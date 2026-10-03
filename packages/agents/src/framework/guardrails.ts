@@ -10,10 +10,11 @@ export type GuardrailFlag =
   | "discount_promise" // offering or promising a discount
   | "date_commitment" // telling the client a date is confirmed/held when it isn't
   | "decor_policy" // inviting outside décor
+  | "unlock_bypass" // offering décor/moodboard work before its payment unlock
   | "guarantee" // promising outcomes
   | "mentions_discount"; // talks about discounts at all (soft)
 
-export const HARD_FLAGS: readonly GuardrailFlag[] = ["price_quote", "discount_promise", "date_commitment", "decor_policy"];
+export const HARD_FLAGS: readonly GuardrailFlag[] = ["price_quote", "discount_promise", "date_commitment", "decor_policy", "unlock_bypass"];
 
 export interface GuardrailContext {
   book: PolicyBook;
@@ -21,6 +22,8 @@ export interface GuardrailContext {
   allowedAmountsPaise?: number[];
   /** True when the lead really has an active hold or confirmed booking. */
   hasActiveHold?: boolean;
+  /** True when this wedding has met décor's payment unlock ('decor.providers'). */
+  decorUnlocked?: boolean;
 }
 
 export interface GuardrailResult {
@@ -51,6 +54,11 @@ const DATE_COMMITMENT = [
 
 const OUTSIDE_DECOR = [
   /\b(?:you can|you may|feel free to|welcome to)\s+(?:bring|use|hire)\s+(?:your|an?)\s+(?:own|outside|external|preferred)\s+(?:decorator|décor|decor|florist)/i,
+];
+
+const DECOR_BEFORE_UNLOCK = [
+  /\b(?:we|i)(?:'ll| will| can| could|'d| would| are happy to| am happy to| shall)\s+(?:go ahead and\s+|happily\s+)?(?:start|begin|send|share|prepare|create|design|make|put together|work on)\s+(?:on\s+)?(?:your|the|some|a few|a|five)?\s*(?:\w+\s+)?(?:d[eé]cor|mood ?boards?)/i,
+  /\bmood ?boards?\b[^.]*\b(?:right away|today|tomorrow|this week|before (?:you|the) (?:book|pay)\w*|straight away|immediately)\b/i,
 ];
 
 const GUARANTEE = [/\bguarantee(?:d|s)?\b/i, /\b100\s*%\s*(?:sure|guaranteed|certain)\b/i, /\bwe promise\b/i];
@@ -110,6 +118,16 @@ export function checkClientMessage(text: string, ctx: GuardrailContext): Guardra
       if (m) {
         flags.add("decor_policy");
         reasons.push(`Invites outside décor ("${m[0].trim()}"); décor is in-house or a designated planner only`);
+      }
+    }
+  }
+
+  if (decor.requires_payment_unlock !== "none" && !ctx.decorUnlocked) {
+    for (const re of DECOR_BEFORE_UNLOCK) {
+      const m = text.match(re);
+      if (m) {
+        flags.add("unlock_bypass");
+        reasons.push(`Offers décor work ("${m[0].trim()}") before its payment unlock in the policy book`);
       }
     }
   }

@@ -140,6 +140,26 @@ describe("Lead Desk: drafting and the gate", () => {
     expect(out.result.reply!.flags).not.toContain("decor_policy");
   });
 
+  it("décor before the 40% payment: never promised, unlock explained from the policy book", async () => {
+    ctx = setup(lead({ message: "Can you start our décor moodboards now? We'd love to see designs before we pay anything." }));
+    const out = await processLead(ctx.deps, "lead-1");
+    if (out.status !== "done") throw new Error(out.status);
+    expect(out.result.intents).toContain("decor_early");
+    expect(out.result.reply!.body).toMatch(/moodboards begin once the 40% contract payment is made/);
+    expect(out.result.reply!.flags).not.toContain("unlock_bypass");
+  });
+
+  it("a model draft that offers moodboards before the 40% payment is replaced and flagged", async () => {
+    const llm = new ScriptedLlm(() => "Hi Meera! We'll start your décor moodboards right away so you can see them before you book.");
+    ctx = setup(lead({ message: "Can we see décor designs first?" }), llm);
+    const out = await processLead(ctx.deps, "lead-1");
+    if (out.status !== "done") throw new Error(out.status);
+    expect(out.result.reply!.replacedUnsafeDraft).toBe(true);
+    expect(out.result.reply!.flags).toContain("unlock_bypass");
+    expect(out.result.reply!.body).not.toMatch(/right away/);
+    expect(ctx.store.approvals[0]!.guardrailFlags).toContain("unlock_bypass");
+  });
+
   it("a model draft that quotes a price and a discount is replaced and flagged for approval", async () => {
     const llm = new ScriptedLlm(() => "Hi Meera! The venue is ₹8 lakh per day and we can offer you a 10% discount. Your date is confirmed!");
     ctx = setup(lead({ message: "What's the price?" }), llm);
@@ -219,6 +239,8 @@ describe("Guardrails", () => {
     ["Your date is now confirmed.", "date_commitment"],
     ["We've reserved the lawn for you.", "date_commitment"],
     ["You can bring your own decorator, no problem.", "decor_policy"],
+    ["We'll start your décor moodboards this week.", "unlock_bypass"],
+    ["We can share five moodboards today, before you book.", "unlock_bypass"],
   ])("blocks: %s", (text, flag) => {
     const r = checkClientMessage(text, { book });
     expect(r.ok).toBe(false);
@@ -229,11 +251,14 @@ describe("Guardrails", () => {
     "We share pricing in person when you visit.",
     "Rooms are complimentary with your booking.",
   ])("allows: %s", (text) => expect(checkClientMessage(text, { book }).ok).toBe(true));
+  it("allows décor work once the wedding has met its payment unlock", () => {
+    expect(checkClientMessage("We'll start your décor moodboards this week.", { book, decorUnlocked: true }).ok).toBe(true);
+  });
   it("allows a date commitment only when there is an active hold", () => {
     expect(checkClientMessage("Your date is held until Friday.", { book, hasActiveHold: true }).ok).toBe(true);
   });
   it("every template reply passes its own guardrails", () => {
-    for (const intents of [["price"], ["discount"], ["rooms", "outside_caterer"], ["outside_decor"], []] as const) {
+    for (const intents of [["price"], ["discount"], ["rooms", "outside_caterer"], ["outside_decor"], ["decor_early"], []] as const) {
       for (const outOfTown of [true, false, null]) {
         const body = templateReply(book, { firstName: "A", eventType: "wedding", dateWanted: "2027-01-01", dateLabel: "1 Jan", guests: 200, freeSpaces: [{ name: "Lawn", capacity: 600 }], outOfTown, intents: [...intents], startingFrom: null, hasActiveHold: false });
         expect(checkClientMessage(body, { book }).ok).toBe(true);
