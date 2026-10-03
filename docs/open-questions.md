@@ -15,6 +15,20 @@ Things Fable/Claude flagged while building Phase 1. Each needs a decision from P
 | Licence to other venues? | Schema is single-tenant (decision D2) | Needs a migration before a second venue |
 | Real space names and capacities | `spaces` seed (placeholders) | 5 demo spaces |
 
+## Needs a value from Prashanth (Phases 2–4)
+| Question | Where it lives | Current behaviour |
+| --- | --- | --- |
+| Google Maps pin for visit confirmations | Policy `visits.booking.location_pin_url` | Confirmations go without a pin |
+| Number the Voice Concierge transfers to | Policy `voice.concierge.transfer_number` | Transfers fail over to "we'll call you back" plus an urgent task |
+| Cancellation and refund terms | Contract template placeholder (`domain/contract.ts`) | The contract says "to be confirmed by Prashanth"; approve nothing until it's filled |
+| Security deposit amount | Policy `closeout.inspection.security_deposit_paise` | No deposit decision is proposed |
+| GSTIN | Policy `finance.gst.gstin` | Invoices omit it |
+| Purchase limit above which you approve | Policy `estate.purchases.owner_approval_above_paise` | ₹25,000 |
+| Real menus and dishes | `menu_library` (26 sample dishes) | Menus are built from the samples |
+| Real décor catalogue and photos | `domain/decor-themes.ts` (5 themes per function) | Moodboards show palettes and image prompts, not photos |
+| Drive templates (checklists, run-of-show) | `task_templates`, `run_of_show_templates` | Starter templates loaded |
+| Tally or Zoho Books | Policy `finance.gst.export_format` | Tally CSV |
+
 ## Contradictions or gaps spotted in the PRD
 1. **Phase scope.** PRD §13 puts lead scoring and the approval queue in Phase 2; the build handoff puts them in Phase 1. I followed the handoff.
 2. **Contract signing vs payment.** "40% within two weeks signs the contract" reads as if the payment *is* the signature, while §5.1 has e-signature and "Prashanth signs contracts". I modelled them separately: the 40% unlocks stages; the contract row has its own signed status (Phase 3).

@@ -28,15 +28,15 @@ These live as **data** in the policy book (`policies` table, typed by `packages/
 - `apps/web`: Next.js (App Router) + Tailwind v4 on Vercel. `/team/*` is the staff dashboard and `/portal/*` is the client portal.
 - Supabase: Postgres, Auth, Storage and row-level security. Migrations live in `packages/db/supabase/migrations`.
 - Claude API (`@anthropic-ai/sdk`) for agents. Model names live in the `agents` table, never in code.
-- Scheduling: Vercel Cron calls `/api/cron/*` (protected by `CRON_SECRET`). `pg_cron` releases expired holds.
-- Later phases: Razorpay, WhatsApp via a BSP (Gupshup or Interakt), Exotel or Plivo, and Digio or Leegality.
+- Scheduling: `pg_cron` calls `/api/cron/tick` every 15 minutes through `pg_net` (URL and `CRON_SECRET` in Supabase Vault, see D23); Vercel Cron runs the daily brief and sweep. `pg_cron` also releases expired holds.
+- Channels (`packages/integrations`): Gupshup WhatsApp, Resend email, Instagram/Meta, Plivo calls, Razorpay. Each runs in **sandbox** (outbox rows, `sbx_…` refs, `/pay/sandbox` and `/sign/sandbox` pages) until its keys are set (D24). E-sign (Digio or Leegality) has no live adapter yet.
 
 ```
 apps/web/              Next.js: /team dashboard, /portal client portal, /enquire public form, /api
 packages/db/           SQL migrations, seed, shared row types (src/types.ts)
 packages/policy/       Policy book schema (zod), defaults, typed loader
 packages/agents/       Agent framework + one folder per agent
-packages/integrations/ Channel adapters (stubs until Phase 2/3)
+packages/integrations/ Channel adapters (sandbox until keys are set) + inbound webhook parsers
 packages/ui/           Wiwaha palette tokens + shared components
 docs/                  PRD, handoff, decisions log, runbooks
 ```
@@ -68,6 +68,8 @@ The framework (`packages/agents/src/framework/`) enforces the following:
 - **Chief of Staff is the only router.** Agents never call each other; they emit `agent_tasks` rows.
 - **Model at runtime:** Haiku for triage, Sonnet for most agents, Opus or Fable for Chief of Staff, Design and Quote. Set in `agents.model`.
 - **Every run is logged** to `agent_actions` (agent, input, output, tools, tokens, cost, approved by).
+- **Database through a scoped port:** agents use `agentDb(ctx, TOOLS)` (`framework/db.ts`); a table or RPC not granted in `tools.ts` throws. Tests use `testWorld()` / `seedWedding()` from `framework/testing.ts` (MemoryDb).
+- **Wiring:** a new entry point goes in `src/dispatch.ts` (agent → task kind → handler) and, if scheduled, in `src/scheduler.ts`; new task kinds need a route in the Chief of Staff's `ROUTES`. Decided approvals come back as `approval_decided` tasks to the agent that asked.
 - With no `ANTHROPIC_API_KEY`, agents use deterministic template fallbacks so demos and tests work offline.
 
 ## Commands
@@ -91,6 +93,8 @@ Setup and deploy: `docs/runbooks/setup.md`. Demo: `docs/runbooks/demo-script.md`
 - PostgREST only exposes `public`: every RPC lives in `app.*`, with a thin `public.*` wrapper and explicit grants.
 - `app.is_service()` uses `session_user`, so it stays false inside SECURITY DEFINER functions called by users.
 - Next.js 16: `src/proxy.ts` replaces `middleware.ts`; `cookies()`/`headers()`/`params` are async.
+- Clients never insert `agent_tasks`: portal actions go through RPCs or triggers that queue them (`submit_brief`, `client_approve_*`, the portal-chat trigger). After a write, `after(runRouting)` routes the work at once.
+- Get Prashanth's written OK before filling any live channel key (WhatsApp, Plivo, Razorpay, e-sign). Until then everything is sandboxed.
 
 ## Brand
 
