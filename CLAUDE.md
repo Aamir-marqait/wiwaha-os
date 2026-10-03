@@ -87,6 +87,7 @@ Setup and deploy: `docs/runbooks/setup.md`. Demo: `docs/runbooks/demo-script.md`
 
 ## Gotchas
 - Staging Supabase exists (`ytqojvumknmebcsjqzio`, see `docs/decisions.md` D18): **only add new migrations**; never edit an applied one.
+- Never apply migrations to staging by hand. Merging a PR into `claude/phase-1-foundation` (or `main`) runs `.github/workflows/deploy-migrations.yml`, which applies new files in order. Test locally with `pnpm db:test` first. See `docs/runbooks/collaborating.md`.
 - PostgREST only exposes `public`: every RPC lives in `app.*`, with a thin `public.*` wrapper and explicit grants.
 - `app.is_service()` uses `session_user`, so it stays false inside SECURITY DEFINER functions called by users.
 - Next.js 16: `src/proxy.ts` replaces `middleware.ts`; `cookies()`/`headers()`/`params` are async.

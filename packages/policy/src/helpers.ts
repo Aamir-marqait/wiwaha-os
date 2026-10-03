@@ -32,3 +32,24 @@ export function splitPayments(book: PolicyBook, totalPaise: number): { milestone
     return { milestone: m.milestone, label: m.label, amountPaise: amount };
   });
 }
+
+/**
+ * What must happen before décor work may begin, from 'decor.providers' and
+ * 'payments.schedule' (e.g. "the 40% contract payment"). Null when décor has
+ * no unlock condition.
+ */
+export function decorUnlockLabel(book: PolicyBook): string | null {
+  const unlock = book.get("decor.providers").requires_payment_unlock;
+  const milestone = unlock === "deposit_paid" ? "deposit" : unlock === "contract_paid" ? "contract" : null;
+  if (milestone) {
+    const m = book.get("payments.schedule").milestones.find((x) => x.milestone === milestone);
+    if (m) return `the ${m.percent_bps / 100}% ${milestone} payment`;
+  }
+  switch (unlock) {
+    case "none": return null;
+    case "brief_started": return "your wedding brief is started";
+    case "quote_approved": return "your quote is approved";
+    case "event_complete": return "the event is complete";
+    default: return `the ${milestone ?? unlock.replace(/_/g, " ")} step`;
+  }
+}

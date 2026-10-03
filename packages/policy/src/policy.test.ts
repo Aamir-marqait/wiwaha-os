@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { DEFAULT_POLICIES, NON_NEGOTIABLE_KEYS, PolicyBook, PolicyError, POLICY_KEYS, isOutOfTown, splitPayments, startingFromBand } from "./index";
+import { DEFAULT_POLICIES, NON_NEGOTIABLE_KEYS, PolicyBook, PolicyError, POLICY_KEYS, decorUnlockLabel, isOutOfTown, splitPayments, startingFromBand } from "./index";
 
 const HANDOFF_RULES: Record<string, string> = {
   "honesty.commitments": "Agents never make a commitment that isn't in the policy book. Unknown → escalate to a human.",
@@ -43,6 +43,10 @@ describe("policy defaults", () => {
     const book = PolicyBook.defaults();
     expect(book.get("pricing.phone").quote_prices_on_phone).toBe(false);
     expect(book.get("discounts").agents_may_offer).toBe(false);
+  });
+
+  it("describes the décor unlock from the payment schedule", () => {
+    expect(decorUnlockLabel(PolicyBook.defaults())).toBe("the 40% contract payment");
   });
 
   it("locks décor behind the 40% contract payment", () => {
