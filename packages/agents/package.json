@@ -1,5 +1,5 @@
 {
-  "name": "@wiwaha/db",
+  "name": "@wiwaha/agents",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -10,16 +10,17 @@
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
-    "test": "vitest run --passWithNoTests",
-    "gen:seed": "tsx scripts/gen-seed.ts",
-    "db:test": "bash scripts/test-migrations.sh"
+    "test": "vitest run",
+    "gen:prompts": "tsx src/gen-prompts.ts"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.131.0",
+    "@supabase/supabase-js": "^2.117.2",
+    "@wiwaha/db": "workspace:*",
     "@wiwaha/policy": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^22.10.0",
-    "supabase": "2.119.0",
     "tsx": "^4.20.6",
     "typescript": "5.9.3",
     "vitest": "^5.0.3"

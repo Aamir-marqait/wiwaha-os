@@ -1,0 +1,61 @@
+/*
+ * Wiwaha palette — "earthy luxury": sage greens, warm golds, ivory whites,
+ * deep burgundies (brand persona). Exposed as Tailwind v4 theme tokens, so
+ * classes like bg-sage-600, text-burgundy-700, bg-ivory-50 work everywhere.
+ */
+@theme {
+  --color-ivory-50: #fdfbf6;
+  --color-ivory-100: #f9f5ec;
+  --color-ivory-200: #f1eadb;
+  --color-ivory-300: #e6dcc6;
+
+  --color-sage-50: #f2f5f0;
+  --color-sage-100: #e3ebdf;
+  --color-sage-200: #c8d7c2;
+  --color-sage-300: #a8bfa0;
+  --color-sage-400: #8aa784;
+  --color-sage-500: #6f8f6c;
+  --color-sage-600: #587556;
+  --color-sage-700: #465d45;
+  --color-sage-800: #374837;
+  --color-sage-900: #263226;
+
+  --color-gold-50: #fbf6ea;
+  --color-gold-100: #f5e9c9;
+  --color-gold-200: #ebd59a;
+  --color-gold-300: #dfbe6c;
+  --color-gold-400: #d1a94f;
+  --color-gold-500: #b98f3a;
+  --color-gold-600: #98722d;
+  --color-gold-700: #765626;
+
+  --color-burgundy-50: #fbf0f1;
+  --color-burgundy-100: #f4d9dd;
+  --color-burgundy-200: #e6b0b8;
+  --color-burgundy-300: #cf7d8a;
+  --color-burgundy-400: #b0505f;
+  --color-burgundy-500: #923644;
+  --color-burgundy-600: #7a2a38;
+  --color-burgundy-700: #63222e;
+  --color-burgundy-800: #4b1a23;
+
+  --color-ink: #2a2723;
+  --color-ink-soft: #5c564d;
+  --color-line: #e7dfcf;
+
+  --font-serif: var(--font-cormorant), "Cormorant Garamond", Georgia, "Times New Roman", serif;
+  --font-sans: var(--font-inter), Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+
+  --radius-card: 1rem;
+  --shadow-card: 0 1px 2px rgb(42 39 35 / 0.04), 0 4px 16px rgb(42 39 35 / 0.05);
+}
+
+/* Calendar status colours (enquiry / held / confirmed). */
+:root {
+  --cal-enquiry: var(--color-gold-100);
+  --cal-enquiry-ink: var(--color-gold-700);
+  --cal-held: var(--color-burgundy-100);
+  --cal-held-ink: var(--color-burgundy-700);
+  --cal-confirmed: var(--color-sage-600);
+  --cal-confirmed-ink: #ffffff;
+}
