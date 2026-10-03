@@ -63,7 +63,11 @@ export async function onboardWedding(deps: AgentDeps, weddingId: string): Promis
         due_at: new Date(ctx.now.getTime() + 24 * 3600_000).toISOString(), priority: "high", proof_kind: "tick", created_by_agent: ONBOARDING,
       });
     }
-    if (w.stage === "booking" || w.stage === "onboarding") await db.update("weddings", { id: weddingId }, { stage: "planning" });
+    if (w.stage === "booking" || w.stage === "onboarding") {
+      await db.update("weddings", { id: weddingId }, { stage: "planning" });
+      // Planning has started: ask for the T-minus plan (the Chief of Staff routes it to the Planner).
+      await db.insert("agent_tasks", { kind: "plan_requested", from_agent: ONBOARDING, wedding_id: weddingId, payload: {} });
+    }
     await ctx.log({ action: "onboard", status: letters ? "gated" : "ok", weddingId, input: {}, output: { invited, letters }, model: letter.model, inputTokens: letter.inputTokens, outputTokens: letter.outputTokens, costUsdMicros: letter.costUsdMicros, policyKeys: [...POLICIES], policyVersions: ctx.book.versions(POLICIES) });
     return { invited, letters };
   });

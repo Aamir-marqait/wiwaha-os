@@ -96,7 +96,11 @@ export async function onBriefDecided(deps: AgentDeps, approvalId: string, status
     if (!a?.wedding_id) return { reviewed: false };
     const ok = status !== "rejected";
     await db.update("wedding_briefs", { wedding_id: a.wedding_id }, ok ? { status: "reviewed", reviewed_by: a.decided_by, reviewed_at: ctx.now.toISOString() } : { status: "draft" });
-    if (ok) await db.update("wedding_stages", { wedding_id: a.wedding_id, key: "brief" }, { status: "done", completed_at: ctx.now.toISOString() });
+    if (ok) {
+      await db.update("wedding_stages", { wedding_id: a.wedding_id, key: "brief" }, { status: "done", completed_at: ctx.now.toISOString() });
+      // Functions and timings are settled: the Planner can lay out the run-of-show.
+      await db.insert("agent_tasks", { kind: "brief_reviewed", from_agent: BRIEF, wedding_id: a.wedding_id, payload: {} });
+    }
     await ctx.log({ action: "brief_decided", status: "ok", weddingId: a.wedding_id, input: { status }, output: { reviewed: ok } });
     return { reviewed: ok };
   });

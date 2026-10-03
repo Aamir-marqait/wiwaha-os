@@ -38,6 +38,13 @@ export function testWorld(opts: { llm?: LlmClient; now?: Date; seed?: Record<str
   });
   db.now = () => now;
   db.unique("calls", "visit_id", "purpose"); // calls_one_follow_up_per_visit
+  db.unique("job_runs", "job", "run_key");
+  db.unique("briefs", "kind", "for_date", "recipient_id");
+  db.unique("tasks", "wedding_id", "template_id");
+  db.unique("offboarding_steps", "wedding_id", "key");
+  db.unique("content_posts", "scheduled_for", "platform");
+  let invoiceSeq = 0;
+  db.onRpc("next_invoice_number", (args) => `${String(args.p_prefix)}/2027/${String(++invoiceSeq).padStart(4, "0")}`);
   // moodboards_guard_unlock: no décor work before the contract (40%) payment.
   db.beforeInsert("moodboards", (r, d) => {
     if (!d.rows("payments").some((p) => p.wedding_id === r.wedding_id && p.milestone === "contract" && p.status === "paid")) {

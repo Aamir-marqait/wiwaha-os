@@ -11,5 +11,6 @@ export const ONBOARDING_TOOLS: DbGrants = {
     tasks: ["select", "insert"],
     outbox: ["insert"],
     messages: ["update"],
+    agent_tasks: ["insert"],
   },
 };

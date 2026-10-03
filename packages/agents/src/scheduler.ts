@@ -6,6 +6,12 @@ import { sendPaymentReminders } from "./agents/contract_payments/agent";
 import { lockPlateCounts } from "./agents/menu/agent";
 import { chaseVendors } from "./agents/vendor_coordinator/agent";
 import { nudgeStages } from "./agents/wedding_room/agent";
+import { anniversaryWishes, sendOffboardingSteps } from "./agents/offboarding/agent";
+import { draftWeek } from "./agents/content_studio/agent";
+import { weeklyAdsReport } from "./agents/ads_analyst/agent";
+import { estateSweep } from "./agents/estate/agent";
+import { reconcilePayments, startCloseOuts } from "./agents/finance/agent";
+import { escalateOverdue, eveningReview, morningStandup } from "./agents/standup/agent";
 import { createDispatcher } from "./dispatch";
 import { sendApprovedMessages } from "./framework/kit";
 import type { RunOutcome } from "./framework/runner";
@@ -25,6 +31,17 @@ const JOBS: ScheduledJob[] = [
   { name: "vendor_chases", run: chaseVendors },
   { name: "plate_locks", run: lockPlateCounts },
   { name: "stage_nudges", run: nudgeStages },
+  // Phase 4 (each is idempotent and checks its own time of day / weekday).
+  { name: "morning_standup", run: morningStandup },
+  { name: "evening_review", run: eveningReview },
+  { name: "escalate_overdue", run: escalateOverdue },
+  { name: "estate_sweep", run: estateSweep },
+  { name: "close_outs", run: startCloseOuts },
+  { name: "reconcile_payments", run: reconcilePayments },
+  { name: "offboarding_steps", run: sendOffboardingSteps },
+  { name: "anniversaries", run: anniversaryWishes },
+  { name: "content_week", run: draftWeek },
+  { name: "ads_report", run: weeklyAdsReport },
 ];
 
 export function registerJob(job: ScheduledJob): void {

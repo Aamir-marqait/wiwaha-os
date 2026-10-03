@@ -241,3 +241,25 @@ export function istDate(now: Date): string {
 export function istInstant(date: string, hhmm: string): string {
   return new Date(`${date}T${hhmm}:00+05:30`).toISOString();
 }
+
+/** The wall-clock time in India now, "HH:MM". */
+export function istClock(now: Date): string {
+  return new Intl.DateTimeFormat("en-GB", { timeZone: "Asia/Kolkata", hour: "2-digit", minute: "2-digit", hour12: false }).format(now);
+}
+
+/** Day of week in India: "mon" … "sun". */
+export function istWeekday(now: Date): "mon" | "tue" | "wed" | "thu" | "fri" | "sat" | "sun" {
+  const d = new Intl.DateTimeFormat("en-GB", { timeZone: "Asia/Kolkata", weekday: "short" }).format(now).toLowerCase().slice(0, 3);
+  return d as "mon";
+}
+
+/** Claims a once-only scheduled run (job_runs primary key). False if it already ran. */
+export async function claimRun(db: Db, job: string, runKey: string): Promise<boolean> {
+  try {
+    await db.insert("job_runs", { job, run_key: runKey });
+    return true;
+  } catch (err) {
+    if ((err as { code?: string }).code === "23505" || /duplicate key/i.test(String((err as Error).message))) return false;
+    throw err;
+  }
+}

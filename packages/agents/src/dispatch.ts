@@ -11,6 +11,12 @@ import { onboardWedding } from "./agents/onboarding/agent";
 import { onQuoteDecided, prepareQuote } from "./agents/quote/agent";
 import { lockVendors, onVendorReplied } from "./agents/vendor_coordinator/agent";
 import { onFamilyMessage } from "./agents/wedding_room/agent";
+import { buildRunOfShow, generatePlan, onRunOfShowDecided } from "./agents/planner/agent";
+import { allocateRooms } from "./agents/rooms_guests/agent";
+import { onPurchaseDecided } from "./agents/estate/agent";
+import { closeOutWedding, onDepositDecided, onInspectionDone, onInvoicesDecided } from "./agents/finance/agent";
+import { scheduleOffboarding } from "./agents/offboarding/agent";
+import { onPostsDecided } from "./agents/content_studio/agent";
 import type { RunOutcome } from "./framework/runner";
 import type { AgentDeps, AgentTaskRow } from "./framework/types";
 
@@ -76,6 +82,28 @@ const HANDLERS: Record<string, Record<string, Handler>> = {
   wedding_room: {
     family_message: (d, _t, p) => (str(p.message_id) ? onFamilyMessage(d, str(p.message_id)!) : null),
   },
+  // Phase 4: execution, close-out and growth.
+  planner: {
+    plan_requested: onWedding(generatePlan),
+    stage_started: (d, t) => (t.wedding_id ? generatePlan(d, t.wedding_id).then(() => buildRunOfShow(d, t.wedding_id!)) : null),
+    brief_reviewed: onWedding(buildRunOfShow),
+    approval_decided: decided(onRunOfShowDecided),
+  },
+  rooms_guests: {
+    rooming_list_submitted: onWedding(allocateRooms),
+    stage_started: onWedding(allocateRooms),
+  },
+  estate: { approval_decided: decided(onPurchaseDecided) },
+  finance: {
+    closeout_due: onWedding(closeOutWedding),
+    inspection_done: onWedding(onInspectionDone),
+    approval_decided: (d, _t, p) => (str(p.approval_id) ? (p.kind === "deposit_decision" ? onDepositDecided : onInvoicesDecided)(d, str(p.approval_id)!, str(p.status) ?? "approved") : null),
+  },
+  offboarding: {
+    offboarding_due: onWedding(scheduleOffboarding),
+    stage_started: onWedding(scheduleOffboarding),
+  },
+  content_studio: { approval_decided: decided(onPostsDecided) },
 };
 
 export function registerHandlers(agent: string, handlers: Record<string, Handler>): void {
@@ -86,6 +114,8 @@ export function createDispatcher(deps: AgentDeps): Dispatcher {
   return async (target, task) => {
     const payload = (task.payload && typeof task.payload === "object" && !Array.isArray(task.payload) ? task.payload : {}) as Record<string, unknown>;
     const handler = HANDLERS[target]?.[task.kind];
+    // A decision the agent has nothing more to do with (e.g. an approved ads report) is simply done.
+    if (!handler && task.kind === "approval_decided") return { ok: true, result: { note: "recorded; nothing further to do" } };
     const run = handler?.(deps, task, payload);
     if (!run) return null;
     const out = await run;
