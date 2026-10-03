@@ -86,3 +86,8 @@ Testing with the seed showed 75 marked nearly every lead hot. 85 keeps "hot" mea
 
 ## D21 — Pinned search_path on all functions (2026-10-03)
 Migration `20261003001100_pin_search_path.sql` clears Supabase advisor lint 0011 on 16 functions (PRD §9 privacy/guardrails). Applied to staging; `pnpm db:test` passes. Remaining advisor warning: leaked-password protection (Auth dashboard toggle).
+
+## D22 — Migrations deploy from CI on merge (2026-10-03)
+**Decision:** `.github/workflows/deploy-migrations.yml` applies new migration files to staging on every merge to `claude/phase-1-foundation` or `main`. It uses `packages/db/scripts/deploy-migrations.mjs`, which goes through the Supabase Management API, so the only secret is `SUPABASE_ACCESS_TOKEN` and no database password is needed. Each file runs in one transaction with its `supabase_migrations.schema_migrations` row, applied in filename order, and the run stops at the first failure. Rollback on failure and idempotent reruns were tested against staging.
+**Why:** collaborators get only GitHub access. Every schema change goes through a reviewed PR and the local `db:test` gate, and nobody applies SQL to staging by hand.
+**Note:** the 11 migrations applied earlier through the Supabase connector were re-keyed in `schema_migrations` to their filename versions, so CI sees them as applied.
