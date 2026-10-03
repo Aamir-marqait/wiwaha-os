@@ -69,3 +69,6 @@ Portal Hindi/Kannada strings (Phase 3, with the portal build-out), client-portal
 
 ## D17 — Default hot-lead threshold 85 (2026-10-03)
 Testing with the seed showed 75 marked nearly every lead hot. 85 keeps "hot" meaningful; tune in policy `lead_scoring`.
+
+## D18 — Daily routing sweep so staging runs on Vercel Hobby (2026-10-03)
+Vercel Hobby allows cron jobs once a day, so `/api/cron/agents` runs at 02:45 UTC (8:15 IST), just before the brief. Routing still happens instantly on every enquiry (`after()`), and `pg_cron` still releases holds every 15 minutes, so the sweep is only a safety net. On Vercel Pro, change it back to hourly (`30 * * * *`). Note: Vercel Hobby is for non-commercial use; Wiwaha's production should run on Pro.
