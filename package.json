@@ -1,0 +1,17 @@
+{
+  "name": "wiwaha-os",
+  "private": true,
+  "version": "0.1.0",
+  "packageManager": "pnpm@10.28.0",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev": "pnpm --filter @wiwaha/web dev",
+    "build": "pnpm --filter @wiwaha/web build",
+    "typecheck": "pnpm -r typecheck",
+    "test": "pnpm -r test",
+    "lint": "pnpm -r lint",
+    "db:test": "bash packages/db/scripts/test-migrations.sh"
+  }
+}

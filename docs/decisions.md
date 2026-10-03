@@ -1,0 +1,53 @@
+# Decisions log
+
+Each entry records what was decided, why, and what would make us revisit it. Newest at the bottom.
+
+## D1 — pnpm monorepo, single Next.js app for team + portal (2026-10-03)
+**Decision:** One Next.js App Router app (`apps/web`) serving `/team` and `/portal`; shared packages for db, policy, agents, integrations, ui.
+**Why:** Handoff §4. One deploy, one auth system, shared components. pnpm workspaces are already installed in the dev environment and need no extra tooling (no Turborepo yet).
+**Revisit if:** portal needs its own domain with different scaling or caching — split via Next.js multi-zones.
+
+## D2 — Single-tenant schema for now (2026-10-03)
+**Decision:** No `venue_id` column; the database is Wiwaha's alone.
+**Why:** PRD §14 leaves licensing open. Adding tenancy everywhere now doubles RLS complexity for an unconfirmed need.
+**Revisit if:** Prashanth confirms licensing to other venues. Migration path: add `venue_id` to every table with a default, add it to every RLS predicate. **Flagged as an open question.**
+
+## D3 — RLS via `app.current_role()` helper + `wedding_members` (2026-10-03)
+**Decision:** `profiles.role` holds one staff/client/vendor role per user. Policies call `app.has_role(...)`. Clients reach wedding data only through `wedding_members` rows (couple, parents, planner each get their own login and permission set).
+**Why:** Simple, auditable, and matches the PRD access table. Agents run server-side with the service role and always log to `agent_actions`, so the `agent` role is reserved for future scoped tokens.
+
+## D4 — Audit by database trigger, IP from PostgREST request headers (2026-10-03)
+**Decision:** A generic `app.audit_trigger()` on every user-editable table writes `audit_log` with `auth.uid()`, the changed row diff, and the IP from `current_setting('request.headers')->>'x-forwarded-for'`.
+**Why:** Can't be bypassed by a forgetful API route; captures portal edits made directly through supabase-js with RLS.
+
+## D5 — Calendar holds with exclusion constraint (2026-10-03)
+**Decision:** `calendar_entries` (space or room, date range, status `enquiry|held|confirmed|released`). A `btree_gist` exclusion constraint prevents two *blocking* entries (`held`, `confirmed`) overlapping on the same space/room. Holds carry `expires_at`; `app.place_hold()` releases expired holds before inserting, and `pg_cron` runs `app.release_expired_holds()` every 15 minutes.
+**Why:** The database is the single truth, so double-booking is impossible even under concurrent requests. `enquiry` entries are pencil marks that don't block.
+**Default hold length:** 72 hours (PRD §12 recommendation #2) — stored in policy `holds.soft_hold_hours`, **to be confirmed by Prashanth** (PRD §14).
+
+## D6 — Scheduling: Vercel Cron for agent jobs, pg_cron for pure-SQL jobs (2026-10-03)
+**Decision:** `vercel.json` schedules `/api/cron/morning-brief` at 03:00 UTC (08:30 IST). Hold expiry is pure SQL so it runs in `pg_cron`. Inngest deferred until Phase 2 needs retries/fan-out.
+**Why:** No new paid service; both are included in Vercel/Supabase plans.
+
+## D7 — Agents: thin in-house framework on the Claude API, deterministic fallbacks (2026-10-03)
+**Decision:** `packages/agents/src/framework` wraps `@anthropic-ai/sdk` `messages.create`. Every run: check `enabled` (kill switch) → load policy book → compute → guardrail check → gate (draft ⇒ approval) → log `agent_actions`. If `ANTHROPIC_API_KEY` is missing, agents use template fallbacks.
+**Why:** The Phase 1 agents (scoring, drafting a reply, writing a brief) are single-shot tasks; a full agent loop adds cost and nondeterminism without benefit. Deterministic scoring keeps lead scores explainable and testable. Fallbacks let the app demo and test offline.
+**Revisit if:** Phase 2 voice/WhatsApp agents need multi-step tool loops — add the SDK tool runner inside the same framework.
+
+## D8 — Lead scoring is rules-based, weights in the policy book (2026-10-03)
+**Decision:** Score 0–100 from date fit (calendar availability), guest count fit, budget signal, and source weight (WedMeGood highest). Weights live in policy `lead_scoring`. Haiku only drafts the reply text.
+**Why:** Prashanth can tune weights without code; scores are reproducible.
+
+## D9 — De-duplication by normalised phone (2026-10-03)
+**Decision:** Phones normalised to E.164 (`+91XXXXXXXXXX` default). `contacts.phone_e164` is unique; a repeat enquiry attaches a new `lead_touches` row to the open lead instead of creating a duplicate.
+**Note:** PRD §9 asks for encrypted phone numbers. Phase 1 relies on Supabase disk encryption + RLS (only roles that need phones can read `contacts`). Column-level encryption with a blind index for dedupe is scheduled for Phase 3 before real client data goes in. **Flagged.**
+
+## D10 — Money in paise, dates in UTC (2026-10-03)
+Per handoff §4. Columns are `*_paise bigint`; event days are `date` (no timezone), timestamps are `timestamptz`; UI formats with `Asia/Kolkata`.
+
+## D11 — Phase 1 approvals for lead replies don't send anything (2026-10-03)
+**Decision:** Approving a Lead Desk draft marks the message `approved` and logs it on the lead timeline; actual sending via WhatsApp/email arrives with the Phase 2 connectors (`packages/integrations` has the interfaces).
+**Why:** Handoff: get Prashanth's written OK before connecting live channels.
+
+## D12 — Model choices per agent (2026-10-03)
+Stored in `agents.model`: Lead Desk `claude-haiku-4-5` (triage volume), Chief of Staff `claude-opus-5-5` (reasoning across the business). Owner can change in Settings → Agents. Opus/Sonnet calls set the server-side refusal fallback (`fallbacks: "default"`).
