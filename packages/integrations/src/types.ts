@@ -98,6 +98,8 @@ export interface Integrations {
   esign: ESignAdapter;
   /** Base URL of this app, for links and webhook callbacks. */
   appUrl: string;
+  /** Our voice webhook URLs, carrying the shared webhook key (agents never see secrets). */
+  voiceUrl: (path: string, params: Record<string, string>) => string;
 }
 
 /** A lead parsed out of any inbound channel, ready for app.ingest_lead. */

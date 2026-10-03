@@ -242,5 +242,6 @@ export function createIntegrations(env: IntegrationEnv, fetchFn: FetchLike = fet
     : sb.payments;
   // E-sign providers need a PDF upload; until a provider account exists the
   // sandbox signing page stands in (see docs/decisions.md D23).
-  return { whatsapp, email, sms: sb.sms, instagram, telephony, payments, esign: sb.esign, appUrl };
+  const voiceUrl = (path: string, params: Record<string, string>) => `${appUrl}${path}?${new URLSearchParams({ ...params, k: env.WEBHOOK_SECRET ?? "" }).toString()}`;
+  return { whatsapp, email, sms: sb.sms, instagram, telephony, payments, esign: sb.esign, appUrl, voiceUrl };
 }

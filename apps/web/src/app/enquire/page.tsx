@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Wordmark } from "@/components/brand";
+import { ChatLauncher } from "@/components/chat-widget";
 import { EnquiryForm } from "./enquiry-form";
 
 export const metadata: Metadata = { title: "Check availability", robots: { index: true, follow: true } };
@@ -22,6 +23,7 @@ export default function EnquirePage() {
           <EnquiryForm />
         </section>
       </div>
+          <ChatLauncher />
     </main>
   );
 }

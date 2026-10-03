@@ -1,17 +1,23 @@
 "use client";
 import { cn } from "@wiwaha/ui";
-import { CalendarDays, CheckCircle2, Gem, Inbox, Settings, Sun } from "lucide-react";
+import { BarChart3, CalendarDays, CheckCircle2, Gem, Inbox, LayoutGrid, Phone, Settings, Sun } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
+// Sidebar (desktop): everything. Bottom bar (phone): the core five + More.
 const ITEMS = [
   { href: "/team", label: "Today", icon: Sun, exact: true },
   { href: "/team/leads", label: "Leads", icon: Inbox },
   { href: "/team/calendar", label: "Calendar", icon: CalendarDays },
   { href: "/team/weddings", label: "Weddings", icon: Gem },
   { href: "/team/approvals", label: "Approvals", icon: CheckCircle2, badge: true },
-  { href: "/team/settings", label: "Settings", icon: Settings },
+  { href: "/team/sales", label: "Sales", icon: BarChart3, desktopOnly: true },
+  { href: "/team/voice", label: "Phone", icon: Phone, desktopOnly: true },
+  { href: "/team/settings", label: "Settings", icon: Settings, desktopOnly: true },
+  { href: "/team/more", label: "More", icon: LayoutGrid, mobileOnly: true },
 ] as const;
+const SIDE = ITEMS.filter((i) => !("mobileOnly" in i));
+const BOTTOM = ITEMS.filter((i) => !("desktopOnly" in i));
 
 function isActive(path: string, href: string, exact?: boolean) {
   return exact ? path === href : path === href || path.startsWith(`${href}/`);
@@ -21,7 +27,7 @@ export function SideNav({ approvals }: { approvals: number }) {
   const path = usePathname();
   return (
     <nav className="space-y-1">
-      {ITEMS.map((item) => {
+      {SIDE.map((item) => {
         const active = isActive(path, item.href, "exact" in item ? item.exact : false);
         const Icon = item.icon;
         return (
@@ -41,7 +47,7 @@ export function BottomNav({ approvals }: { approvals: number }) {
   return (
     <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-white/95 pb-[env(safe-area-inset-bottom)] backdrop-blur lg:hidden">
       <ul className="grid grid-cols-6">
-        {ITEMS.map((item) => {
+        {BOTTOM.map((item) => {
           const active = isActive(path, item.href, "exact" in item ? item.exact : false);
           const Icon = item.icon;
           return (

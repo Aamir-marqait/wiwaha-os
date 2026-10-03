@@ -64,15 +64,15 @@ export function scopeDb(db: Db, agent: string, grants: DbGrants): Db {
     if (!grants.tables[table]?.includes(op)) throw new ToolNotAllowedError(agent, `${op} ${table}`);
   };
   return {
-    select: (t, o) => { check(t, "select"); return db.select(t, o); },
-    insert: (t, r) => { check(t, "insert"); return db.insert(t, r); },
-    update: (t, w, p) => { check(t, "update"); return db.update(t, w, p); },
-    upsert: (t, r, c) => { check(t, "upsert"); return db.upsert(t, r, c); },
-    rpc: (fn, args) => {
+    select: async (t, o) => { check(t, "select"); return db.select(t, o); },
+    insert: async (t, r) => { check(t, "insert"); return db.insert(t, r); },
+    update: async (t, w, p) => { check(t, "update"); return db.update(t, w, p); },
+    upsert: async (t, r, c) => { check(t, "upsert"); return db.upsert(t, r, c); },
+    rpc: async (fn, args) => {
       if (!grants.rpcs?.includes(fn)) throw new ToolNotAllowedError(agent, `call ${fn}()`);
       return db.rpc(fn, args);
     },
-  };
+  } as Db;
 }
 
 // ---------------------------------------------------------------------------

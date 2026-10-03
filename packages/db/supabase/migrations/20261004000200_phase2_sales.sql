@@ -193,3 +193,11 @@ select
 from public.leads l
 group by l.source;
 grant select on public.sales_funnel to authenticated;
+
+-- ---------------------------------------------------------------------------
+-- Our own review form (sent after each event): a private link per couple.
+-- ---------------------------------------------------------------------------
+alter table public.reviews
+  add column form_token text not null default encode(extensions.gen_random_bytes(18), 'hex'),
+  add column testimonial_captured_at timestamptz;
+create unique index reviews_form_token_idx on public.reviews(form_token);

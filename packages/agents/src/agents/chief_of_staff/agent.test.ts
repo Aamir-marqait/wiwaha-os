@@ -83,8 +83,9 @@ describe("Chief of Staff: routing", () => {
     expect(routeFor({ kind: "unknown", payload: {} })).toBeNull();
   });
 
-  it("holds work for agents that aren't live and gives it to a person", async () => {
+  it("holds work for an agent that is switched off and gives it to a person", async () => {
     const { store, deps } = setup();
+    store.setAgent("design", { enabled: false });
     store.tasks = [{ id: "t1", from_agent: null, to_agent: null, kind: "stage_started", payload: { stage_key: "decor" }, lead_id: null, wedding_id: "w1", status: "queued", created_at: NOW.toISOString() }];
     const out = await routeTasks(deps, createDispatcher(deps));
     if (out.status !== "done") throw new Error(out.status);

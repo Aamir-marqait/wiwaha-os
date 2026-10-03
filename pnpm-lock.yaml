@@ -22,6 +22,9 @@ importers:
       '@wiwaha/db':
         specifier: workspace:*
         version: link:../../packages/db
+      '@wiwaha/integrations':
+        specifier: workspace:*
+        version: link:../../packages/integrations
       '@wiwaha/policy':
         specifier: workspace:*
         version: link:../../packages/policy

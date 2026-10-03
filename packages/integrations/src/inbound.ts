@@ -190,6 +190,7 @@ export function toIngestPayload(l: InboundLead): Record<string, string | number 
     budget_text: l.budgetText,
     message: l.message,
     external_ref: `${l.source}:${l.externalId}`,
+    reply_to: l.replyTo,
     consent_whatsapp: l.source === "whatsapp",
   };
 }

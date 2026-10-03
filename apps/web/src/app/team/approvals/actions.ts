@@ -1,6 +1,9 @@
 "use server";
 import type { Json } from "@wiwaha/db";
 import { revalidatePath } from "next/cache";
+import { after } from "next/server";
+import { sendApprovedMessages } from "@wiwaha/agents";
+import { agentDeps, runRouting } from "@/lib/agents";
 import { requireStaff } from "@/lib/auth";
 import { friendlyError } from "@/lib/errors";
 import { createClient } from "@/lib/supabase/server";
@@ -18,5 +21,12 @@ export async function decide(approvalId: string, decision: "approved" | "edited"
   const { error } = await supabase.rpc("decide_approval", { p_approval_id: approvalId, p_decision: decision, p_edited_payload: edited, p_note: note?.trim() || null });
   revalidatePath("/team/approvals");
   revalidatePath("/team", "layout");
+  if (!error) {
+    // Approved messages go out now; decided approvals go back to their agent.
+    after(async () => {
+      await sendApprovedMessages(agentDeps());
+      await runRouting();
+    });
+  }
   return error ? { error: friendlyError(error) } : {};
 }
