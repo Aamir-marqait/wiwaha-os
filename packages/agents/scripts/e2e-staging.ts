@@ -93,8 +93,7 @@ async function main() {
   for (const [i, f] of fns.entries()) {
     const pick = boards.find((b) => b.function_id === f && b.design_kind === (i === 1 ? "custom" : "standard"))!;
     must(await sb.rpc("client_shortlist_moodboard", { p_id: pick.id, p_shortlist: true, p_feedback: "Love this" }), "shortlist");
-    must(await sb.from("moodboards").update({ status: "finalised" }).eq("id", pick.id), "finalise");
-    must(await sb.from("agent_tasks").insert({ kind: "moodboard_finalised", wedding_id: wid, payload: { moodboard_id: pick.id } }), "task");
+    must(await sb.rpc("finalise_moodboard", { p_id: pick.id }), "finalise");
   }
   await route(6);
   await approveAll(wid, ["custom_decor"]); await route(6);
@@ -104,8 +103,7 @@ async function main() {
   check("A quote with a custom line waits for Prashanth before the couple sees it", quote.status === "pending_approval" && offBook.length === 1 && !!tooEarly.error);
   for (const l of offBook) must(await sb.from("quote_lines").update({ unit_price_paise: 4_50_000_00, line_total_paise: 4_50_000_00 * l.quantity, off_book: false }).eq("id", l.id), "price");
   await approveAll(wid, ["quote"]); await route();
-  must(await sb.from("quotes").update({ status: "client_approved" }).eq("id", quote.id), "client approve");
-  must(await sb.from("agent_tasks").insert({ kind: "quote_approved", wedding_id: wid, payload: { quote_id: quote.id } }), "qa"); await route();
+  must(await sb.rpc("client_approve_quote", { p_quote_id: quote.id }), "client approve quote"); await route();
   const vb = must(await sb.from("vendor_bookings").select("id, reply_token").eq("wedding_id", wid), "vb") as { id: string; reply_token: string }[];
   check("Vendor lock-in requests created with reply links", vb.length >= 2 && vb.every((b) => b.reply_token), `${vb.length} vendors`);
   for (const b of vb) { must(await sb.from("vendor_bookings").update({ status: "confirmed", replied_at: new Date().toISOString() }).eq("id", b.id), "vr"); must(await sb.from("agent_tasks").insert({ kind: "vendor_replied", wedding_id: wid, payload: { booking_id: b.id } }), "t"); }
