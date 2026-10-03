@@ -218,7 +218,8 @@ export async function routeTasks(deps: AgentDeps, dispatch: Dispatcher, limit = 
       if (!(await store.claimAgentTask(task.id, target, CHIEF_OF_STAFF))) continue; // another run has it
       res.routed++;
       // Hand over to the target agent's entry point; it applies its own gate.
-      const out = await dispatch(target, task);
+      // One bad task (e.g. its wedding was deleted) must never block the rest of the queue.
+      const out = await dispatch(target, task).catch((err: unknown) => ({ ok: false, result: { error: err instanceof Error ? err.message : String(err) } as Json }));
       if (out) {
         await store.updateAgentTask(task.id, { status: out.ok ? "done" : "failed", result: out.result });
         if (out.ok) res.done++;

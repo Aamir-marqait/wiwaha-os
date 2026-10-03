@@ -140,3 +140,19 @@ describe("Chief of Staff: new leads", () => {
     expect(store.tasks[0]!.status).toBe("done");
   });
 });
+
+describe("Chief of Staff resilience", () => {
+  it("a task whose handler throws is marked failed and the rest still route", async () => {
+    const { MemoryAgentStore } = await import("../../framework/memory-store");
+    const { NoLlm } = await import("../../framework/llm");
+    const store = new MemoryAgentStore();
+    const deps = { store, llm: new NoLlm(), now: () => new Date("2026-10-03T04:30:00Z") };
+    const t = (id: string) => ({ id, from_agent: null, to_agent: null, kind: "new_lead", payload: {}, lead_id: "l1", wedding_id: null, status: "queued", created_at: "" });
+    store.tasks = [t("bad"), t("good")];
+    let calls = 0;
+    const out = await routeTasks(deps, async (_target, task) => { calls++; if (task.id === "bad") throw new Error("boom"); return { ok: true, result: {} }; });
+    expect(calls).toBe(2);
+    expect(out.status === "done" && out.result.done).toBe(1);
+    expect(store.tasks.find((x) => x.id === "bad")!.status).toBe("failed");
+  });
+});
