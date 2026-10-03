@@ -1,7 +1,7 @@
 /**
  * The 21 agents from PRD §8. Seeds the `agents` table; the owner then controls
  * the autonomy dial, kill switch and model per agent in Settings → Agents.
- * Every agent ships in `draft`. Agents not yet built (later phases) ship disabled.
+ * Every agent ships in `draft` (Phases 1–4 are all built and switched on).
  */
 export type Vertical = "all" | "sales_marketing" | "event_crm" | "operations";
 

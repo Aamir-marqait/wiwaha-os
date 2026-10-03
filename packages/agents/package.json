@@ -17,7 +17,8 @@
     "@anthropic-ai/sdk": "^0.131.0",
     "@supabase/supabase-js": "^2.117.2",
     "@wiwaha/db": "workspace:*",
-    "@wiwaha/policy": "workspace:*"
+    "@wiwaha/policy": "workspace:*",
+    "@wiwaha/integrations": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^22.10.0",

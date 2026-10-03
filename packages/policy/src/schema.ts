@@ -146,6 +146,120 @@ export const policySchemas = {
     portal: z.array(z.enum(["en", "kn", "hi"])),
     voice: z.array(z.enum(["en", "kn", "hi", "ta", "te"])),
   }),
+
+  // ---- Phase 2: sales engine ------------------------------------------------
+  "channels.replies": z.object({
+    reply_on_same_channel: z.boolean(),
+    fallback_channel: z.enum(["whatsapp", "email"]),
+    hot_lead_alert_channel: z.enum(["whatsapp", "email", "in_app"]),
+    hot_lead_alert_role: z.enum(["sales", "owner"]),
+    website_chat_enabled: z.boolean(),
+  }),
+  "visits.booking": z.object({
+    slot_minutes: z.number().int().positive(),
+    open_from: z.string().regex(/^\d{2}:\d{2}$/),
+    open_until: z.string().regex(/^\d{2}:\d{2}$/),
+    days_open: z.array(z.number().int().min(0).max(6)),
+    lead_time_hours: z.number().int().nonnegative(),
+    reminder_hours_before: z.number().int().positive(),
+    confirmation_channel: z.enum(["whatsapp", "email"]),
+    location_name: z.string(),
+    location_pin_url: z.string().nullable(),
+  }),
+  "voice.concierge": z.object({
+    hours: z.literal("24x7"),
+    record_calls: z.boolean(),
+    announce_recording: z.boolean(),
+    transfer_to_role: z.enum(["sales", "owner", "event_manager"]),
+    transfer_number_e164: z.string().nullable(),
+    callback_within_minutes: z.number().int().positive(),
+    transfer_on: z.array(z.enum(["asked_for_person", "upset", "off_policy"])),
+  }),
+  "reviews.replies": z.object({
+    platforms: z.array(z.enum(["google", "wedmegood"])),
+    reply_needs_approval: z.boolean(),
+    capture_testimonial_min_score: z.number().int().min(1).max(5),
+  }),
+
+  // ---- Phase 3: Wedding Room and portal ------------------------------------
+  "contracts.process": z.object({
+    owner_approves_before_send: z.boolean(),
+    esign_provider: z.enum(["digio", "leegality"]),
+    template_version: z.string(),
+  }),
+  "onboarding.welcome": z.object({
+    trigger: z.literal("deposit_paid"),
+    channels: z.array(z.enum(["whatsapp", "email"])),
+    whatsapp_group_members: z.array(z.enum(["couple", "parent", "planner", "owner", "event_manager", "sales"])),
+  }),
+  "portal.nudges": z.object({
+    nudge_days_after_recommended: z.number().int().nonnegative(),
+    call_task_days_after_nudge: z.number().int().positive(),
+    snooze_max_days: z.number().int().positive(),
+  }),
+  "menus.rules": z.object({
+    cuisines: z.array(z.string()),
+    outside_caterer_rules: z.string(),
+    tasting_lead_days: z.number().int().nonnegative(),
+    plate_count_lock_days_before: z.number().int().positive(),
+  }),
+  "quotes.rules": z.object({
+    validity_days: z.number().int().positive(),
+    off_book_needs_owner: z.boolean(),
+    custom_decor_needs_owner: z.boolean(),
+  }),
+  "vendors.lockin": z.object({
+    chase_after_hours: z.number().int().positive(),
+    max_chases: z.number().int().nonnegative(),
+    escalate_after_chases: z.boolean(),
+  }),
+
+  // ---- Phase 4: operations and growth --------------------------------------
+  "tasks.escalation": z.object({
+    to_event_manager_after_buffer: z.boolean(),
+    to_owner_after_hours: z.number().int().positive(),
+  }),
+  "rooms.operations": z.object({
+    check_in_time: z.string().regex(/^\d{2}:\d{2}$/),
+    check_out_time: z.string().regex(/^\d{2}:\d{2}$/),
+    housekeeping_minutes_per_room: z.number().int().positive(),
+    pickup_points: z.array(z.string()),
+  }),
+  "estate.purchases": z.object({
+    owner_approval_above_paise: paise,
+    low_stock_alert_role: z.enum(["staff", "owner"]),
+  }),
+  "finance.gst": z.object({
+    rates_bps: z.record(z.string(), z.number().int().min(0).max(2800)),
+    gstin: z.string().nullable(),
+    invoice_prefix: z.string(),
+    state_code: z.string(),
+    export_format: z.enum(["tally_csv", "zoho_csv"]),
+  }),
+  "closeout.inspection": z.object({
+    photo_required: z.boolean(),
+    security_deposit_paise: paise.nullable(),
+    deposit_decision_role: z.enum(["owner", "accounts"]),
+  }),
+  "offboarding.sequence": z.object({
+    steps: z.array(z.object({
+      key: z.enum(["thank_you", "photo_sharing", "review_form", "parting_gift", "newsletter", "referral_ask"]),
+      days_after_event: z.number().int().nonnegative(),
+    })),
+    anniversary_wishes: z.boolean(),
+  }),
+  "content.rhythm": z.object({
+    weekly: z.object({
+      mon: z.string(), tue: z.string(), wed: z.string(), thu: z.string(), fri: z.string(), sat: z.string(), sun: z.string(),
+    }),
+    platforms: z.array(z.enum(["instagram", "facebook", "youtube", "linkedin", "x"])),
+    needs_approval: z.literal(true),
+  }),
+  "ads.reporting": z.object({
+    report_day: z.enum(["mon", "tue", "wed", "thu", "fri", "sat", "sun"]),
+    budget_changes_need_owner: z.literal(true),
+    platforms: z.array(z.enum(["meta", "google"])),
+  }),
 } as const;
 
 export type PolicyKey = keyof typeof policySchemas;

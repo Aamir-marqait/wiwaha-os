@@ -24,7 +24,7 @@ export class MemoryAgentStore implements AgentStore {
   constructor() {
     this.agents = AGENT_ROSTER.map((a) => ({
       key: a.key, name: a.name, vertical: a.vertical, job: a.job, human_gate: a.humanGate, phase: a.phase,
-      implemented: a.phase === 1, enabled: a.phase === 1, autonomy: "draft", model: a.model, config: {}, updated_at: new Date().toISOString(),
+      implemented: true, enabled: true, autonomy: "draft", model: a.model, config: {}, updated_at: new Date().toISOString(),
     }));
     this.policies = DEFAULT_POLICIES.map((p) => ({ ...p, value: structuredClone(p.value) as unknown, version: 1 }));
   }

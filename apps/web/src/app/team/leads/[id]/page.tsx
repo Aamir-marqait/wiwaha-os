@@ -10,6 +10,10 @@ import { requireStaff } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { releaseEntry, rerunLeadDesk } from "../actions";
 import { HoldForm, StatusSelect } from "./lead-controls";
+import { BookVisit, VisitCard, type SlotOption } from "./visit-panel";
+import { BookedForm } from "./booked-form";
+import { findSlots, formatSlot, istDate, SupabaseDb } from "@wiwaha/agents";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 export const metadata = { title: "Lead" };
 
@@ -34,6 +38,18 @@ export default async function LeadPage({ params, searchParams }: { params: Promi
     supabase.from("policies").select("key, topic, title, rule_text, value, version, client_visible, needs_confirmation, sort"),
   ]);
   const book = PolicyBook.fromRows((policies.data ?? []) as PolicyRow[]);
+  const [{ data: calls }, { data: people }] = await Promise.all([
+    supabase.from("calls").select("id, direction, purpose, handled_by, started_at, duration_seconds, summary, transcript, outcome, recording_url, status, language").eq("lead_id", id).order("started_at", { ascending: false }),
+    supabase.from("profiles").select("id, full_name, role").in("role", ["sales", "owner", "event_manager"]).eq("active", true),
+  ]);
+  const nameOf = (pid: string | null) => (people ?? []).find((p) => p.id === pid)?.full_name ?? null;
+  let slots: SlotOption[] = [];
+  if ((viewer.profile.role === "owner" || viewer.profile.role === "sales") && book.has("visits.booking")) {
+    const now = new Date();
+    const free = await findSlots(new SupabaseDb(createAdminClient("system")), book, now, istDate(now), 7, 12).catch(() => []);
+    slots = free.map((s) => ({ startsAt: s.startsAt, executiveId: s.executiveId, label: formatSlot(s.startsAt), executive: nameOf(s.executiveId) ?? "Sales" }));
+  }
+  const checklist = book.has("visits.checklist") ? book.get("visits.checklist").items : [];
   const holdHours = book.has("holds.soft_hold") ? book.get("holds.soft_hold").hours : 72;
   const canEdit = viewer.profile.role === "owner" || viewer.profile.role === "sales";
   const contact = lead.contact as { full_name: string; phone_e164: string | null; email: string | null; city: string | null; consent_whatsapp: boolean; consent_email: boolean };
@@ -78,6 +94,25 @@ export default async function LeadPage({ params, searchParams }: { params: Promi
             {lead.message ? <p className="mx-4 mb-4 rounded-xl bg-ivory-100 px-4 py-3 text-sm italic text-ink sm:mx-5">“{lead.message as string}”</p> : null}
           </Card>
 
+          {(calls ?? []).length ? (
+            <Card>
+              <CardHeader title="Calls" subtitle="Answered by the Voice Concierge or the team" />
+              <ul className="divide-y divide-line">
+                {(calls ?? []).map((c) => (
+                  <li key={c.id as string} className="px-4 py-3 text-sm sm:px-5">
+                    <div className="flex flex-wrap items-baseline justify-between gap-2">
+                      <p className="font-medium capitalize">{c.direction} {String(c.purpose ?? "call").replace(/_/g, " ")} · {String(c.outcome ?? c.status).replace(/_/g, " ")}{c.language && c.language !== "en" ? ` · ${c.language}` : ""}</p>
+                      <time className="text-xs text-ink-soft">{formatDateTimeIST(c.started_at as string)}{c.duration_seconds ? ` · ${Math.round((c.duration_seconds as number) / 60)} min` : ""}</time>
+                    </div>
+                    {c.summary ? <p className="mt-1 text-ink-soft">{c.summary as string}</p> : null}
+                    {c.recording_url ? <audio controls preload="none" src={c.recording_url as string} className="mt-2 w-full" /> : null}
+                    {c.transcript ? <details className="mt-1"><summary className="cursor-pointer text-xs text-sage-700">Transcript</summary><p className="mt-1 whitespace-pre-line text-xs">{c.transcript as string}</p></details> : null}
+                  </li>
+                ))}
+              </ul>
+            </Card>
+          ) : null}
+
           <Card>
             <CardHeader title="Timeline" subtitle="Enquiries, drafts, visits and agent actions" />
             <ol className="space-y-0 px-4 py-2 sm:px-5">
@@ -120,6 +155,32 @@ export default async function LeadPage({ params, searchParams }: { params: Promi
               <p className="mt-3 text-xs text-ink-soft">Weights come from the <Link href="/team/settings/policy" className="underline">policy book</Link>.</p>
             </Card>
           ) : null}
+
+          {canEdit ? (
+            <Card className="p-4 sm:p-5">
+              <h2 className="font-serif text-xl font-semibold">Booking</h2>
+              {lead.wedding_id ? (
+                <p className="mt-2 text-sm">Booked. <Link href={`/team/weddings/${lead.wedding_id as string}`} className="text-sage-700 underline">Open the Wedding Room →</Link></p>
+              ) : (
+                <div className="mt-3"><BookedForm leadId={id} defaultTitle={contact.full_name} defaultDate={lead.date_wanted as string | null} managers={(people ?? []).filter((p) => p.role === "event_manager" || p.role === "owner").map((p) => ({ id: p.id as string, name: p.full_name as string }))} /></div>
+              )}
+            </Card>
+          ) : null}
+
+          <Card className="p-4 sm:p-5">
+            <h2 className="font-serif text-xl font-semibold">Site visits</h2>
+            <ul className="mt-2 space-y-2">
+              {(visits.data ?? []).length === 0 ? <li className="text-sm text-ink-soft">No visits yet.</li> : null}
+              {(visits.data ?? []).map((v) => (
+                <VisitCard key={v.id as string} leadId={id} checklist={checklist} v={{
+                  id: v.id as string, label: `#${v.visit_number} · ${formatSlot(v.scheduled_at as string)}`, status: v.status as string,
+                  executive: nameOf(v.executive_id as string | null), attendees: v.attendees as string | null, brief: v.pre_visit_brief as string | null, recap: (v as { recap?: string | null }).recap ?? null,
+                  followUp: v.follow_up_outcome === "pending" ? (v.follow_up_due_at ? `due ${formatDateTimeIST(v.follow_up_due_at as string)}` : "after the visit") : String(v.follow_up_outcome).replace(/_/g, " "),
+                }} />
+              ))}
+            </ul>
+            {canEdit ? <div className="mt-4 border-t border-line pt-4"><BookVisit leadId={id} slots={slots} /></div> : null}
+          </Card>
 
           <Card className="p-4 sm:p-5">
             <h2 className="font-serif text-xl font-semibold">Date holds</h2>

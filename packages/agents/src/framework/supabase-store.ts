@@ -71,7 +71,7 @@ export class SupabaseAgentStore implements AgentStore {
       await this.db.from("messages").insert({
         lead_id: m.leadId ?? null, wedding_id: m.weddingId ?? null, channel: m.channel, direction: m.direction,
         status: m.status, author_kind: m.authorKind, agent_key: m.agentKey ?? null, approval_id: m.approvalId ?? null,
-        to_address: m.toAddress ?? null, subject: m.subject ?? null, body: m.body, metadata: m.metadata ?? {},
+        to_address: m.toAddress ?? null, subject: m.subject ?? null, body: m.body, metadata: m.metadata ?? {}, client_visible: m.clientVisible ?? false,
       }).select("id").single(),
       "create message",
     ) as { id: string };

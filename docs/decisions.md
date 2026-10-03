@@ -91,3 +91,35 @@ Migration `20261003001100_pin_search_path.sql` clears Supabase advisor lint 0011
 **Decision:** `.github/workflows/deploy-migrations.yml` applies new migration files to staging on every merge to `claude/phase-1-foundation` or `main`. It uses `packages/db/scripts/deploy-migrations.mjs`, which goes through the Supabase Management API, so the only secret is `SUPABASE_ACCESS_TOKEN` and no database password is needed. Each file runs in one transaction with its `supabase_migrations.schema_migrations` row, applied in filename order, and the run stops at the first failure. Rollback on failure and idempotent reruns were tested against staging.
 **Why:** collaborators get only GitHub access. Every schema change goes through a reviewed PR and the local `db:test` gate, and nobody applies SQL to staging by hand.
 **Note:** the 11 migrations applied earlier through the Supabase connector were re-keyed in `schema_migrations` to their filename versions, so CI sees them as applied.
+
+## D23 — The 15-minute tick runs from pg_cron through pg_net (2026-10-04)
+**Decision:** Vercel Hobby allows only daily crons, so migration `20261004000800_tick_schedule.sql` schedules `wiwaha-agent-tick` (`*/15 * * * *`) in Supabase `pg_cron`. It calls `app.call_tick()`, which reads the app URL and `CRON_SECRET` from Supabase Vault (`wiwaha_app_url`, `wiwaha_cron_secret`) and makes a `pg_net` GET to `/api/cron/tick`. With either secret missing it does nothing. The tick runs every scheduled job (routing, follow-up calls, reminders, nudges, chases, plate locks, stand-ups, escalations, estate, close-outs, offboarding, content, ads) and then sends approved messages. Each job is idempotent and checks its own time of day (8:30 am and 7 pm IST from policy `briefs.schedule`) or weekday.
+**Why:** one scheduler and no secrets in SQL. Running a job twice never sends twice: briefs are unique per person per day, weekly jobs claim a `job_runs` row, and reminders record what they sent.
+
+## D24 — Sandbox first for every outside channel (2026-10-04)
+**Decision:** `packages/integrations` picks a live adapter only when that channel's keys are set (Gupshup WhatsApp, Resend email, Instagram via Meta, Plivo calls, Razorpay links). Otherwise it uses a sandbox adapter that returns `sbx_…` references. Every send, live or sandbox, is an `outbox` row. Payment links in sandbox open `/pay/sandbox/<payment>`, which marks the payment paid through the same database trigger Razorpay's webhook uses. E-signature has no live adapter yet: `/sign/sandbox/<contract>` stands in until Digio or Leegality is chosen.
+**Why:** the handoff says test mode until Prashanth approves going live. The whole flow (booking → contract → 10/40/50 → onboarding → vendors) can be demoed end to end without one rupee or message leaving the building.
+**Revisit:** at go-live, set the keys in Vercel. The sandbox pay and sign pages switch themselves off when Razorpay or e-sign keys exist.
+
+## D25 — Agents get a scoped database port, not raw Supabase (2026-10-04)
+**Decision:** Phase 2–4 agents talk to the database through `framework/db.ts`: a small `Db` interface (select, insert, update, upsert, rpc) wrapped by `scopeDb()` with the grants in each agent's `tools.ts`. Calling a table or RPC that isn't granted throws `ToolNotAllowedError`. Tests use `MemoryDb`, which mimics the constraints and triggers that matter (unique follow-up call, décor unlock, job_runs).
+**Why:** "tools.ts: only the tools this agent may call" is enforced in code, and every agent's scenario tests run in milliseconds without Postgres.
+
+## D26 — Who answers the family (2026-10-04)
+**Decision:** The Wedding Room agent answers family messages (WhatsApp group and portal chat) only from the couple's own record (payments, functions, stages) and client-visible policies. Decisions are logged to `wedding_decisions`. Price, discount and anything unknown go to a person. Couples see a message only after it has been sent: an RLS change hides `pending_approval` drafts from them.
+
+## D27 — Portal unlocks enforced in the database (2026-10-04)
+**Decision:** Every portal write path checks `app.require_stage_open` (brief, functions, rooming list, menu approval, moodboard shortlist), and a trigger refuses any moodboard insert, even by an agent, before the décor unlock (40% paid). Contracts can't move to `sent` without an approved `contract` approval, and quotes with off-book or custom lines can't be sent without Prashanth's approval.
+
+## D28 — Offline task completion (2026-10-04)
+**Decision:** `/team/tasks` keeps a copy of the person's list (localStorage) and a service worker (`public/sw.js`) caches the page. A completion made offline is stored in IndexedDB with its proof photo as a Blob and the time it was ticked. When the phone is back online it uploads the photo to the private `task-proof` bucket and calls `complete_task(p_completed_at)`. The RPC is idempotent (a done task stays done) and records `completed_offline_at`.
+
+## D29 — Templates for plans and run-of-show are data (2026-10-04)
+**Decision:** T-minus steps come from `task_templates` (plan `standard_wedding`, with owners by role; the event manager is the wedding's own). Run-of-show items come from `run_of_show_templates` (minutes relative to each function's start, optionally tied to a vendor category). Both tables are editable by the owner and event managers. When the Drive templates arrive, load them into these tables; no code changes.
+
+## D30 — Money after the event (2026-10-04)
+**Decision:** The Finance agent re-rates every quote line with GST from policy `finance.gst` (category → rate), splits CGST and SGST for Karnataka (state code 29, otherwise IGST), and issues two invoices (final and GST) as one `invoice` approval. Profit is collected revenue (ex-GST share) minus `cost_entries`. Export to Tally or Zoho Books is a CSV (`/api/finance/export`). The security-deposit decision is proposed from the handover inspection and decided by Prashanth. No agent refunds or charges anything.
+**Open:** `closeout.inspection.security_deposit_paise` is empty, so no deposit decision is proposed until Prashanth sets one. `finance.gst.gstin` is empty, so it isn't printed yet.
+
+## D31 — Marketing without live accounts (2026-10-04)
+**Decision:** Content Studio drafts next week's posts (5 platforms × 7 days, brand rhythm from `content.rhythm`) as one `social_post` approval per day. Approved posts become `scheduled` with a sandbox `social_post` outbox row, because no publishing API is connected. Ad spend is imported as CSV on `/team/marketing` until the Meta and Google Ads APIs are connected. The weekly ads report is an `ad_budget` approval: a recommendation only, applied by hand in the ads managers.

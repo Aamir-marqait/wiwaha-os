@@ -40,6 +40,7 @@ export default async function TodayPage({ searchParams }: { searchParams: Promis
       {denied ? <p className="mb-4 rounded-xl bg-burgundy-50 px-4 py-2 text-sm text-burgundy-700">That page is for another role.</p> : null}
       <PageTitle title={`${greeting}, ${viewer.profile.full_name.split(" ")[0]}`} subtitle={formatDateIST(today, { weekday: "long", day: "numeric", month: "long", year: "numeric" })} />
 
+      {isOwner ? <p className="mb-3 text-sm"><Link href="/team/owner" className="text-sage-700 underline">Your five numbers, bookings and profit →</Link></p> : null}
       <div className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Stat label="New enquiries (24 h)" value={(newLeads.data ?? []).length} hint={<Link href="/team/leads" className="underline">Lead inbox</Link>} />
         <Stat label="Waiting for approval" value={approvals.count ?? 0} tone={(approvals.count ?? 0) > 0 ? "burgundy" : "sage"} hint={<Link href="/team/approvals" className="underline">Approval queue</Link>} />

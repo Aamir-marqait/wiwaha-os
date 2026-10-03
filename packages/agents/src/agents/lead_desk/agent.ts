@@ -1,10 +1,11 @@
-import type { Json, LeadWithContact } from "@wiwaha/db";
+import type { Json, LeadWithContact, MessageChannel } from "@wiwaha/db";
 import { formatDateIST, rupees, todayIST } from "@wiwaha/db";
 import { decorUnlockLabel, isOutOfTown, startingFromBand, type PolicyBook, type PolicyKey } from "@wiwaha/policy";
 import { checkClientMessage, type GuardrailFlag } from "../../framework/guardrails";
 import { decideDelivery, runAgent, type RunContext, type RunOutcome } from "../../framework/runner";
 import type { AgentDeps, LlmClient } from "../../framework/types";
 import { PROMPTS } from "../../prompts.generated";
+import { alertStaff } from "../../framework/kit";
 import { LEAD_DESK_GATE, replyPriority } from "./gate";
 import { detectIntents, scoreLead, type Intent, type ScoreResult } from "./scoring";
 import type { LeadDeskStore } from "./tools";
@@ -22,6 +23,7 @@ export const LEAD_DESK_POLICIES: readonly PolicyKey[] = [
   "followup.after_visit",
   "visits.checklist",
   "lead_scoring",
+  "channels.replies",
 ];
 
 export interface ReplyFacts {
@@ -77,15 +79,26 @@ export async function processLead(deps: AgentDeps, leadId: string, opts: { force
       durationMs: Date.now() - t0,
     });
 
-    // 2. Hot leads go straight to the sales executive (the human gate).
+    // 2. Hot leads go straight to the sales executive (the human gate),
+    //    in-app and on WhatsApp when the policy says so.
     if (score.hot) {
       const name = lead.contact?.full_name ?? "A new lead";
-      await store.notify({
-        userId: lead.assigned_to, role: lead.assigned_to ? null : LEAD_DESK_GATE.hotLeadNotifyRole,
+      const alert = {
         title: `Hot lead: ${name} (${score.score})`,
         body: [lead.date_wanted ? formatDateIST(lead.date_wanted) : null, lead.guest_count ? `${lead.guest_count} guests` : null, lead.source].filter(Boolean).join(" · "),
         link: `/team/leads/${lead.id}`,
-      });
+      };
+      const rules = ctx.book.has("channels.replies") ? ctx.book.get("channels.replies") : null;
+      if (deps.db && deps.channels) {
+        await alertStaff(deps, {
+          ...alert, leadId: lead.id,
+          userIds: lead.assigned_to ? [lead.assigned_to] : undefined,
+          role: lead.assigned_to ? undefined : rules?.hot_lead_alert_role ?? LEAD_DESK_GATE.hotLeadNotifyRole,
+          whatsapp: rules?.hot_lead_alert_channel === "whatsapp",
+        });
+      } else {
+        await store.notify({ userId: lead.assigned_to, role: lead.assigned_to ? null : LEAD_DESK_GATE.hotLeadNotifyRole, ...alert });
+      }
     }
 
     // 3. Don't stack drafts when a family writes twice in a few minutes
@@ -135,8 +148,7 @@ export async function processLead(deps: AgentDeps, leadId: string, opts: { force
 
     // 6. The gate (autonomy dial + guardrail flags).
     const delivery = decideDelivery(ctx.agent, flags);
-    const channel = lead.contact?.phone_e164 ? "whatsapp" : "email";
-    const toAddress = channel === "whatsapp" ? lead.contact?.phone_e164 ?? null : lead.contact?.email ?? null;
+    const { channel, toAddress } = await replyRoute(deps, ctx.book, lead);
 
     const actionId = await ctx.log({
       action: "draft_reply", status: delivery === "approval" ? "gated" : "ok", leadId: lead.id,
@@ -173,6 +185,29 @@ export async function processLead(deps: AgentDeps, leadId: string, opts: { force
 
     return { leadId: lead.id, score, intents, reply: { body, source, flags, replacedUnsafeDraft }, approvalId, messageId, escalations };
   });
+}
+
+/**
+ * Where the reply goes: the same channel the family used (policy
+ * "channels.replies"), falling back to WhatsApp or email for web forms.
+ */
+export async function replyRoute(deps: AgentDeps, book: PolicyBook, lead: LeadWithContact): Promise<{ channel: MessageChannel; toAddress: string | null }> {
+  const phone = lead.contact?.phone_e164 ?? null;
+  const email = lead.contact?.email ?? null;
+  const rules = book.has("channels.replies") ? book.get("channels.replies") : null;
+  const fallback = (): { channel: MessageChannel; toAddress: string | null } =>
+    (rules?.fallback_channel ?? "whatsapp") === "whatsapp" && phone ? { channel: "whatsapp", toAddress: phone } : email ? { channel: "email", toAddress: email } : { channel: "whatsapp", toAddress: phone };
+  if (!rules?.reply_on_same_channel || !deps.db) return fallback();
+  const [touch] = await deps.db.select<{ channel: string; payload: Record<string, unknown> | null }>("lead_touches", {
+    where: { lead_id: lead.id, direction: "inbound" }, order: [{ column: "received_at", ascending: false }], limit: 1,
+  });
+  const replyTo = typeof touch?.payload?.reply_to === "string" ? touch.payload.reply_to : null;
+  switch (touch?.channel ?? lead.source) {
+    case "whatsapp": return phone ? { channel: "whatsapp", toAddress: phone } : fallback();
+    case "instagram": return replyTo ? { channel: "instagram", toAddress: replyTo } : fallback();
+    case "web_chat": return replyTo ? { channel: "web_chat", toAddress: replyTo } : fallback();
+    default: return fallback();
+  }
 }
 
 function buildFacts(book: PolicyBook, lead: LeadWithContact, free: { name: string; capacity: number }[] | null, intents: Intent[]): ReplyFacts {
