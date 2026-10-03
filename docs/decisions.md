@@ -69,3 +69,8 @@ Portal Hindi/Kannada strings (Phase 3, with the portal build-out), client-portal
 
 ## D17 — Default hot-lead threshold 85 (2026-10-03)
 Testing with the seed showed 75 marked nearly every lead hot. 85 keeps "hot" meaningful; tune in policy `lead_scoring`.
+
+## D18 — Staging Supabase project (2026-10-03)
+**Decision:** Staging lives in the Supabase project `wiwaha-os-staging` (ref `ytqojvumknmebcsjqzio`, Mumbai `ap-south-1`, org "RohithMarqait's Org", free plan). All ten migrations from `packages/db/supabase/migrations` were applied under the same names, then all three seed files including the demo seed. `pg_cron` is on and `release-expired-holds` runs every 15 minutes.
+**Consequence:** Migrations have now reached a real project. From here on **only add new migrations**; never edit an applied one.
+**Open:** The security advisor warns that 16 functions have a mutable `search_path` (the `public.*` RPC wrappers and a few `app.*` helpers) and that leaked-password protection is off. Neither blocks staging. Fix both in a new migration and in Auth settings before production.

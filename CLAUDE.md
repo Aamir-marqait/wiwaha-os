@@ -86,7 +86,7 @@ node apps/web/e2e/done-when.mjs          # Phase 1 "done when" checks in a brows
 Setup and deploy: `docs/runbooks/setup.md`. Demo: `docs/runbooks/demo-script.md`. Open questions for Prashanth: `docs/open-questions.md`.
 
 ## Gotchas
-- Migrations that haven't reached a real project yet may be edited in place. Once staging exists, only add new migrations.
+- Staging Supabase exists (`ytqojvumknmebcsjqzio`, see `docs/decisions.md` D18): **only add new migrations**; never edit an applied one.
 - PostgREST only exposes `public`: every RPC lives in `app.*`, with a thin `public.*` wrapper and explicit grants.
 - `app.is_service()` uses `session_user`, so it stays false inside SECURITY DEFINER functions called by users.
 - Next.js 16: `src/proxy.ts` replaces `middleware.ts`; `cookies()`/`headers()`/`params` are async.
