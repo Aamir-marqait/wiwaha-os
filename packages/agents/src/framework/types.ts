@@ -9,7 +9,9 @@ import type {
   MessageChannel,
   MessageStatus,
 } from "@wiwaha/db";
+import type { Integrations } from "@wiwaha/integrations";
 import type { PolicyRow } from "@wiwaha/policy";
+import type { Db } from "./db";
 
 export type AgentKey = string;
 
@@ -168,8 +170,18 @@ export interface LlmClient {
   complete(req: LlmRequest): Promise<LlmResult>;
 }
 
+/** Portal logins (Supabase Auth admin in production, recorded in tests). */
+export interface PortalAuth {
+  inviteClient(input: { email: string; fullName: string; redirectTo: string }): Promise<{ ok: boolean; error?: string }>;
+}
+
 export interface AgentDeps {
   store: AgentStore;
   llm: LlmClient;
   now?: () => Date;
+  /** Database port for Phase 2+ agents; each agent scopes it through its tools.ts. */
+  db?: Db;
+  /** Outbound channels (sandboxed until real provider keys are set). */
+  channels?: Integrations;
+  auth?: PortalAuth;
 }

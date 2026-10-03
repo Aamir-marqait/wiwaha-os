@@ -30,7 +30,7 @@ const lines: string[] = [
   "insert into public.agents (key, name, vertical, job, human_gate, phase, implemented, enabled, autonomy, model) values",
   AGENT_ROSTER.map(
     (a) =>
-      `  (${q(a.key)}, ${q(a.name)}, ${q(a.vertical)}, ${q(a.job)}, ${q(a.humanGate)}, ${a.phase}, ${a.phase === 1}, ${a.phase === 1}, 'draft', ${q(a.model)})`,
+      `  (${q(a.key)}, ${q(a.name)}, ${q(a.vertical)}, ${q(a.job)}, ${q(a.humanGate)}, ${a.phase}, true, true, 'draft', ${q(a.model)})`,
   ).join(",\n"),
   "on conflict (key) do nothing;",
   "",

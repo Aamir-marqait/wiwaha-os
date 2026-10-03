@@ -10,10 +10,10 @@ export type LanguageCode = "en" | "kn" | "hi" | "ta" | "te";
 
 export type LeadSource =
   | "website" | "manual" | "phone" | "whatsapp" | "instagram" | "facebook" | "meta_form"
-  | "google_form" | "google_ads" | "wedmegood" | "referral" | "walk_in" | "other";
+  | "google_form" | "google_ads" | "wedmegood" | "referral" | "walk_in" | "other" | "web_chat";
 export const LEAD_SOURCES: readonly LeadSource[] = [
   "website", "manual", "phone", "whatsapp", "instagram", "facebook", "meta_form",
-  "google_form", "google_ads", "wedmegood", "referral", "walk_in", "other",
+  "google_form", "google_ads", "wedmegood", "referral", "walk_in", "other", "web_chat",
 ];
 export type LeadStatus =
   | "new" | "contacted" | "visit_booked" | "visited" | "follow_up_done" | "negotiating" | "won" | "lost" | "no_response";
@@ -25,12 +25,13 @@ export type AgentAutonomy = "draft" | "act_and_notify" | "act_silently";
 export type AgentActionStatus = "ok" | "gated" | "blocked" | "escalated" | "error" | "fallback" | "skipped_disabled";
 export type ApprovalKind =
   | "lead_reply" | "client_message" | "discount" | "contract" | "quote" | "quote_line" | "custom_decor"
-  | "vendor_payment" | "ad_budget" | "purchase" | "brief" | "social_post" | "review_reply" | "policy_answer" | "other";
+  | "vendor_payment" | "ad_budget" | "purchase" | "brief" | "social_post" | "review_reply" | "policy_answer" | "other"
+  | "visit_message" | "moodboard" | "menu" | "vendor_message" | "invoice" | "deposit_decision" | "run_of_show" | "t_minus_plan";
 export type ApprovalStatus = "pending" | "approved" | "edited" | "rejected" | "expired";
 export type StageStatus = "locked" | "not_started" | "in_progress" | "awaiting_client" | "done" | "snoozed";
 export type TaskStatus = "todo" | "in_progress" | "blocked" | "done" | "cancelled";
 export type TaskPriority = "low" | "normal" | "high" | "urgent";
-export type MessageChannel = "whatsapp" | "email" | "sms" | "instagram" | "portal" | "phone" | "internal";
+export type MessageChannel = "whatsapp" | "email" | "sms" | "instagram" | "portal" | "phone" | "internal" | "web_chat";
 export type MessageStatus =
   | "draft" | "pending_approval" | "approved" | "queued" | "sent" | "delivered" | "read" | "failed" | "rejected" | "received";
 export type PaymentStatus = "scheduled" | "link_sent" | "paid" | "overdue" | "waived" | "refunded" | "cancelled";

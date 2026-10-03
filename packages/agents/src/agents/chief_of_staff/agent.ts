@@ -138,6 +138,27 @@ const ROUTES: Record<string, string> = {
   hold_released_notify_client: "lead_desk",
   new_lead: "lead_desk",
   lead_updated: "lead_desk",
+  // Phase 2
+  visit_booked: "visit_host",
+  visit_voice_note: "visit_host",
+  external_review: "reputation",
+  review_submitted: "reputation",
+  // Phase 3
+  wedding_booked: "contract_payments",
+  payment_received: "contract_payments",
+  deposit_paid: "onboarding",
+  brief_submitted: "brief",
+  menu_approved: "menu",
+  moodboard_shortlisted: "design",
+  quote_requested: "quote",
+  quote_approved: "vendor_coordinator",
+  vendor_replied: "vendor_coordinator",
+  family_message: "wedding_room",
+  // Phase 4
+  rooming_list_submitted: "rooms_guests",
+  closeout_due: "finance",
+  inspection_done: "finance",
+  offboarding_due: "offboarding",
 };
 const STAGE_ROUTES: Record<string, string> = {
   brief: "brief",
@@ -154,6 +175,11 @@ export function routeFor(task: Pick<AgentTaskRow, "kind" | "payload">): string |
   if (task.kind === "stage_started") {
     const key = typeof task.payload === "object" && task.payload && !Array.isArray(task.payload) ? task.payload.stage_key : null;
     return typeof key === "string" ? STAGE_ROUTES[key] ?? null : null;
+  }
+  // A human decided an approval: it goes back to the agent that asked for it.
+  if (task.kind === "approval_decided") {
+    const key = typeof task.payload === "object" && task.payload && !Array.isArray(task.payload) ? task.payload.agent_key : null;
+    return typeof key === "string" ? key : null;
   }
   return ROUTES[task.kind] ?? null;
 }

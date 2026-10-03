@@ -8,9 +8,9 @@
 do $$
 begin
   assert (select count(*) from public.agents) = 21, 'expected 21 agents';
-  assert (select count(*) from public.agents where enabled and autonomy = 'draft') = 2, 'only phase-1 agents enabled, all in draft';
+  assert (select count(*) from public.agents where enabled and implemented and autonomy = 'draft') = 21, 'all 21 agents built, switched on, in draft';
   assert (select count(*) from public.agents where autonomy <> 'draft') = 0, 'every agent ships in draft';
-  assert (select count(*) from public.policies) >= 11, 'policy book seeded';
+  assert (select count(*) from public.policies) = 37, 'policy book seeded (Phase 1–4 rules)';
   assert (select rule_text from public.policies where key = 'followup.after_visit')
          = 'Exactly one follow-up call, two days after a site visit. No response = stop calling.', 'follow-up wording';
   assert (select count(*) from public.rooms where active) = 30, '30 rooms today';
