@@ -15,3 +15,4 @@ packages/db/supabase/.branches/
 packages/db/supabase/.temp/
 .vercel
 .env*
+apps/web/next-env.d.ts
