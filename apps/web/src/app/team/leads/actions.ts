@@ -75,3 +75,20 @@ export async function releaseEntry(entryId: string, path: string): Promise<{ err
   revalidatePath("/team/calendar");
   return error ? { error: friendlyError(error) } : {};
 }
+
+/** "Mark as booked": the database creates the wedding, payment schedule and stage cards, then the Contract agent drafts. */
+export async function markBooked(leadId: string, input: { start: string; end: string; totalRupees: number; managerId: string; title: string }): Promise<{ error?: string; weddingId?: string }> {
+  await requireStaff(["owner", "sales"]);
+  if (!input.start || !input.end) return { error: "Choose the event dates." };
+  if (!Number.isFinite(input.totalRupees) || input.totalRupees <= 0) return { error: "Enter the contract value in rupees." };
+  const supabase = await createClient("team");
+  const { data, error } = await supabase.rpc("mark_lead_booked", {
+    p_lead_id: leadId, p_event_start: input.start, p_event_end: input.end,
+    p_contract_total_paise: Math.round(input.totalRupees * 100), p_event_manager_id: input.managerId || null, p_title: input.title || null,
+  });
+  if (error) return { error: friendlyError(error) };
+  revalidatePath(`/team/leads/${leadId}`);
+  revalidatePath("/team/weddings");
+  after(runRouting);
+  return { weddingId: (data as { id: string }).id };
+}

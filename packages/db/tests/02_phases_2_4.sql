@@ -49,3 +49,21 @@ begin
   assert (select count(*) from public.external_reviews) = 0, 'client sees no review queue';
 end $$;
 rollback;
+
+-- A couple never sees a message that is still waiting for approval.
+do $$
+declare v_w uuid;
+begin
+  select id into v_w from public.weddings limit 1;
+  insert into public.messages (wedding_id, channel, direction, status, author_kind, body, client_visible)
+  values (v_w, 'portal', 'outbound', 'pending_approval', 'agent', 'DRAFT-NOT-FOR-CLIENT', true);
+end $$;
+begin;
+select set_config('request.jwt.claims', '{"sub":"66666666-6666-4666-8666-666666666666","role":"authenticated"}', true);
+set local role authenticated;
+do $$
+begin
+  assert (select count(*) from public.messages where body = 'DRAFT-NOT-FOR-CLIENT') = 0, 'pending messages are hidden from the couple';
+end $$;
+rollback;
+delete from public.messages where body = 'DRAFT-NOT-FOR-CLIENT';

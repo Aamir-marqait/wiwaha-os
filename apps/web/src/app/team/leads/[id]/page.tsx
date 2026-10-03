@@ -11,6 +11,7 @@ import { createClient } from "@/lib/supabase/server";
 import { releaseEntry, rerunLeadDesk } from "../actions";
 import { HoldForm, StatusSelect } from "./lead-controls";
 import { BookVisit, VisitCard, type SlotOption } from "./visit-panel";
+import { BookedForm } from "./booked-form";
 import { findSlots, formatSlot, istDate, SupabaseDb } from "@wiwaha/agents";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -39,7 +40,7 @@ export default async function LeadPage({ params, searchParams }: { params: Promi
   const book = PolicyBook.fromRows((policies.data ?? []) as PolicyRow[]);
   const [{ data: calls }, { data: people }] = await Promise.all([
     supabase.from("calls").select("id, direction, purpose, handled_by, started_at, duration_seconds, summary, transcript, outcome, recording_url, status, language").eq("lead_id", id).order("started_at", { ascending: false }),
-    supabase.from("profiles").select("id, full_name").in("role", ["sales", "owner"]),
+    supabase.from("profiles").select("id, full_name, role").in("role", ["sales", "owner", "event_manager"]).eq("active", true),
   ]);
   const nameOf = (pid: string | null) => (people ?? []).find((p) => p.id === pid)?.full_name ?? null;
   let slots: SlotOption[] = [];
@@ -152,6 +153,17 @@ export default async function LeadPage({ params, searchParams }: { params: Promi
               </ul>
               {breakdown.notes.length ? <ul className="mt-3 list-disc pl-4 text-xs text-ink-soft">{breakdown.notes.map((n) => <li key={n}>{n}</li>)}</ul> : null}
               <p className="mt-3 text-xs text-ink-soft">Weights come from the <Link href="/team/settings/policy" className="underline">policy book</Link>.</p>
+            </Card>
+          ) : null}
+
+          {canEdit ? (
+            <Card className="p-4 sm:p-5">
+              <h2 className="font-serif text-xl font-semibold">Booking</h2>
+              {lead.wedding_id ? (
+                <p className="mt-2 text-sm">Booked. <Link href={`/team/weddings/${lead.wedding_id as string}`} className="text-sage-700 underline">Open the Wedding Room →</Link></p>
+              ) : (
+                <div className="mt-3"><BookedForm leadId={id} defaultTitle={contact.full_name} defaultDate={lead.date_wanted as string | null} managers={(people ?? []).filter((p) => p.role === "event_manager" || p.role === "owner").map((p) => ({ id: p.id as string, name: p.full_name as string }))} /></div>
+              )}
             </Card>
           ) : null}
 

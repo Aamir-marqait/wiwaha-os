@@ -5,6 +5,7 @@ import { notFound } from "next/navigation";
 import { StageStatusBadge, UNLOCK_TEXT } from "@/components/stage-status";
 import { requireStaff } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
+import { PlanningPanels } from "./panels";
 
 export const metadata = { title: "Wedding Room" };
 
@@ -69,6 +70,8 @@ export default async function WeddingRoom({ params }: { params: Promise<{ id: st
               })}
             </ul>
           </Card>
+
+          <PlanningPanels supabase={supabase} weddingId={id} role={viewer.profile.role} />
 
           <Card>
             <CardHeader title="Room timeline" subtitle="Every message in this Wedding Room" />
