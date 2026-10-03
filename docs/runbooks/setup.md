@@ -37,6 +37,8 @@ node apps/web/e2e/done-when.mjs        # Phase 1 "done when" checks in a real br
 ## B. Staging on Supabase + Vercel
 
 ### 1. Supabase project
+> **Done for staging (2026-10-03):** project `wiwaha-os-staging`, ref `ytqojvumknmebcsjqzio`, URL `https://ytqojvumknmebcsjqzio.supabase.co`, Mumbai. Schema, `pg_cron` and the demo seed are loaded. Steps 4–7 (auth settings and keys) are still to do in the dashboard once the Vercel URL exists.
+
 1. Create a project at supabase.com (region **Mumbai, ap-south-1**). Save the database password.
 2. **Database → Extensions:** enable `pg_cron` (it releases expired holds every 15 minutes).
 3. Push the schema and seed from your computer:

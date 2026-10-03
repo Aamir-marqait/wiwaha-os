@@ -70,5 +70,12 @@ Portal Hindi/Kannada strings (Phase 3, with the portal build-out), client-portal
 ## D17 — Default hot-lead threshold 85 (2026-10-03)
 Testing with the seed showed 75 marked nearly every lead hot. 85 keeps "hot" meaningful; tune in policy `lead_scoring`.
 
-## D18 — Daily routing sweep so staging runs on Vercel Hobby (2026-10-03)
-Vercel Hobby allows cron jobs once a day, so `/api/cron/agents` runs at 02:45 UTC (8:15 IST), just before the brief. Routing still happens instantly on every enquiry (`after()`), and `pg_cron` still releases holds every 15 minutes, so the sweep is only a safety net. On Vercel Pro, change it back to hourly (`30 * * * *`). Note: Vercel Hobby is for non-commercial use; Wiwaha's production should run on Pro.
+## D18 — Staging Supabase project (2026-10-03)
+**Decision:** Staging lives in the Supabase project `wiwaha-os-staging` (ref `ytqojvumknmebcsjqzio`, Mumbai `ap-south-1`, org "RohithMarqait's Org", free plan). All ten migrations from `packages/db/supabase/migrations` were applied under the same names, then all three seed files including the demo seed. `pg_cron` is on and `release-expired-holds` runs every 15 minutes.
+**Consequence:** Migrations have now reached a real project. From here on **only add new migrations**; never edit an applied one.
+**Open:** The security advisor warns that 16 functions have a mutable `search_path` (the `public.*` RPC wrappers and a few `app.*` helpers) and that leaked-password protection is off. Neither blocks staging. Fix both in a new migration and in Auth settings before production.
+
+## D19 — Vercel project on the Hobby plan: daily crons only (2026-10-03)
+**Decision:** Vercel project `wiwaha-os` (team "Aamir's projects", Hobby), root directory `apps/web`. Hobby only allows crons that run once a day, so the agent-routing sweep `/api/cron/agents` runs daily at 04:30 UTC (10:00 am IST) instead of hourly. The morning brief is unchanged (03:00 UTC).
+**Why it's acceptable for staging:** every enquiry is still routed immediately by the web request (`after()`, see D13); the sweep only catches runs that died halfway, so on Hobby a stuck lead can wait up to a day instead of an hour.
+**Revisit:** before go-live, upgrade to Vercel Pro and set the sweep back to `30 * * * *`, or schedule it from Supabase `pg_cron`.
