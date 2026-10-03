@@ -103,6 +103,7 @@ export interface ProposedMessage {
   payload?: Record<string, Json>;
   metadata?: Record<string, Json>;
   actionId?: string | null;
+  clientVisible?: boolean;
 }
 
 export interface ProposedResult {
@@ -128,6 +129,8 @@ export async function proposeClientMessage(ctx: RunContext, m: ProposedMessage):
     status: delivery === "approval" ? "pending_approval" : "approved", authorKind: "agent", agentKey: ctx.agent.key,
     approvalId, toAddress: m.to, subject: m.subject ?? null, body: m.body,
     metadata: { flags, ...(m.metadata ?? {}) },
+    // Wedding messages show in the couple's timeline once sent (the portal filters by status).
+    clientVisible: m.clientVisible ?? (m.channel === "portal" || !!m.weddingId),
   });
   if (delivery === "notify") {
     await store.notify({ role: "owner", title: `${ctx.agent.name} sent: ${m.title}`, body: m.body.slice(0, 200), link: m.weddingId ? `/team/weddings/${m.weddingId}` : m.leadId ? `/team/leads/${m.leadId}` : undefined });

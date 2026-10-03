@@ -65,6 +65,8 @@ export interface NewMessage {
   subject?: string | null;
   body: string;
   metadata?: Json;
+  /** Shown in the couple's portal (Wedding Room timeline and chat). */
+  clientVisible?: boolean;
 }
 
 export interface NewHumanQueueItem {

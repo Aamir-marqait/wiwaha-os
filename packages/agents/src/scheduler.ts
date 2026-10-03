@@ -2,6 +2,10 @@ import type { Json } from "@wiwaha/db";
 import { routeTasks } from "./agents/chief_of_staff/agent";
 import { placeFollowUpCalls } from "./agents/voice_concierge/agent";
 import { sendVisitReminders } from "./agents/visit_host/agent";
+import { sendPaymentReminders } from "./agents/contract_payments/agent";
+import { lockPlateCounts } from "./agents/menu/agent";
+import { chaseVendors } from "./agents/vendor_coordinator/agent";
+import { nudgeStages } from "./agents/wedding_room/agent";
 import { createDispatcher } from "./dispatch";
 import { sendApprovedMessages } from "./framework/kit";
 import type { RunOutcome } from "./framework/runner";
@@ -17,6 +21,10 @@ const JOBS: ScheduledJob[] = [
   { name: "route_tasks", run: (d) => routeTasks(d, createDispatcher(d)) },
   { name: "follow_up_calls", run: placeFollowUpCalls },
   { name: "visit_reminders", run: sendVisitReminders },
+  { name: "payment_reminders", run: sendPaymentReminders },
+  { name: "vendor_chases", run: chaseVendors },
+  { name: "plate_locks", run: lockPlateCounts },
+  { name: "stage_nudges", run: nudgeStages },
 ];
 
 export function registerJob(job: ScheduledJob): void {

@@ -108,6 +108,8 @@ export class MemoryDb implements Db {
   private readonly rpcs = new Map<string, RpcHandler>();
   /** Unique columns per table, to emulate constraints that matter in tests. */
   private readonly uniques = new Map<string, string[][]>();
+  /** Before-insert checks, to emulate the triggers that matter in tests. */
+  private readonly guards = new Map<string, ((row: Row, db: MemoryDb) => void)[]>();
   now: () => Date = () => new Date();
 
   constructor(seed: Record<string, Row[]> = {}) {
@@ -121,6 +123,11 @@ export class MemoryDb implements Db {
 
   unique(table: string, ...columns: string[]): this {
     this.uniques.set(table, [...(this.uniques.get(table) ?? []), columns]);
+    return this;
+  }
+
+  beforeInsert(table: string, guard: (row: Row, db: MemoryDb) => void): this {
+    this.guards.set(table, [...(this.guards.get(table) ?? []), guard]);
     return this;
   }
 
@@ -147,6 +154,7 @@ export class MemoryDb implements Db {
     const now = this.now().toISOString();
     const created: Row[] = list.map((r) => ({ id: randomUUID(), created_at: now, ...r }));
     for (const r of created) {
+      for (const g of this.guards.get(table) ?? []) g(r, this);
       for (const cols of this.uniques.get(table) ?? []) {
         if (cols.every((c) => r[c] !== undefined && r[c] !== null) && this.rows(table).some((x) => cols.every((c) => x[c] === r[c]))) {
           throw Object.assign(new Error(`duplicate key value violates unique constraint (${table}: ${cols.join(", ")})`), { code: "23505" });
