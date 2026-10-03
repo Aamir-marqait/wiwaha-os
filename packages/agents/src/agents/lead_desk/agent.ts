@@ -1,6 +1,6 @@
 import type { Json, LeadWithContact } from "@wiwaha/db";
 import { formatDateIST, rupees, todayIST } from "@wiwaha/db";
-import { isOutOfTown, startingFromBand, type PolicyBook, type PolicyKey } from "@wiwaha/policy";
+import { decorUnlockLabel, isOutOfTown, startingFromBand, type PolicyBook, type PolicyKey } from "@wiwaha/policy";
 import { checkClientMessage, type GuardrailFlag } from "../../framework/guardrails";
 import { decideDelivery, runAgent, type RunContext, type RunOutcome } from "../../framework/runner";
 import type { AgentDeps, LlmClient } from "../../framework/types";
@@ -218,6 +218,7 @@ async function draftReply(ctx: RunContext, llm: LlmClient, lead: LeadWithContact
         family_is_out_of_town: facts.outOfTown,
         approved_starting_from_band: facts.startingFrom ? rupees(facts.startingFrom.paise) : null,
         active_hold: facts.hasActiveHold,
+        decor_and_moodboards_start_after: decorUnlockLabel(ctx.book),
         they_asked_about: facts.intents,
         channel: lead.contact?.phone_e164 ? "WhatsApp" : "email",
       },
@@ -270,6 +271,12 @@ export function templateReply(book: PolicyBook, f: ReplyFacts): string {
   }
   if (f.intents.includes("outside_decor")) {
     parts.push("Décor here is created by our in-house team or a designated planner, and we'll happily show you what's possible.");
+  }
+  if (f.intents.includes("decor_early")) {
+    const unlock = decorUnlockLabel(book);
+    parts.push(unlock
+      ? `Décor design and moodboards begin once ${unlock} is made, and in the meantime we'd love to show you what's possible when you visit.`
+      : "Our décor team would love to show you what's possible when you visit.");
   }
 
   if (f.intents.includes("price") || f.intents.includes("discount")) {

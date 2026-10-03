@@ -79,3 +79,10 @@ Testing with the seed showed 75 marked nearly every lead hot. 85 keeps "hot" mea
 **Decision:** Vercel project `wiwaha-os` (team "Aamir's projects", Hobby), root directory `apps/web`. Hobby only allows crons that run once a day, so the agent-routing sweep `/api/cron/agents` runs daily at 04:30 UTC (10:00 am IST) instead of hourly. The morning brief is unchanged (03:00 UTC).
 **Why it's acceptable for staging:** every enquiry is still routed immediately by the web request (`after()`, see D13); the sweep only catches runs that died halfway, so on Hobby a stuck lead can wait up to a day instead of an hour.
 **Revisit:** before go-live, upgrade to Vercel Pro and set the sweep back to `30 * * * *`, or schedule it from Supabase `pg_cron`.
+
+## D20 — Décor before the 40% payment is a guardrail, not just a portal lock (2026-10-03)
+**Decision:** The handoff requires every agent to be tested against "a décor request before the 40% payment". The portal already locks the décor stage (`app.start_stage` checks `contract_paid`), but an agent could still *offer* moodboards early in a message. Added a hard guardrail flag `unlock_bypass` (framework-wide, in `guardrails.ts`), a Lead Desk `decor_early` intent whose safe reply explains the unlock, and `decorUnlockLabel()` in `@wiwaha/policy` so the wording ("the 40% contract payment") always comes from `decor.providers` + `payments.schedule`, never hard-coded.
+**Revisit:** agents that work after booking (Design, Wedding Room) must pass `decorUnlocked: true` to the guardrail once the wedding's contract payment is paid.
+
+## D21 — Pinned search_path on all functions (2026-10-03)
+Migration `20261003001100_pin_search_path.sql` clears Supabase advisor lint 0011 on 16 functions (PRD §9 privacy/guardrails). Applied to staging; `pnpm db:test` passes. Remaining advisor warning: leaked-password protection (Auth dashboard toggle).

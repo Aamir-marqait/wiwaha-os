@@ -106,7 +106,7 @@ function round2(n: number): number {
   return Math.round(n * 100) / 100;
 }
 
-export type Intent = "price" | "discount" | "availability" | "visit" | "rooms" | "outside_caterer" | "outside_decor";
+export type Intent = "price" | "discount" | "availability" | "visit" | "rooms" | "outside_caterer" | "outside_decor" | "decor_early";
 
 const INTENT_PATTERNS: Record<Intent, RegExp> = {
   price: /\b(price|pricing|cost|costs|rate|rates|charges?|quote|quotation|how much|package|budget|tariff)\b/i,
@@ -116,6 +116,7 @@ const INTENT_PATTERNS: Record<Intent, RegExp> = {
   rooms: /\b(rooms?|stay|accommodat\w*|overnight)\b/i,
   outside_caterer: /\b(outside|own|external|our)\s+cater\w*|\bbring\b.*\bcater\w*/i,
   outside_decor: /\b(outside|own|external|our)\s+(decor\w*|décor\w*|decorator)|\bbring\b.*\b(decor\w*|décor\w*)/i,
+  decor_early: /\bmood ?boards?\b|\b(start|begin|plan|design|see)\w*\s+(on\s+|the\s+|our\s+)?(decor|décor)\b|\b(decor|décor)\s+(designs?|plans?|planning|ideas?|concepts?|mock-?ups?)\b/i,
 };
 
 export function detectIntents(text: string | null | undefined): Intent[] {
