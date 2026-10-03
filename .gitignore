@@ -13,3 +13,5 @@ coverage/
 .DS_Store
 packages/db/supabase/.branches/
 packages/db/supabase/.temp/
+.vercel
+.env*
