@@ -118,3 +118,24 @@ describe("Prompt hygiene", () => {
     expect(md).not.toMatch(/₹|\d+\s*%|\d+\s*(hours|days)|lakh/i);
   });
 });
+
+describe("Chief of Staff: new leads", () => {
+  it("routes a new enquiry to Lead Desk exactly once, even if two runs overlap", async () => {
+    const { store, deps } = setup();
+    store.spaces = [{ id: "s1", name: "The Grand Lawn", capacity: 1000, takenDates: [] }];
+    store.leads = [{
+      id: "lead-new", contact_id: "c", source: "website", source_detail: null, event_type: "wedding", date_wanted: "2027-02-14", date_flexible: false, alt_dates: [],
+      guest_count: 200, budget_paise: null, budget_text: null, rooms_needed: null, city: "Bengaluru", message: "Is 14 Feb free?", score: null, score_breakdown: null, hot: false,
+      status: "new", assigned_to: null, hold_expires_at: null, wedding_id: null, touch_count: 1, first_touch_at: "", last_touch_at: "", created_at: "",
+      contact: { id: "c", full_name: "Isha Rao", phone_e164: "+919900000001", email: null, city: "Bengaluru" },
+    }];
+    store.tasks = [{ id: "t-new", from_agent: null, to_agent: null, kind: "new_lead", payload: {}, lead_id: "lead-new", wedding_id: null, status: "queued", created_at: NOW.toISOString() }];
+    const dispatch = createDispatcher(deps);
+    const [a, b] = await Promise.all([routeTasks(deps, dispatch), routeTasks(deps, dispatch)]);
+    const routed = [a, b].reduce((s, o) => s + (o.status === "done" ? o.result.routed : 0), 0);
+    expect(routed).toBe(1);
+    expect(store.approvals.filter((x) => x.leadId === "lead-new")).toHaveLength(1);
+    expect(store.leads[0]!.score).not.toBeNull();
+    expect(store.tasks[0]!.status).toBe("done");
+  });
+});

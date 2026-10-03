@@ -75,6 +75,13 @@ export class MemoryAgentStore implements AgentStore {
     return id;
   }
   async queuedAgentTasks(limit: number) { return this.tasks.filter((t) => t.status === "queued").slice(0, limit); }
+  async claimAgentTask(id: string, toAgent: string) {
+    const t = this.tasks.find((x) => x.id === id && x.status === "queued");
+    if (!t) return false;
+    t.status = "routed";
+    t.to_agent = toAgent;
+    return true;
+  }
   async updateAgentTask(id: string, patch: { status: string; to_agent?: string | null; result?: Json }) {
     const t = this.tasks.find((x) => x.id === id);
     if (t) { t.status = patch.status; if (patch.to_agent !== undefined) t.to_agent = patch.to_agent; }

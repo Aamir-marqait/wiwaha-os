@@ -201,7 +201,12 @@ begin
            budget_paise = coalesce(nullif(p ->> 'budget_paise', '')::bigint, l.budget_paise),
            budget_text = coalesce(nullif(p ->> 'budget_text', ''), l.budget_text),
            city = coalesce(nullif(p ->> 'city', ''), l.city),
-           message = coalesce(nullif(p ->> 'message', ''), l.message),
+           -- keep the whole thread so a follow-up doesn't erase the original question
+           message = case
+             when nullif(p ->> 'message', '') is null then l.message
+             when l.message is null then p ->> 'message'
+             else right(l.message || E'\n\n' || (p ->> 'message'), 4000)
+           end,
            touch_count = l.touch_count + 1,
            last_touch_at = now()
      where l.id = v_lead;

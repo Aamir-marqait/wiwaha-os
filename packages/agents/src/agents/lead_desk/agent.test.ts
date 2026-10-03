@@ -252,3 +252,13 @@ describe("Prompt hygiene", () => {
     expect(md).not.toMatch(/₹|\d+\s*%|\d+\s*(hours|days)|lakh/i);
   });
 });
+
+describe("Lead Desk: closed leads", () => {
+  it("never drafts a reply to a family that has already booked", async () => {
+    const { store, deps } = setup(lead({ status: "won" }));
+    const out = await processLead(deps, "lead-1");
+    if (out.status !== "done") throw new Error(out.status);
+    expect(out.result.skippedReason).toBe("Lead is won");
+    expect(store.approvals).toHaveLength(0);
+  });
+});

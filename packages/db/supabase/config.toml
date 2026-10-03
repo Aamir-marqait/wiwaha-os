@@ -25,7 +25,9 @@ jwt_expiry = 3600
 enable_signup = false
 
 [auth.email]
-enable_signup = false
+# Must stay true or email/password and magic-link logins are disabled entirely.
+# Public sign-up is still blocked by [auth] enable_signup = false above.
+enable_signup = true
 enable_confirmations = false
 
 [storage]

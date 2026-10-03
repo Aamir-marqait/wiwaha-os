@@ -78,7 +78,18 @@ pnpm dev                 # web app on :3000 (needs apps/web/.env.local)
 pnpm typecheck           # all packages
 pnpm test                # vitest in every package
 pnpm db:test             # applies migrations + seed to a throwaway local Postgres and runs RLS checks
+pnpm --filter @wiwaha/db gen:seed        # after editing policy defaults or the agent roster
+pnpm --filter @wiwaha/agents gen:prompts # after editing any agent prompt.md
+node apps/web/e2e/done-when.mjs          # Phase 1 "done when" checks in a browser
 ```
+
+Setup and deploy: `docs/runbooks/setup.md`. Demo: `docs/runbooks/demo-script.md`. Open questions for Prashanth: `docs/open-questions.md`.
+
+## Gotchas
+- Migrations that haven't reached a real project yet may be edited in place. Once staging exists, only add new migrations.
+- PostgREST only exposes `public`: every RPC lives in `app.*`, with a thin `public.*` wrapper and explicit grants.
+- `app.is_service()` uses `session_user`, so it stays false inside SECURITY DEFINER functions called by users.
+- Next.js 16: `src/proxy.ts` replaces `middleware.ts`; `cookies()`/`headers()`/`params` are async.
 
 ## Brand
 

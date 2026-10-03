@@ -14,7 +14,7 @@ export function createDispatcher(deps: AgentDeps): Dispatcher {
         const out = await draftHoldReleased(deps, task.lead_id, (task.payload ?? {}) as { starts_on?: string; label?: string | null });
         return out.status === "done" ? { ok: true, result: { approval_id: out.result.approvalId } } : { ok: false, result: { status: out.status } as Json };
       }
-      if (task.kind === "new_lead") {
+      if (task.kind === "new_lead" || task.kind === "lead_updated") {
         const out = await processLead(deps, task.lead_id);
         return out.status === "done" ? { ok: true, result: { approval_id: out.result.approvalId } } : { ok: false, result: { status: out.status } as Json };
       }

@@ -137,6 +137,7 @@ export function renderBrief(d: BriefData, headline: string): string {
 const ROUTES: Record<string, string> = {
   hold_released_notify_client: "lead_desk",
   new_lead: "lead_desk",
+  lead_updated: "lead_desk",
 };
 const STAGE_ROUTES: Record<string, string> = {
   brief: "brief",
@@ -185,7 +186,7 @@ export async function routeTasks(deps: AgentDeps, dispatch: Dispatcher, limit = 
         res.held++;
         continue;
       }
-      await store.updateAgentTask(task.id, { status: "routed", to_agent: target, routed_by: CHIEF_OF_STAFF });
+      if (!(await store.claimAgentTask(task.id, target, CHIEF_OF_STAFF))) continue; // another run has it
       res.routed++;
       // Hand over to the target agent's entry point; it applies its own gate.
       const out = await dispatch(target, task);

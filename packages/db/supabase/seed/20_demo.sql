@@ -169,7 +169,7 @@ select 'space', (select id from public.spaces where name = 'The Grand Lawn'), cu
 
 -- Escalation in the human queue: out-of-town caller asked for price, band not approved yet.
 insert into public.human_queue (agent_key, reason, title, detail, lead_id, assigned_role)
-select 'lead_desk', 'off_policy', 'Out-of-town family asked for a starting price',
+select 'lead_desk', 'off_policy', 'Rhea Kapoor (Mumbai) asked for a starting price',
        'Rhea (Mumbai) asked for a starting-from price. The policy allows a band for out-of-town callers, but no figure has been approved yet. Please approve a band in the policy book or call her back.',
        l.id, 'owner'
   from public.leads l join public.contacts c on c.id = l.contact_id where c.phone_e164 = '+919900011104';

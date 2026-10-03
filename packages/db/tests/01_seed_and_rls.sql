@@ -243,3 +243,14 @@ end $$;
 rollback;
 
 select 'all SQL tests passed' as result;
+
+-- Repeat enquiries keep the original question and queue one task for the Chief of Staff.
+do $$
+begin
+  assert (select l.message from public.leads l join public.contacts c on c.id = l.contact_id where c.phone_e164 = '+919900011106')
+         like 'Do you allow outside caterers?%Following up%', 'thread kept across touches';
+  assert (select count(*) from public.agent_tasks t join public.leads l on l.id = t.lead_id join public.contacts c on c.id = l.contact_id
+           where c.phone_e164 = '+919900011106' and t.status = 'queued') = 1, 'one queued task per lead';
+  assert (select count(*) from public.agent_tasks where kind = 'new_lead') >= 6, 'every new lead queued for routing';
+end $$;
+select 'thread tests passed' as result;

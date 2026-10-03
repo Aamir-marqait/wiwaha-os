@@ -1,0 +1,28 @@
+name: CI
+on:
+  push:
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @wiwaha/db gen:seed && git diff --exit-code packages/db/supabase/seed
+        name: Seed is in sync with the policy book
+      - run: pnpm --filter @wiwaha/agents gen:prompts && git diff --exit-code packages/agents/src/prompts.generated.ts
+        name: Prompts bundle is in sync with prompt.md files
+      - run: pnpm typecheck
+      - run: pnpm test
+      - run: pnpm db:test
+        name: Migrations, seed and RLS tests on Postgres 16
+      - run: pnpm build
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: http://127.0.0.1:54321
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ci-placeholder

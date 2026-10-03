@@ -199,6 +199,14 @@ export class SupabaseAgentStore implements AgentStore {
     return must(await this.db.from("agent_tasks").select("*").eq("status", "queued").order("created_at").limit(limit), "load agent tasks") as AgentTaskRow[];
   }
 
+  async claimAgentTask(id: string, toAgent: string, routedBy: string): Promise<boolean> {
+    const rows = must(
+      await this.db.from("agent_tasks").update({ status: "routed", to_agent: toAgent, routed_by: routedBy, routed_at: new Date().toISOString() }).eq("id", id).eq("status", "queued").select("id"),
+      "claim agent task",
+    ) as { id: string }[];
+    return rows.length === 1;
+  }
+
   async updateAgentTask(id: string, patch: { status: string; to_agent?: string | null; routed_by?: string; result?: Json }): Promise<void> {
     const update: Record<string, unknown> = { status: patch.status };
     if (patch.to_agent !== undefined) update.to_agent = patch.to_agent;

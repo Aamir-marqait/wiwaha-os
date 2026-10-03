@@ -141,6 +141,8 @@ export interface AgentStore {
   saveBrief(b: { kind: "morning" | "evening"; forDate: string; title: string; contentMd: string; data: Json; agentActionId: string }): Promise<string>;
   queuedAgentTasks(limit: number): Promise<AgentTaskRow[]>;
   updateAgentTask(id: string, patch: { status: string; to_agent?: string | null; routed_by?: string; result?: Json }): Promise<void>;
+  /** Atomically moves a queued task to 'routed'. False if another run already claimed it. */
+  claimAgentTask(id: string, toAgent: string, routedBy: string): Promise<boolean>;
 }
 
 /** Minimal LLM surface the agents use; real impl wraps @anthropic-ai/sdk. */

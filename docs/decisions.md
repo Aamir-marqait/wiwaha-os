@@ -51,3 +51,21 @@ Per handoff §4. Columns are `*_paise bigint`; event days are `date` (no timezon
 
 ## D12 — Model choices per agent (2026-10-03)
 Stored in `agents.model`: Lead Desk `claude-haiku-4-5` (triage volume), Chief of Staff `claude-opus-5-5` (reasoning across the business). Owner can change in Settings → Agents. Opus/Sonnet calls set the server-side refusal fallback (`fallbacks: "default"`).
+
+## D13 — Every lead is routed by the Chief of Staff (2026-10-03)
+**Decision:** `ingest_lead` triggers an `agent_tasks` row (`new_lead` / `lead_updated`); the Chief of Staff claims it atomically and dispatches to Lead Desk. The web request kicks routing off immediately (`after()`), and the hourly cron catches anything missed.
+**Why:** One routing path (handoff: CoS is the only router), no lost leads if a request dies, no double drafts when two runs overlap.
+
+## D14 — The owner's brief isn't gated (2026-10-03)
+**Decision:** The 8:30 am brief is delivered straight to Prashanth even in `draft` mode. Gating applies to anything leaving the business or committing money, a date, a design or the brand.
+**Why:** Approving your own briefing before reading it is meaningless. Revisit if briefs ever go to staff or clients.
+
+## D15 — Client IP for the audit log (2026-10-03)
+**Decision:** Server-side Supabase calls forward the browser IP as `x-client-ip`; the trigger prefers it, then the first `x-forwarded-for` hop. A user calling PostgREST directly could spoof `x-client-ip`, but every row still carries their verified user id.
+**Revisit if:** audit IPs need to be evidential. Then route all portal writes through server actions and ignore client-supplied headers.
+
+## D16 — Deferred to later phases (2026-10-03)
+Portal Hindi/Kannada strings (Phase 3, with the portal build-out), client-portal invites UI (Phase 3 onboarding), column-level PII encryption (before real client data, see D9), outbound sending (Phase 2 connectors; approved messages are recorded with status `approved` until then).
+
+## D17 — Default hot-lead threshold 85 (2026-10-03)
+Testing with the seed showed 75 marked nearly every lead hot. 85 keeps "hot" meaningful; tune in policy `lead_scoring`.

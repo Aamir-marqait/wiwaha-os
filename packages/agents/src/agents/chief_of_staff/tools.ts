@@ -9,6 +9,7 @@ export const CHIEF_OF_STAFF_TOOLS = [
   "saveBrief",
   "queuedAgentTasks",
   "updateAgentTask",
+  "claimAgentTask",
   "queueHuman",
   "notify",
 ] as const satisfies readonly (keyof AgentStore)[];

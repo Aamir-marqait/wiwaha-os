@@ -192,7 +192,7 @@ export const DEFAULT_POLICIES = [
       ideal_guests: { min: 150, max: 300 },
       max_guests: 800,
       budget_bands_paise: { low: 15 * LAKH, good: 30 * LAKH, premium: 50 * LAKH },
-      hot_threshold: 75,
+      hot_threshold: 85,
     },
     { sort: 36 },
   ),

@@ -52,12 +52,16 @@ export interface LeadDeskResult {
  * Process a new or updated enquiry: score it, alert sales if it's hot, draft a
  * reply and put it through the gate. Safe to call more than once per lead.
  */
-export async function processLead(deps: AgentDeps, leadId: string): Promise<RunOutcome<LeadDeskResult>> {
-  return runAgent(deps, LEAD_DESK, { action: "process_lead", leadId, input: { lead_id: leadId }, fallbackTitle: "Reply to a new enquiry" }, async (ctx) => {
+export async function processLead(deps: AgentDeps, leadId: string, opts: { force?: boolean } = {}): Promise<RunOutcome<LeadDeskResult>> {
+  return runAgent(deps, LEAD_DESK, { action: "process_lead", leadId, input: { lead_id: leadId, force: !!opts.force }, fallbackTitle: "Reply to a new enquiry" }, async (ctx) => {
     const store: LeadDeskStore = deps.store;
     const t0 = Date.now();
     const lead = await store.getLead(leadId);
     if (!lead) throw new Error(`Lead ${leadId} not found`);
+    if (["won", "lost", "no_response"].includes(lead.status)) {
+      await ctx.log({ action: "process_lead", status: "ok", leadId: lead.id, input: { status: lead.status }, output: { skipped: "lead is closed" } });
+      return { leadId: lead.id, score: { score: lead.score ?? 0, hot: lead.hot, breakdown: { date_fit: 0, guest_fit: 0, budget: 0, source: 0, notes: ["Lead is closed"] } }, intents: [], reply: null, approvalId: null, messageId: null, escalations: [], skippedReason: `Lead is ${lead.status.replace("_", " ")}` };
+    }
 
     // 1. Score (deterministic, policy-weighted).
     const today = todayIST(ctx.now);
@@ -84,8 +88,9 @@ export async function processLead(deps: AgentDeps, leadId: string): Promise<RunO
       });
     }
 
-    // 3. Don't stack drafts when a family writes twice in a few minutes.
-    const recent = await store.countRecentRepliesForLead(lead.id, new Date(ctx.now.getTime() - 10 * 60_000).toISOString());
+    // 3. Don't stack drafts when a family writes twice in a few minutes
+    //    (a person pressing "Re-run" forces a fresh draft).
+    const recent = opts.force ? 0 : await store.countRecentRepliesForLead(lead.id, new Date(ctx.now.getTime() - 10 * 60_000).toISOString());
     const intents = detectIntents(lead.message);
     if (recent > 0) {
       return { leadId: lead.id, score, intents, reply: null, approvalId: null, messageId: null, escalations: [], skippedReason: "A reply was drafted in the last 10 minutes" };
@@ -97,7 +102,7 @@ export async function processLead(deps: AgentDeps, leadId: string): Promise<RunO
     if (intents.includes("discount")) {
       await store.queueHuman({
         agentKey: LEAD_DESK, reason: "escalation", assignedRole: "owner", leadId: lead.id,
-        title: `${facts.firstName} asked about a discount`,
+        title: `${lead.contact?.full_name ?? facts.firstName} asked about a discount`,
         detail: `Only Prashanth decides discounts (policy "discounts"). Their message: "${lead.message ?? ""}"`,
       });
       escalations.push("discount");
@@ -105,7 +110,7 @@ export async function processLead(deps: AgentDeps, leadId: string): Promise<RunO
     if (intents.includes("price") && facts.outOfTown && !facts.startingFrom) {
       await store.queueHuman({
         agentKey: LEAD_DESK, reason: "off_policy", assignedRole: "owner", leadId: lead.id,
-        title: `Out-of-town family asked for a starting price`,
+        title: `${lead.contact?.full_name ?? "Out-of-town family"} (${lead.city ?? "out of town"}) asked for a starting price`,
         detail: `${lead.contact?.full_name ?? "A family"} (${lead.city ?? "out of town"}) asked about price. Policy allows a "starting from" band for out-of-town families, but no figure is approved yet. Approve one in the policy book or call them back.`,
       });
       escalations.push("starting_from_band_missing");
