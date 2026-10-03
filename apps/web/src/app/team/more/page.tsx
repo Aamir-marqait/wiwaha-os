@@ -1,5 +1,5 @@
 import { Card, PageTitle } from "@wiwaha/ui";
-import { BarChart3, Phone, Settings } from "lucide-react";
+import { BarChart3, CalendarDays, IndianRupee, Megaphone, Phone, Settings, Trees } from "lucide-react";
 import Link from "next/link";
 import { requireStaff } from "@/lib/auth";
 
@@ -10,6 +10,11 @@ export default async function MorePage() {
   const viewer = await requireStaff();
   const role = viewer.profile.role;
   const items = [
+    { href: "/team/calendar", icon: CalendarDays, title: "Calendar", body: "Every space, hold and booking." },
+    ...(role === "owner" ? [{ href: "/team/owner", icon: BarChart3, title: "Numbers", body: "The five morning numbers, bookings and profit." }] : []),
+    ...(["owner", "staff", "event_manager"].includes(role) ? [{ href: "/team/estate", icon: Trees, title: "Estate", body: "Maintenance, stock, purchases and readings." }] : []),
+    ...(role === "owner" || role === "accounts" ? [{ href: "/team/finance", icon: IndianRupee, title: "Finance", body: "Invoices, costs, profit and Tally export." }] : []),
+    ...(role === "owner" || role === "sales" ? [{ href: "/team/marketing", icon: Megaphone, title: "Marketing", body: "Post calendar and ad spend." }] : []),
     ...(role === "owner" || role === "sales" ? [
       { href: "/team/sales", icon: BarChart3, title: "Sales", body: "Funnel by source, calls answered, visits, reviews." },
       { href: "/team/voice", icon: Phone, title: "Phone concierge", body: "Rehearse calls with the Voice Concierge." },

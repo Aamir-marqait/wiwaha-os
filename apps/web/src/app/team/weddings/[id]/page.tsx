@@ -6,11 +6,13 @@ import { StageStatusBadge, UNLOCK_TEXT } from "@/components/stage-status";
 import { requireStaff } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { PlanningPanels } from "./panels";
+import { OperationsPanels } from "./closeout";
+import { todayIST } from "@wiwaha/db";
 
 export const metadata = { title: "Wedding Room" };
 
 export default async function WeddingRoom({ params }: { params: Promise<{ id: string }> }) {
-  const viewer = await requireStaff(["owner", "sales", "event_manager", "accounts"]);
+  const viewer = await requireStaff(["owner", "sales", "event_manager", "accounts", "staff"]);
   const { id } = await params;
   const supabase = await createClient();
   const { data: w } = await supabase.from("weddings").select("*, manager:profiles!weddings_event_manager_id_fkey(full_name)").eq("id", id).maybeSingle();
@@ -72,6 +74,7 @@ export default async function WeddingRoom({ params }: { params: Promise<{ id: st
           </Card>
 
           <PlanningPanels supabase={supabase} weddingId={id} role={viewer.profile.role} />
+          <OperationsPanels supabase={supabase} weddingId={id} role={viewer.profile.role} eventEnded={(w.event_end as string) < todayIST()} />
 
           <Card>
             <CardHeader title="Room timeline" subtitle="Every message in this Wedding Room" />

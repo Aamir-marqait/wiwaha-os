@@ -1,0 +1,9 @@
+{
+  "name": "Wiwaha OS",
+  "short_name": "Wiwaha",
+  "start_url": "/team/tasks",
+  "display": "standalone",
+  "background_color": "#FDFBF6",
+  "theme_color": "#3F5B45",
+  "icons": [{ "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml" }]
+}

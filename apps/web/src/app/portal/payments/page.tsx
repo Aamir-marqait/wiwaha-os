@@ -9,9 +9,11 @@ export default async function PaymentsPage() {
   const { viewer, supabase, t, wedding, me } = await loadPortal();
   const w = wedding!;
   const first = viewer.profile.full_name.split(" ")[0] ?? "";
-  const [{ data: payments }, { data: contract }] = await Promise.all([
+  const [{ data: payments }, { data: contract }, { data: invoices }] = await Promise.all([
     supabase.from("payments").select("id, label, amount_paise, due_on, status, link_url, receipt_number, paid_at").eq("wedding_id", w.id).order("sort"),
     supabase.from("contracts").select("id, version, status, esign_url, esign_completed_at").eq("wedding_id", w.id).in("status", ["sent", "signed"]).order("version", { ascending: false }).limit(1).maybeSingle(),
+    // RLS: only issued invoices, only for members who can see payments.
+    supabase.from("invoices").select("id, number, kind, issued_on, total_paise, balance_paise").eq("wedding_id", w.id).order("issued_on"),
   ]);
   return (
     <PortalShell t={t} wedding={w} first={first} active="payments">
@@ -38,6 +40,13 @@ export default async function PaymentsPage() {
           </ul>
         </Card>
       )}
+      {(invoices ?? []).length ? (
+        <Card>
+          <ul className="divide-y divide-line/70">
+            {(invoices ?? []).map((i) => <li key={i.id as string} className="flex justify-between gap-2 px-4 py-3 text-sm"><span>{i.kind === "gst" ? "GST invoice" : "Final invoice"} {i.number as string}</span><span>{rupees(Number(i.total_paise))}{Number(i.balance_paise) > 0 ? ` · ${rupees(Number(i.balance_paise))} due` : ""}</span></li>)}
+          </ul>
+        </Card>
+      ) : null}
       <p className="text-xs text-ink-soft">10% holds your date; 40% within two weeks signs the contract and opens décor; the final 50% is due 30 days before your celebration. Receipts arrive on WhatsApp and here.</p>
     </PortalShell>
   );

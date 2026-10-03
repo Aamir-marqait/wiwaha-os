@@ -1,6 +1,6 @@
 "use client";
 import { cn } from "@wiwaha/ui";
-import { BarChart3, CalendarDays, CheckCircle2, Gem, Inbox, LayoutGrid, Phone, Settings, Sun } from "lucide-react";
+import { BarChart3, CalendarDays, CheckCircle2, ClipboardCheck, Gem, Inbox, IndianRupee, LayoutGrid, Megaphone, Phone, Settings, Sun, Trees } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
@@ -8,10 +8,15 @@ import { usePathname } from "next/navigation";
 const ITEMS = [
   { href: "/team", label: "Today", icon: Sun, exact: true },
   { href: "/team/leads", label: "Leads", icon: Inbox },
-  { href: "/team/calendar", label: "Calendar", icon: CalendarDays },
+  { href: "/team/tasks", label: "Tasks", icon: ClipboardCheck },
+  { href: "/team/calendar", label: "Calendar", icon: CalendarDays, desktopOnly: true },
   { href: "/team/weddings", label: "Weddings", icon: Gem },
   { href: "/team/approvals", label: "Approvals", icon: CheckCircle2, badge: true },
   { href: "/team/sales", label: "Sales", icon: BarChart3, desktopOnly: true },
+  { href: "/team/owner", label: "Numbers", icon: BarChart3, desktopOnly: true },
+  { href: "/team/estate", label: "Estate", icon: Trees, desktopOnly: true },
+  { href: "/team/finance", label: "Finance", icon: IndianRupee, desktopOnly: true },
+  { href: "/team/marketing", label: "Marketing", icon: Megaphone, desktopOnly: true },
   { href: "/team/voice", label: "Phone", icon: Phone, desktopOnly: true },
   { href: "/team/settings", label: "Settings", icon: Settings, desktopOnly: true },
   { href: "/team/more", label: "More", icon: LayoutGrid, mobileOnly: true },

@@ -60,3 +60,21 @@ export async function postToRoom(weddingId: string, body: string): Promise<Resul
   });
   return done(weddingId, error);
 }
+
+/** Handover inspection after the event: areas, photos and damage; Finance then proposes the deposit decision. */
+export async function recordInspection(weddingId: string, items: { area: string; ok: boolean; note: string; damageRupees: number; photoPath: string | null }[]): Promise<Result> {
+  const viewer = await requireStaff(["owner", "staff", "event_manager"]);
+  if (!items.length) return { error: "Add at least one area." };
+  const supabase = await createClient("team");
+  const { data: policy } = await supabase.from("policies").select("value").eq("key", "closeout.inspection").maybeSingle();
+  const photoRequired = !!(policy?.value as { photo_required?: boolean } | null)?.photo_required;
+  if (photoRequired && items.some((i) => !i.ok && !i.photoPath)) return { error: "Add a photo for each area with damage." };
+  const rows = items.map((i) => ({ area: i.area, ok: i.ok, note: i.note || null, photo_path: i.photoPath, damage_paise: Math.round((i.damageRupees || 0) * 100) }));
+  const damage = rows.reduce((s, r) => s + r.damage_paise, 0);
+  const { error } = await supabase.from("inspections").upsert({ wedding_id: weddingId, inspector_id: viewer.userId, inspected_at: new Date().toISOString(), items: rows, damage_total_paise: damage }, { onConflict: "wedding_id" });
+  if (error) return done(weddingId, error);
+  const { createAdminClient } = await import("@/lib/supabase/admin");
+  await createAdminClient("system").from("agent_tasks").insert({ kind: "inspection_done", wedding_id: weddingId, payload: { damage_paise: damage } });
+  after(runRouting);
+  return done(weddingId, null);
+}
