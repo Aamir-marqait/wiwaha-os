@@ -50,7 +50,7 @@ export default async function LeadsPage({ searchParams }: { searchParams: Promis
       <PageTitle
         title="Lead inbox"
         subtitle="Every enquiry, de-duplicated by phone and scored by Lead Desk"
-        action={viewer.profile.role !== "event_manager" ? <Link href="/team/leads/new" className={buttonClass("primary")}>+ New lead</Link> : null}
+        action={viewer.profile.role !== "event_manager" ? <span className="flex gap-2"><Link href="/team/leads/import" className={buttonClass("secondary")}>Import CSV</Link><Link href="/team/leads/new" className={buttonClass("primary")}>+ New lead</Link></span> : null}
       />
       <div className="mb-4 flex flex-wrap items-center gap-2">
         <div className="-mx-1 flex max-w-full gap-1 overflow-x-auto px-1 pb-1">

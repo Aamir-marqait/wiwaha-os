@@ -96,7 +96,11 @@ describe("adapter selection", () => {
     const i = createIntegrations({ NEXT_PUBLIC_APP_URL: "https://wiwaha-os.vercel.app/" });
     expect([i.whatsapp.live, i.email.live, i.telephony.live, i.payments.live, i.esign.live]).toEqual([false, false, false, false, false]);
     const link = await i.payments.createLink({ amountPaise: 450000_00, description: "Deposit", referenceId: "pay-1", customer: { name: "A" } });
-    expect(link).toMatchObject({ status: "sandboxed", url: "https://wiwaha-os.vercel.app/pay/sandbox/pay-1" });
+    // No test pay page unless the demo switch is on: nobody can mark a payment paid by visiting a link.
+    expect(link).toMatchObject({ status: "sandboxed", url: null });
+    const demo = createIntegrations({ NEXT_PUBLIC_APP_URL: "https://wiwaha-os.vercel.app/", ALLOW_SANDBOX_LINKS: "true" });
+    expect(await demo.payments.createLink({ amountPaise: 1, description: "x", referenceId: "pay-1", customer: { name: "A" } })).toMatchObject({ url: "https://wiwaha-os.vercel.app/pay/sandbox/pay-1" });
+    expect((await i.esign.requestSignature({ documentTitle: "c", documentHtml: "", referenceId: "c1", signers: [] })).signUrl).toBeNull();
     expect((await i.whatsapp.send({ to: "+919800000000", body: "hi" })).status).toBe("sandboxed");
   });
   it("switches to live adapters only when their keys are present", () => {
@@ -117,5 +121,26 @@ describe("adapter selection", () => {
     const r = await rp.createLink({ amountPaise: 100, description: "d", referenceId: "p1", customer: { name: "n", phone: "+91" } });
     expect(r).toMatchObject({ status: "sent", url: "https://rzp.io/i/x" });
     expect(sent).toMatchObject({ amount: 100, currency: "INR", reference_id: "p1", notify: { sms: false, email: false } });
+  });
+});
+
+import { parseCsv, parseLeadCsv } from "./csv";
+describe("CSV lead import", () => {
+  it("reads Meta Lead Center style exports (tab separated, quoted fields)", () => {
+    const text = 'created_time\tfull_name\tphone_number\temail\tcity\twedding_date\tguests\n2026-10-05T10:00:00\tPriya Natarajan\tp:+919900011103\tpriya@example.com\tBengaluru\t14 March 2027\t300 guests\n2026-10-05T11:00:00\t\t\t\t\t\t';
+    const r = parseLeadCsv(text, "meta_form");
+    expect(r.errors).toEqual([{ line: 3, reason: "Missing name" }]);
+    expect(r.leads).toHaveLength(1);
+    expect(r.leads[0]).toMatchObject({ fullName: "Priya Natarajan", phone: "+919900011103", city: "Bengaluru", dateWanted: "2027-03-14", guestCount: 300, source: "meta_form" });
+  });
+  it("handles commas inside quotes, Google-style headers and unmatched columns", () => {
+    const text = 'Full Name,Phone Number,Email,Notes,Campaign\n"Rao, Meera",9845012345,,"Hall for 200, Feb",Search wedding';
+    const r = parseLeadCsv(text, "google_form");
+    expect(r.leads[0]).toMatchObject({ fullName: "Rao, Meera", phone: "+919845012345", email: null });
+    expect(r.leads[0]!.message).toBe("Hall for 200, Feb · campaign: Search wedding");
+    expect(parseCsv('a,b\n"x ""y""",2')[1]).toEqual(['x "y"', "2"]);
+  });
+  it("explains a file with no name or contact column", () => {
+    expect(parseLeadCsv("foo,bar\n1,2", "meta_form").errors[0]!.reason).toMatch(/No name column/);
   });
 });

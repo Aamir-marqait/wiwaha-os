@@ -1,5 +1,7 @@
 # Phases 2–4 demo script (about 25 minutes, on a phone)
 
+> The test pay and sign pages used in steps 3.2 only exist when `ALLOW_SANDBOX_LINKS=true` is set in Vercel (demos only; see D32). Without it, accounts record payments by hand on the wedding page, and WhatsApp/email messages are sent from **To send**.
+
 Use the same logins as the Phase 1 demo (`docs/runbooks/demo-script.md`; password `WiwahaDemo!2026`). Every outside channel is in **sandbox**: WhatsApp, email, calls, payment links and signatures show up under **Settings → Activity** (outbox) instead of being sent. Every agent is in `draft`, so anything going to a family waits in **Approvals** first.
 
 ## Phase 2: no enquiry is missed (8 min)

@@ -2,8 +2,10 @@ import "server-only";
 import { createAdminClient } from "./supabase/admin";
 
 /** Live gateway configured? Then the sandbox pay page is switched off. */
-export const sandboxPayments = () => !process.env.RAZORPAY_KEY_ID;
-export const sandboxEsign = () => !process.env.DIGIO_CLIENT_ID && !process.env.LEEGALITY_API_KEY;
+/** The test pay/sign pages exist only for demos (ALLOW_SANDBOX_LINKS=true) and never alongside live keys. */
+const demo = () => process.env.ALLOW_SANDBOX_LINKS === "true";
+export const sandboxPayments = () => demo() && !process.env.RAZORPAY_KEY_ID;
+export const sandboxEsign = () => demo() && !process.env.DIGIO_CLIENT_ID && !process.env.LEEGALITY_API_KEY;
 
 /**
  * Marks a payment paid (idempotent). The database trigger issues the receipt

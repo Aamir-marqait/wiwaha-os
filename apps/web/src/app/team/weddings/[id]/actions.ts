@@ -78,3 +78,21 @@ export async function recordInspection(weddingId: string, items: { area: string;
   after(runRouting);
   return done(weddingId, null);
 }
+
+/**
+ * Accounts record a payment that arrived by bank transfer, UPI or cheque. The database does the rest:
+ * receipt number, the milestone's effect (the 40% signs the contract and opens décor) and the receipt message.
+ */
+export async function recordPayment(weddingId: string, paymentId: string, input: { method: string; reference: string; rupees: number }): Promise<Result> {
+  await requireStaff(["owner", "accounts"]);
+  if (!["upi", "bank_transfer", "cheque", "cash", "card", "netbanking", "other"].includes(input.method)) return { error: "Choose how it was paid." };
+  const supabase = await createClient("team");
+  const { data: p } = await supabase.from("payments").select("id, amount_paise, status").eq("id", paymentId).eq("wedding_id", weddingId).maybeSingle();
+  if (!p) return { error: "Payment not found." };
+  if (p.status === "paid") return { error: "This payment is already recorded." };
+  const paise = Math.round((input.rupees || Number(p.amount_paise) / 100) * 100);
+  if (!(paise > 0)) return { error: "Enter the amount received." };
+  const { error } = await supabase.from("payments").update({ status: "paid", paid_at: new Date().toISOString(), paid_amount_paise: paise, method: input.method, gateway: "manual", gateway_ref: input.reference.trim() || null }).eq("id", paymentId);
+  if (!error) after(runRouting);
+  return done(weddingId, error);
+}

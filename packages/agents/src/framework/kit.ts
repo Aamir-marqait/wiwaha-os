@@ -216,20 +216,28 @@ export async function deliver(deps: AgentDeps, r: DeliverRequest): Promise<{ out
 
 const SENDABLE: MessageChannel[] = ["whatsapp", "email", "instagram", "sms", "web_chat"];
 
-/** Sends every approved outbound message (after Prashanth approves, or straight away above `draft`). */
-export async function sendApprovedMessages(deps: AgentDeps, limit = 50): Promise<{ sent: number; failed: number; skipped: number }> {
+/** Channels a person can send by hand (WhatsApp link, mailto) while the real provider isn't connected. */
+const MANUAL_WHEN_NOT_LIVE: MessageChannel[] = ["whatsapp", "email"];
+
+/**
+ * Sends every approved outbound message (after Prashanth approves, or straight away above `draft`).
+ * WhatsApp and email stay "approved" while their provider isn't live: the team sends them from
+ * /team/outbox (one tap opens WhatsApp or the mail app with the text filled in).
+ */
+export async function sendApprovedMessages(deps: AgentDeps, limit = 50): Promise<{ sent: number; failed: number; skipped: number; awaitingManual: number }> {
   const db = requireDb(deps);
   const msgs = await db.select<{ id: string; channel: MessageChannel; to_address: string | null; subject: string | null; body: string; lead_id: string | null; wedding_id: string | null; metadata: Row | null }>("messages", {
     where: { status: "approved", direction: "outbound", channel: where.in(SENDABLE) }, order: [{ column: "created_at" }], limit,
   });
-  let sent = 0, failed = 0, skipped = 0;
+  let sent = 0, failed = 0, skipped = 0, awaitingManual = 0;
   for (const m of msgs) {
+    if (MANUAL_WHEN_NOT_LIVE.includes(m.channel) && deps.channels && !adapterFor(deps.channels, m.channel as DeliverRequest["kind"])?.live) { awaitingManual++; continue; }
     if (!m.to_address && m.channel !== "web_chat") { skipped++; await db.update("messages", { id: m.id }, { status: "failed", metadata: { ...(m.metadata ?? {}), error: "No address to send to" } }); continue; }
     const loc = (m.metadata?.location ?? null) as { name: string; url: string } | null;
     const out = await deliver(deps, { kind: m.channel as DeliverRequest["kind"], to: m.to_address ?? "", body: m.body, subject: m.subject, location: loc, messageId: m.id, leadId: m.lead_id, weddingId: m.wedding_id });
     if (out.status === "failed") failed++; else sent++;
   }
-  return { sent, failed, skipped };
+  return { sent, failed, skipped, awaitingManual };
 }
 
 /** Today's date in India (YYYY-MM-DD) for the run's clock. */

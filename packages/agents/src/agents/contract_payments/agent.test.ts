@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { createIntegrations } from "@wiwaha/integrations";
 import { decide, seedWedding, STAFF, testWorld } from "../../framework/testing";
 import { draftContract, onContractDecided, onPaymentReceived, sendPaymentReminders } from "./agent";
 
@@ -74,5 +75,19 @@ describe("Contract & Payments", () => {
     expect(c.status === "done" && c.result.overdue).toBe(1);
     expect(late.db.rows("payments").find((p) => p.id === "pay-con")).toMatchObject({ status: "overdue" });
     expect(late.store.messages.filter((m) => m.status === "pending_approval")).toHaveLength(0);
+  });
+
+  it("without live e-sign or payments, sends no test links and tells the family their event manager will follow up", async () => {
+    const w = testWorld();
+    w.deps.channels = createIntegrations({ NEXT_PUBLIC_APP_URL: "https://wiwaha.test" });
+    seedWedding(w);
+    const d = await draftContract(w.deps, "wd1");
+    if (d.status !== "done") throw new Error("draft failed");
+    decide(w, d.result.approvalId);
+    await onContractDecided(w.deps, d.result.approvalId, "approved");
+    const body = w.store.messages.at(-1)!.body;
+    expect(body).not.toMatch(/sandbox|https?:\/\//);
+    expect(body).toMatch(/event manager will share the contract/);
+    expect(w.db.rows("payments").find((p) => p.id === "pay-dep")!.link_url).toBeNull();
   });
 });

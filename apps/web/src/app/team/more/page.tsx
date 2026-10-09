@@ -1,5 +1,5 @@
 import { Card, PageTitle } from "@wiwaha/ui";
-import { BarChart3, CalendarDays, IndianRupee, Megaphone, Phone, Settings, Trees } from "lucide-react";
+import { BarChart3, CalendarDays, IndianRupee, Megaphone, Phone, Send, Settings, Trees } from "lucide-react";
 import Link from "next/link";
 import { requireStaff } from "@/lib/auth";
 
@@ -10,6 +10,7 @@ export default async function MorePage() {
   const viewer = await requireStaff();
   const role = viewer.profile.role;
   const items = [
+    ...(["owner", "sales", "event_manager"].includes(role) ? [{ href: "/team/outbox", icon: Send, title: "To send", body: "Approved WhatsApp and email waiting for you to send." }] : []),
     { href: "/team/calendar", icon: CalendarDays, title: "Calendar", body: "Every space, hold and booking." },
     ...(role === "owner" ? [{ href: "/team/owner", icon: BarChart3, title: "Numbers", body: "The five morning numbers, bookings and profit." }] : []),
     ...(["owner", "staff", "event_manager"].includes(role) ? [{ href: "/team/estate", icon: Trees, title: "Estate", body: "Maintenance, stock, purchases and readings." }] : []),

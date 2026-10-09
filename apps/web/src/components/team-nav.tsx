@@ -1,6 +1,6 @@
 "use client";
 import { cn } from "@wiwaha/ui";
-import { BarChart3, CalendarDays, CheckCircle2, ClipboardCheck, Gem, Inbox, IndianRupee, LayoutGrid, Megaphone, Phone, Settings, Sun, Trees } from "lucide-react";
+import { BarChart3, CalendarDays, CheckCircle2, ClipboardCheck, Gem, Inbox, IndianRupee, LayoutGrid, Megaphone, Phone, Send, Settings, Sun, Trees } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
@@ -12,6 +12,7 @@ const ITEMS = [
   { href: "/team/calendar", label: "Calendar", icon: CalendarDays, desktopOnly: true },
   { href: "/team/weddings", label: "Weddings", icon: Gem },
   { href: "/team/approvals", label: "Approvals", icon: CheckCircle2, badge: true },
+  { href: "/team/outbox", label: "To send", icon: Send, desktopOnly: true, outboxBadge: true },
   { href: "/team/sales", label: "Sales", icon: BarChart3, desktopOnly: true },
   { href: "/team/owner", label: "Numbers", icon: BarChart3, desktopOnly: true },
   { href: "/team/estate", label: "Estate", icon: Trees, desktopOnly: true },
@@ -28,7 +29,7 @@ function isActive(path: string, href: string, exact?: boolean) {
   return exact ? path === href : path === href || path.startsWith(`${href}/`);
 }
 
-export function SideNav({ approvals }: { approvals: number }) {
+export function SideNav({ approvals, toSend = 0 }: { approvals: number; toSend?: number }) {
   const path = usePathname();
   return (
     <nav className="space-y-1">
@@ -40,6 +41,7 @@ export function SideNav({ approvals }: { approvals: number }) {
             <Icon className="size-[18px]" aria-hidden />
             <span className="flex-1">{item.label}</span>
             {"badge" in item && approvals > 0 ? <span className={cn("rounded-full px-2 py-0.5 text-xs", active ? "bg-white/20" : "bg-gold-400 text-ink")}>{approvals}</span> : null}
+            {"outboxBadge" in item && toSend > 0 ? <span className={cn("rounded-full px-2 py-0.5 text-xs", active ? "bg-white/20" : "bg-gold-400 text-ink")}>{toSend}</span> : null}
           </Link>
         );
       })}
