@@ -69,7 +69,7 @@ export function testWorld(opts: { llm?: LlmClient; now?: Date; seed?: Record<str
     d.rows("lead_touches").push({ id: randomUUID(), lead_id: lead.id, channel: p.source, direction: "inbound", message: p.message ?? null, payload: p, received_at: now.toISOString() });
     return [{ lead_id: lead.id, contact_id: contact.id, is_new_lead: isNew, is_new_contact: isNew }];
   });
-  const channels = createIntegrations({ NEXT_PUBLIC_APP_URL: "https://wiwaha.test" });
+  const channels = createIntegrations({ NEXT_PUBLIC_APP_URL: "https://wiwaha.test", ALLOW_SANDBOX_LINKS: "true" });
   const deps: AgentDeps = { store, llm: opts.llm ?? new NoLlm(), now: () => now, db, channels };
   return { store, db, deps, channels, now };
 }

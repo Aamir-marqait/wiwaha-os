@@ -12,13 +12,15 @@ export default async function TeamLayout({ children }: { children: React.ReactNo
   const supabase = await createClient();
   const { count } = await supabase.from("approvals").select("id", { count: "exact", head: true }).eq("status", "pending");
   const approvals = count ?? 0;
+  const { count: sendCount } = await supabase.from("messages").select("id", { count: "exact", head: true }).eq("status", "approved").eq("direction", "outbound").in("channel", ["whatsapp", "email"]);
+  const toSend = sendCount ?? 0;
   const first = viewer.profile.full_name.split(" ")[0];
 
   return (
     <div className="lg:grid lg:min-h-dvh lg:grid-cols-[248px_1fr]">
       <aside className="ornament sticky top-0 hidden h-dvh flex-col bg-sage-800 px-4 py-6 lg:flex">
         <Link href="/team" className="mb-8 px-2"><Wordmark subtitle="Wiwaha OS" light /></Link>
-        <SideNav approvals={approvals} />
+        <SideNav approvals={approvals} toSend={toSend} />
         <div className="mt-auto rounded-xl bg-sage-900/40 px-3 py-3 text-sm text-sage-100">
           <p className="font-medium text-white">{viewer.profile.full_name}</p>
           <p className="text-xs text-sage-300">{viewer.profile.title ?? ROLE_LABELS[viewer.profile.role]}</p>

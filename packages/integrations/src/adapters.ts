@@ -70,10 +70,11 @@ export class SandboxTelephony implements TelephonyAdapter {
 export class SandboxPayments implements PaymentsAdapter {
   readonly provider = "sandbox";
   readonly live = false;
-  constructor(private readonly appUrl: string) {}
+  /** `demoLinks` hands out the test pay page; without it no link exists (accounts record payments by hand). */
+  constructor(private readonly appUrl: string, private readonly demoLinks = false) {}
   async createLink(req: PaymentLinkRequest): Promise<PaymentLinkResult> {
     const linkId = sandboxRef("plink");
-    return { provider: this.provider, status: "sandboxed", providerRef: linkId, linkId, url: `${this.appUrl}/pay/sandbox/${req.referenceId}` };
+    return { provider: this.provider, status: "sandboxed", providerRef: linkId, linkId, url: this.demoLinks ? `${this.appUrl}/pay/sandbox/${req.referenceId}` : null };
   }
   verifyWebhook(): boolean {
     return false; // sandbox payments are confirmed by our own server, never by webhook
@@ -83,10 +84,10 @@ export class SandboxPayments implements PaymentsAdapter {
 export class SandboxESign implements ESignAdapter {
   readonly provider = "sandbox";
   readonly live = false;
-  constructor(private readonly appUrl: string) {}
+  constructor(private readonly appUrl: string, private readonly demoLinks = false) {}
   async requestSignature(req: SignatureRequest): Promise<SignatureResult> {
     const id = sandboxRef("esign");
-    return { provider: this.provider, status: "sandboxed", providerRef: id, requestId: id, signUrl: `${this.appUrl}/sign/sandbox/${req.referenceId}` };
+    return { provider: this.provider, status: "sandboxed", providerRef: id, requestId: id, signUrl: this.demoLinks ? `${this.appUrl}/sign/sandbox/${req.referenceId}` : null };
   }
   verifyWebhook(): boolean {
     return false;
@@ -214,21 +215,22 @@ export interface IntegrationEnv {
   [key: string]: string | undefined;
 }
 
-export function sandboxFor(appUrl: string) {
+export function sandboxFor(appUrl: string, demoLinks = false) {
   return {
     whatsapp: new SandboxMessaging("wa"),
     email: new SandboxMessaging("email"),
     sms: new SandboxMessaging("sms"),
     instagram: new SandboxMessaging("ig"),
     telephony: new SandboxTelephony(),
-    payments: new SandboxPayments(appUrl),
-    esign: new SandboxESign(appUrl),
+    payments: new SandboxPayments(appUrl, demoLinks),
+    esign: new SandboxESign(appUrl, demoLinks),
   };
 }
 
 export function createIntegrations(env: IntegrationEnv, fetchFn: FetchLike = fetch as unknown as FetchLike) {
   const appUrl = (env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000").replace(/\/$/, "");
-  const sb = sandboxFor(appUrl);
+  // ALLOW_SANDBOX_LINKS=true is for demos only: it turns on the test pay and sign pages, which mark things paid/signed without checks.
+  const sb = sandboxFor(appUrl, env.ALLOW_SANDBOX_LINKS === "true");
   const whatsapp = env.WHATSAPP_BSP === "gupshup" && env.WHATSAPP_API_KEY && env.WHATSAPP_SENDER_NUMBER && env.GUPSHUP_APP_NAME
     ? new GupshupWhatsApp({ apiKey: env.WHATSAPP_API_KEY, source: env.WHATSAPP_SENDER_NUMBER, appName: env.GUPSHUP_APP_NAME }, fetchFn)
     : sb.whatsapp;

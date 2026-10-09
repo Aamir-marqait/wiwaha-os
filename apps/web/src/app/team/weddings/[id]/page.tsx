@@ -6,6 +6,7 @@ import { StageStatusBadge, UNLOCK_TEXT } from "@/components/stage-status";
 import { requireStaff } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { PlanningPanels } from "./panels";
+import { PaymentForm } from "./panel-forms";
 import { OperationsPanels } from "./closeout";
 import { todayIST } from "@wiwaha/db";
 
@@ -101,7 +102,10 @@ export default async function WeddingRoom({ params }: { params: Promise<{ id: st
                       <p className="text-sm font-medium">{p.label as string}</p>
                       <p className="text-xs text-ink-soft">{rupees(Number(p.amount_paise))} · due {formatDateIST(p.due_on as string)}</p>
                     </div>
-                    <Badge tone={p.status === "paid" ? "solid" : p.status === "overdue" ? "burgundy" : "gold"}>{String(p.status).replace(/_/g, " ")}</Badge>
+                    <span className="flex flex-col items-end gap-1">
+                      <Badge tone={p.status === "paid" ? "solid" : p.status === "overdue" ? "burgundy" : "gold"}>{String(p.status).replace(/_/g, " ")}</Badge>
+                      {p.status !== "paid" && ["owner", "accounts"].includes(viewer.profile.role) ? <PaymentForm weddingId={id} paymentId={p.id as string} amountRupees={Number(p.amount_paise) / 100} /> : null}
+                    </span>
                   </li>
                 ))}
               </ul>

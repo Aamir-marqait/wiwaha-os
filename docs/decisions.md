@@ -123,3 +123,13 @@ Migration `20261003001100_pin_search_path.sql` clears Supabase advisor lint 0011
 
 ## D31 — Marketing without live accounts (2026-10-04)
 **Decision:** Content Studio drafts next week's posts (5 platforms × 7 days, brand rhythm from `content.rhythm`) as one `social_post` approval per day. Approved posts become `scheduled` with a sandbox `social_post` outbox row, because no publishing API is connected. Ad spend is imported as CSV on `/team/marketing` until the Meta and Google Ads APIs are connected. The weekly ads report is an `ad_budget` approval: a recommendation only, applied by hand in the ads managers.
+
+## D32 — Manual-first fallbacks for every slow connection (2026-10-09)
+**Decision:** Anything that needs an outside approval has a manual way to do the same job, so nobody waits on Meta, Google, Razorpay or a WhatsApp provider.
+- **WhatsApp and email:** while a provider isn't live, approved messages stay `approved` (not faked as sent) and appear in **To send** (`/team/outbox`). One tap opens WhatsApp (`wa.me`) or the mail app with the text filled in; "I've sent it" records who sent it (`outbox.provider = 'manual'`). Web chat is unaffected. With keys set, `sendApprovedMessages` sends as before.
+- **Meta and Google leads:** CSV import (`/team/leads/import`, `parseLeadCsv`) with loose header matching. It goes through the same de-duplicating intake, so re-importing never duplicates.
+- **Payments:** accounts record bank, UPI or cheque payments on the wedding page. The same database trigger issues the receipt, signs the contract on the 40% and opens décor.
+- **Connections page** (`/team/settings/channels`) lists every dependency with its status, what it needs and the fallback.
+- Click-to-call, WhatsApp and email buttons on the lead page.
+**Security fix:** the test pay and sign pages could mark a payment paid or a contract signed without any check, and they were reachable on the deployed app. They now exist only when `ALLOW_SANDBOX_LINKS=true` (demos), and without it agents send no test links at all.
+**Decided against:** a "Sign in with Claude" login and building Wiwaha OS as a Claude connector (Anthropic doesn't allow third-party apps to use Claude plan logins; see the conversation of 2026-10-06). Revisit a connector later if the team wants to chat with Wiwaha from Claude.

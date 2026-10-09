@@ -21,13 +21,14 @@ export default async function TodayPage({ searchParams }: { searchParams: Promis
   const isOwner = viewer.profile.role === "owner";
   const since = new Date(Date.now() - 86_400_000).toISOString();
 
-  const [brief, newLeads, approvals, visits, myTasks, queue] = await Promise.all([
+  const [brief, newLeads, approvals, visits, myTasks, queue, toSend] = await Promise.all([
     supabase.from("briefs").select("*").eq("kind", "morning").is("recipient_id", null).order("for_date", { ascending: false }).limit(1).maybeSingle(),
     supabase.from("leads").select("id, source, score, hot, date_wanted, guest_count, created_at, contact:contacts(full_name)").gte("last_touch_at", since).order("score", { ascending: false, nullsFirst: false }).limit(6),
     supabase.from("approvals").select("id", { count: "exact", head: true }).eq("status", "pending"),
     supabase.from("visits").select("id, scheduled_at, attendees, lead:leads(id, contact:contacts(full_name))").eq("status", "scheduled").gte("scheduled_at", `${today}T00:00:00+05:30`).lt("scheduled_at", `${addDays(today, 2)}T00:00:00+05:30`).order("scheduled_at"),
     supabase.from("tasks").select("id, title, due_at, priority, status, wedding:weddings(title)").eq("owner_id", viewer.userId).in("status", ["todo", "in_progress", "blocked"]).order("due_at").limit(8),
     supabase.from("human_queue").select("id, title, detail, reason, created_at, lead_id").neq("status", "done").order("created_at", { ascending: false }).limit(6),
+    supabase.from("messages").select("id", { count: "exact", head: true }).eq("status", "approved").eq("direction", "outbound").in("channel", ["whatsapp", "email"]),
   ]);
 
   const b = brief.data as BriefRow | null;
@@ -41,9 +42,10 @@ export default async function TodayPage({ searchParams }: { searchParams: Promis
       <PageTitle title={`${greeting}, ${viewer.profile.full_name.split(" ")[0]}`} subtitle={formatDateIST(today, { weekday: "long", day: "numeric", month: "long", year: "numeric" })} />
 
       {isOwner ? <p className="mb-3 text-sm"><Link href="/team/owner" className="text-sage-700 underline">Your five numbers, bookings and profit →</Link></p> : null}
-      <div className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <div className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-5">
         <Stat label="New enquiries (24 h)" value={(newLeads.data ?? []).length} hint={<Link href="/team/leads" className="underline">Lead inbox</Link>} />
         <Stat label="Waiting for approval" value={approvals.count ?? 0} tone={(approvals.count ?? 0) > 0 ? "burgundy" : "sage"} hint={<Link href="/team/approvals" className="underline">Approval queue</Link>} />
+        <Stat label="Approved, ready to send" value={toSend.count ?? 0} tone={(toSend.count ?? 0) > 0 ? "gold" : "sage"} hint={<Link href="/team/outbox" className="underline">To send</Link>} />
         <Stat label="Visits today & tomorrow" value={(visits.data ?? []).length} tone="gold" />
         <Stat label="My overdue tasks" value={overdue} tone={overdue ? "burgundy" : "sage"} />
       </div>

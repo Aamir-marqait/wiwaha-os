@@ -1,4 +1,4 @@
-import { Badge, Card, CardHeader } from "@wiwaha/ui";
+import { Badge, Card, CardHeader, buttonClass } from "@wiwaha/ui";
 import { formatDateIST, formatDateTimeIST, rupees, type LeadStatus } from "@wiwaha/db";
 import { PolicyBook, type PolicyRow } from "@wiwaha/policy";
 import Link from "next/link";
@@ -135,6 +135,13 @@ export default async function LeadPage({ params, searchParams }: { params: Promi
           <Card className="p-4 sm:p-5">
             <h2 className="font-serif text-xl font-semibold">Contact</h2>
             <p className="mt-2 text-sm">{contact.phone_e164 ? <a href={`tel:${contact.phone_e164}`} className="text-sage-700 underline">{contact.phone_e164}</a> : "No phone"}</p>
+            {contact.phone_e164 || contact.email ? (
+              <p className="mt-2 flex flex-wrap gap-2">
+                {contact.phone_e164 ? <a href={`tel:${contact.phone_e164}`} className={buttonClass("secondary", "sm")}>Call</a> : null}
+                {contact.phone_e164 ? <a href={`https://wa.me/${contact.phone_e164.replace(/\D/g, "")}`} target="_blank" rel="noreferrer" className={buttonClass("secondary", "sm")}>WhatsApp</a> : null}
+                {contact.email ? <a href={`mailto:${contact.email}`} className={buttonClass("secondary", "sm")}>Email</a> : null}
+              </p>
+            ) : null}
             <p className="text-sm">{contact.email ?? "No email"}</p>
             <p className="mt-2 text-xs text-ink-soft">WhatsApp {contact.consent_whatsapp ? "✓ consented" : "✗ no consent"} · Email {contact.consent_email ? "✓" : "✗"}</p>
             {canEdit ? <div className="mt-4"><StatusSelect leadId={id} status={lead.status as LeadStatus} /></div> : null}

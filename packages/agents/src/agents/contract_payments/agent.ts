@@ -85,7 +85,7 @@ export async function onContractDecided(deps: AgentDeps, approvalId: string, sta
     const final = { ...a.payload, ...(a.edited_payload ?? {}) };
     const to = final.to ?? contact?.phone_e164 ?? contact?.email ?? null;
     if (to) {
-      const body = `${final.body ?? ""}\n\nSign your contract: ${sig.signUrl ?? "(link to follow)"}${link ? `\nPay the deposit: ${link}` : ""}`;
+      const body = `${final.body ?? ""}${sig.signUrl ? `\n\nSign your contract: ${sig.signUrl}` : "\n\nYour event manager will share the contract for signing shortly."}${link ? `\nPay the deposit: ${link}` : "\nYour event manager will share the payment details for the deposit."}`;
       const messageId = await deps.store.createMessage({ weddingId: w.id, channel: final.channel === "email" ? "email" : "whatsapp", direction: "outbound", status: "approved", authorKind: "agent", agentKey: CONTRACT_PAYMENTS, approvalId, toAddress: to, subject: `Your Wiwaha contract (${w.code})`, body });
       await deliver(deps, { kind: final.channel === "email" ? "email" : "whatsapp", to, subject: `Your Wiwaha contract (${w.code})`, body, messageId, weddingId: w.id, subjectTable: "contracts", subjectId: contract.id });
     }

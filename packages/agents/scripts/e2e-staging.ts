@@ -22,7 +22,7 @@ import { sendOffboardingSteps } from "../src/agents/offboarding/agent";
 const url = process.env.SUPABASE_URL, key = process.env.SUPABASE_SERVICE_ROLE_KEY;
 if (!url || !key) throw new Error("Set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY");
 const sb = createClient(url, key, { auth: { persistSession: false } });
-const deps: AgentDeps = { store: new SupabaseAgentStore(sb), llm: new NoLlm(), db: new SupabaseDb(sb), channels: createIntegrations({ NEXT_PUBLIC_APP_URL: process.env.APP_URL ?? "https://wiwaha-os.vercel.app" }) };
+const deps: AgentDeps = { store: new SupabaseAgentStore(sb), llm: new NoLlm(), db: new SupabaseDb(sb), channels: createIntegrations({ NEXT_PUBLIC_APP_URL: process.env.APP_URL ?? "https://wiwaha-os.vercel.app", ALLOW_SANDBOX_LINKS: "true" }) };
 const results: [string, boolean, string][] = [];
 const check = (name: string, ok: boolean, detail = "") => { results.push([name, ok, detail]); console.log(`${ok ? "✓" : "✗"} ${name}${detail ? ` — ${detail}` : ""}`); };
 const must = <T,>(r: { data: T | null; error: { message: string } | null }, what: string): T => { if (r.error) throw new Error(`${what}: ${r.error.message}`); return r.data as T; };
