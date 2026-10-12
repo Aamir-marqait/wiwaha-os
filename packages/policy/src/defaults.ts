@@ -112,8 +112,8 @@ export const DEFAULT_POLICIES = [
     "planning.start",
     "Planning",
     "Planning start",
-    "Recommended ~90 days before; the couple can start any stage earlier, but never before its payment unlock.",
-    { recommended_days_before: 90, allow_early_start: true, respect_payment_unlock: true },
+    "Active planning opens 90 days before the event. Until then the couple can share ideas, which we note; no stage starts before its opening date or its payment unlock.",
+    { recommended_days_before: 90, allow_early_start: false, respect_payment_unlock: true },
     { client_visible: true, sort: 80 },
   ),
   def(
@@ -162,13 +162,15 @@ export const DEFAULT_POLICIES = [
     "portal.stage_cards",
     "Planning",
     "Portal stage cards",
-    "Each planning stage has a recommended start date. The couple can press Start early, but a stage never opens before its unlock condition. If a stage hasn't started by its recommended date, the portal nudges once, then the event manager calls.",
+    "Each planning stage opens on its date (active planning starts 90 days before the event) and never before its payment unlock. Until then the couple can share ideas. If a stage hasn't started by its date, the portal nudges once, then the event manager calls.",
     {
       cards: [
         { key: "brief", name: "Our wedding (brief)", unlock: "deposit_paid", recommended_label: "On booking", triggers: "Brief agent guides the form; event manager assigned", needs_from_client: "Tell us about your functions, guests and rituals" },
         { key: "ceremonies", name: "Ceremonies & schedule", unlock: "brief_started", recommended_days_before: 120, recommended_label: "120 days before", triggers: "Run-of-show draft", needs_from_client: "Confirm ceremony timings" },
         { key: "menus", name: "Menus & tasting", unlock: "contract_paid", recommended_days_before: 90, recommended_label: "90 days before", triggers: "Menu options; tasting slot booking", needs_from_client: "Pick cuisines and book a tasting" },
         { key: "decor", name: "Décor & moodboards", unlock: "contract_paid", recommended_days_before: 90, recommended_label: "90 days before", triggers: "About five moodboards per function", needs_from_client: "Shortlist your favourite moodboards" },
+        { key: "entertainment", name: "Entertainment", unlock: "contract_paid", recommended_days_before: 90, recommended_label: "90 days before", triggers: "Event manager sends artist and act options", needs_from_client: "Pick your music, artists and acts" },
+        { key: "extras", name: "Extras", unlock: "contract_paid", recommended_days_before: 90, recommended_label: "90 days before", triggers: "Event manager sends add-on options", needs_from_client: "Choose any extras: makeup, laundry, welcome drinks and more" },
         { key: "guests_rooms", name: "Guests & rooms", unlock: "contract_paid", recommended_days_before: 60, recommended_label: "60 days before", triggers: "Rooming list, pickup schedule", needs_from_client: "Share your rooming list and arrivals" },
         { key: "vendors", name: "Vendors", unlock: "quote_approved", recommended_days_before: 75, recommended_label: "After décor and menu are final", triggers: "Vendor lock-in emails", needs_from_client: "Approve your quote" },
         { key: "final_payment", name: "Final payment", unlock: "quote_approved", recommended_days_before: 30, recommended_label: "30 days before", triggers: "Invoice and payment link", needs_from_client: "Complete the final 50%" },

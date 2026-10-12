@@ -172,3 +172,29 @@ export async function postMessage(weddingId: string, body: string): Promise<Resu
   route(error);
   return result(["/portal/chat"], error);
 }
+
+// ---------------------------------------------------------------------------
+// Ideas and options (D35)
+// ---------------------------------------------------------------------------
+/** The family shares an idea; we note it and pick it up when planning opens. */
+export async function shareIdea(weddingId: string, body: string, link: string, vertical: string): Promise<Result> {
+  const viewer = await requireClient();
+  const text = body.trim();
+  const url = link.trim();
+  if (!text) return { error: "Write a few words about your idea." };
+  if (url && !/^https?:\/\/\S+$/.test(url)) return { error: "That link doesn't look right." };
+  const supabase = await createClient("portal");
+  const { error } = await supabase.from("wedding_ideas").insert({
+    wedding_id: weddingId, author_id: viewer.userId, author_name: viewer.profile.full_name.split(" ")[0] || null, body: text.slice(0, 2000), link_url: url || null,
+    vertical: ["decor", "fnb", "entertainment", "extras", "venue", "other"].includes(vertical) ? vertical : null,
+  });
+  return result(["/portal/ideas"], error, "Noted, thank you! We'll pick this up when planning begins.");
+}
+
+/** The couple chooses (or declines) an option their event manager sent. */
+export async function chooseOption(selectionId: string, choice: "chosen" | "declined", vertical: string): Promise<Result> {
+  await requireClient();
+  const supabase = await createClient("portal");
+  const { error } = await supabase.rpc("client_choose_selection", { p_id: selectionId, p_choice: choice });
+  return result([`/portal/options/${vertical}`], error);
+}

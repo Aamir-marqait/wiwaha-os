@@ -17,7 +17,7 @@ These live as **data** in the policy book (`policies` table, typed by `packages/
 | Contract | Plain black-and-white template; e-signature. |
 | Décor | Only the in-house team or a designated planner. The venue provides infrastructure (power, complimentary rooms). |
 | Moodboards | About five per function: broad themes first, then detail. Standard and custom are labelled clearly. |
-| Planning start | Recommended about 90 days before. The couple can start any stage earlier, but never before its payment unlock. |
+| Planning start | Active planning opens 90 days before the event (changed 2026-10-12, D35). Until then the couple can share ideas, which we note; no stage starts before its opening date or its payment unlock. |
 | Audit | Every portal edit logs user, time and IP address. |
 | Reviews | Personalised review form by email after each event; low scores reach Prashanth within 2 hours. |
 | Farewell | Thank-you note, parting gift (chocolates or an Amazon voucher), added to the newsletter. |

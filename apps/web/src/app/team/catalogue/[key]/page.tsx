@@ -18,6 +18,7 @@ export default async function CataloguePage({ params }: { params: Promise<{ key:
   const viewer = await requireStaff(spec.viewRoles);
   const supabase = await createClient();
   let q = supabase.from(spec.table).select("*");
+  if (spec.fixed) q = q.match(spec.fixed);
   for (const o of spec.order) q = q.order(o.column, { ascending: o.ascending !== false });
   const { data } = await q.limit(1000);
   return (

@@ -10,7 +10,8 @@ export function PortalShell({ t, wedding, first, active, children }: { t: Portal
   const days = daysBetween(todayIST(), wedding.event_start as string);
   const tabs = [
     { href: "/portal", key: "home", label: t.home }, { href: "/portal/brief", key: "brief", label: t.brief }, { href: "/portal/menus", key: "menus", label: t.menus },
-    { href: "/portal/decor", key: "decor", label: t.decor }, { href: "/portal/quote", key: "quote", label: t.quote }, { href: "/portal/payments", key: "payments", label: t.payments },
+    { href: "/portal/decor", key: "decor", label: t.decor }, { href: "/portal/options/entertainment", key: "entertainment", label: t.entertainment }, { href: "/portal/options/extras", key: "extras", label: t.extras },
+    { href: "/portal/ideas", key: "ideas", label: t.ideas }, { href: "/portal/quote", key: "quote", label: t.quote }, { href: "/portal/payments", key: "payments", label: t.payments },
     { href: "/portal/guests", key: "guests", label: t.guests }, { href: "/portal/family", key: "family", label: t.family }, { href: "/portal/chat", key: "chat", label: t.chat },
   ];
   return (

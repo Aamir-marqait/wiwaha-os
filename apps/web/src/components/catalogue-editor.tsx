@@ -2,6 +2,7 @@
 import { Badge, buttonClass, Card, cn } from "@wiwaha/ui";
 import { useState, useTransition } from "react";
 import { saveCatalogueRow } from "@/app/team/catalogue/actions";
+import { PhotoField } from "./photo-field";
 import { toValues, type CatalogueSpec, type CatalogueValues, type FieldSpec } from "@/lib/catalogue";
 
 const input = "mt-1 block h-10 w-full rounded-xl border border-line bg-white px-3 text-sm normal-case tracking-normal";
@@ -14,6 +15,8 @@ function display(f: FieldSpec, v: string | boolean): string {
   if (f.kind === "rupees") return `₹${Number(v).toLocaleString("en-IN")}`;
   if (f.kind === "percent") return `${v}% GST`;
   if (f.kind === "select") return pretty(String(v));
+  if (f.kind === "image") return "photo";
+  if (f.kind === "images") { const n = String(v).split(/\s+/).filter(Boolean).length; return n ? `${n} photo${n === 1 ? "" : "s"}` : ""; }
   return String(v);
 }
 
@@ -27,6 +30,8 @@ function RowForm({ spec, initial, id, onDone }: { spec: CatalogueSpec; initial: 
       <div className="grid gap-3 sm:grid-cols-2">
         {spec.fields.map((f) => f.kind === "checkbox" ? (
           <label key={f.key} className="flex items-center gap-2 self-end pb-2 text-sm"><input type="checkbox" checked={v[f.key] === true} onChange={(e) => set(f.key, e.target.checked)} /> {f.label}</label>
+        ) : f.kind === "image" || f.kind === "images" ? (
+          <PhotoField key={f.key} label={f.label} value={String(v[f.key] ?? "")} multiple={f.kind === "images"} onChange={(x) => set(f.key, x)} />
         ) : f.kind === "textarea" ? (
           <label key={f.key} className={cn(label, "sm:col-span-2")}>{f.label}<textarea value={String(v[f.key] ?? "")} onChange={(e) => set(f.key, e.target.value)} rows={2} className="mt-1 block w-full rounded-xl border border-line bg-white px-3 py-2 text-sm normal-case tracking-normal" /></label>
         ) : f.kind === "select" ? (
@@ -68,7 +73,8 @@ export function CatalogueEditor({ spec, rows, canEdit }: { spec: CatalogueSpec; 
               <Card className={cn("p-4", inactive && "opacity-60")}>
                 {editing === id ? <RowForm spec={spec} initial={values} id={id} onDone={() => setEditing(null)} /> : (
                   <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
+                    {(() => { const img = spec.fields.find((f) => f.kind === "image"); const u = img ? String(values[img.key] ?? "") : ""; return u ? <img src={u} alt="" className="size-14 shrink-0 rounded-lg border border-line object-cover" /> : null; })()}
+                    <div className="min-w-0 flex-1">
                       <p className="font-medium">{String(values[primary.key] ?? "")} {inactive ? <Badge>inactive</Badge> : null}</p>
                       <p className="mt-0.5 text-sm text-ink-soft">{spec.fields.filter((f) => f !== primary && f.key !== "active" && f.kind !== "textarea").map((f) => display(f, values[f.key]!)).filter(Boolean).join(" · ")}</p>
                     </div>

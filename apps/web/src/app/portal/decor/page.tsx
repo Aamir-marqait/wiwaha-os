@@ -30,7 +30,13 @@ export default async function DecorPage() {
             <div className="grid gap-3 sm:grid-cols-2">
               {list.filter((b) => b.status !== "rejected").map((b) => (
                 <Card key={b.id} className="overflow-hidden">
-                  <div className="flex h-20">{(b.palette ?? []).map((c) => <span key={c} className="flex-1" style={{ background: c }} />)}</div>
+                  {(() => {
+                    const photos = (b.images ?? []).map((i) => i.url).filter((u): u is string => !!u).slice(0, 3);
+                    return photos.length ? (
+                      <div className={`grid h-36 gap-0.5 ${photos.length === 1 ? "grid-cols-1" : photos.length === 2 ? "grid-cols-2" : "grid-cols-3"}`}>{photos.map((u) => <img key={u} src={u} alt="" className="size-full object-cover" />)}</div>
+                    ) : null;
+                  })()}
+                  <div className="flex h-5">{(b.palette ?? []).map((c) => <span key={c} className="flex-1" style={{ background: c }} />)}</div>
                   <div className="space-y-2 p-4">
                     <div className="flex items-start justify-between gap-2">
                       <p className="font-serif text-lg font-semibold">{b.theme}</p>

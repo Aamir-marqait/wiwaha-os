@@ -9,7 +9,8 @@ const HANDOFF_RULES: Record<string, string> = {
   "contract.template": "Plain black-and-white template; e-signature.",
   "decor.providers": "Only the in-house team or a designated planner. Venue provides infrastructure (power, complimentary rooms).",
   moodboards: "About five per function, broad themes first, then detail. Standard and custom labelled clearly.",
-  "planning.start": "Recommended ~90 days before; the couple can start any stage earlier, but never before its payment unlock.",
+  // Changed at the founders' workflow meeting, 2026-10-12 (decisions D35).
+  "planning.start": "Active planning opens 90 days before the event. Until then the couple can share ideas, which we note; no stage starts before its opening date or its payment unlock.",
   "audit.portal_edits": "Every portal edit logs user, time and IP address.",
   "reviews.after_event": "Personalised review form by email after each event; low scores reach Prashanth within 2 hours.",
   farewell: "Thank-you note, parting gift (chocolates or an Amazon voucher), added to the newsletter.",

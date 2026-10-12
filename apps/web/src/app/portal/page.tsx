@@ -12,7 +12,7 @@ import { PortalShell } from "./_ui/shell";
 
 export const metadata: Metadata = { title: "Your wedding" };
 
-const STAGE_TAB: Record<string, string> = { brief: "/portal/brief", menus: "/portal/menus", decor: "/portal/decor", guests_rooms: "/portal/guests", final_payment: "/portal/payments", vendors: "/portal/quote" };
+const STAGE_TAB: Record<string, string> = { brief: "/portal/brief", menus: "/portal/menus", decor: "/portal/decor", entertainment: "/portal/options/entertainment", extras: "/portal/options/extras", guests_rooms: "/portal/guests", final_payment: "/portal/payments", vendors: "/portal/quote" };
 
 export default async function PortalHome() {
   const { viewer, supabase, t, wedding, me } = await loadPortal({ allowNoWedding: true });
@@ -29,10 +29,13 @@ export default async function PortalHome() {
     );
   }
 
-  const [stages, messages] = await Promise.all([
+  const [stages, messages, planning] = await Promise.all([
     supabase.from("wedding_stages").select("*").eq("wedding_id", wedding.id).order("sort"),
     supabase.from("messages").select("id, body, created_at").eq("wedding_id", wedding.id).eq("client_visible", true).eq("direction", "outbound").order("created_at", { ascending: false }).limit(1),
+    supabase.from("policies").select("value").eq("key", "planning.start").maybeSingle(),
   ]);
+  // Policy 'planning.start': when early starts aren't allowed, a stage opens on its date.
+  const allowEarly = (planning.data?.value as { allow_early_start?: boolean } | null)?.allow_early_start !== false;
   const canStart = !!me?.can_start_stages;
   const today = todayIST();
 
@@ -49,8 +52,9 @@ export default async function PortalHome() {
           {(stages.data ?? []).map((s) => {
             const status = s.status as StageStatus;
             const locked = status === "locked";
-            const startable = status === "not_started" && canStart;
-            const early = s.recommended_start && (s.recommended_start as string) > today;
+            const early = !!s.recommended_start && (s.recommended_start as string) > today;
+            const notYet = early && !allowEarly;
+            const startable = status === "not_started" && canStart && !notYet;
             const href = STAGE_TAB[s.key as string];
             const snoozed = s.snoozed_until && (s.snoozed_until as string) >= today;
             return (
@@ -59,10 +63,11 @@ export default async function PortalHome() {
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
                       <p className="flex items-center gap-2 font-serif text-xl font-semibold">{locked ? <Lock className="size-4 text-ink-soft" aria-hidden /> : null}{s.name as string}</p>
-                      <p className="mt-0.5 text-xs text-ink-soft">{t.recommended}: {s.recommended_start ? formatDateIST(s.recommended_start as string) : "on booking"}{snoozed ? ` · snoozed until ${formatDateIST(s.snoozed_until as string)}` : ""}</p>
+                      <p className="mt-0.5 text-xs text-ink-soft">{allowEarly ? t.recommended : t.opens_on}: {s.recommended_start ? formatDateIST(s.recommended_start as string) : "on booking"}{snoozed ? ` · snoozed until ${formatDateIST(s.snoozed_until as string)}` : ""}</p>
                       {locked ? <p className="mt-2 text-sm text-ink-soft">{UNLOCK_TEXT[s.unlock_rule as string]}</p> : s.needs_from_client && status !== "done" ? <p className="mt-2 text-sm">{s.needs_from_client as string}</p> : null}
                       {s.owner_label && status !== "not_started" && !locked ? <p className="mt-1 text-xs text-sage-700">With: {s.owner_label as string}</p> : null}
                       {href && s.started_at ? <a href={href} className="mt-2 inline-block text-sm text-sage-700 underline">Open →</a> : null}
+                      {status === "not_started" && notYet ? <p className="mt-2 text-sm text-ink-soft">{t.opens_on} {formatDateIST(s.recommended_start as string)}. <a href="/portal/ideas" className="text-sage-700 underline">{t.ideas} →</a></p> : null}
                       {startable && !snoozed ? <div className="mt-1"><SnoozeForm stageId={s.id as string} /></div> : null}
                     </div>
                     <div className="flex shrink-0 flex-col items-end gap-2">

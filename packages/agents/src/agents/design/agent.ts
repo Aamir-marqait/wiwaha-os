@@ -10,6 +10,8 @@ import { DESIGN_GATE } from "./gate";
 import { DESIGN_TOOLS } from "./tools";
 
 export const DESIGN = "design";
+
+interface Template { id: string; area: string; title: string; function_type: string | null; description: string | null; reference_image_url: string | null; examples: { url: string; caption?: string }[] | null; palette: string[] | null; design_kind: string }
 const POLICIES: readonly PolicyKey[] = ["moodboards", "decor.providers"];
 
 /** Décor stage started: about five broad moodboards per function (round 1). */
@@ -20,15 +22,26 @@ export async function generateMoodboards(deps: AgentDeps, weddingId: string): Pr
     const [w] = await db.select<{ id: string; title: string; primary_contact_id: string | null }>("weddings", { where: { id: weddingId } });
     const functions = await db.select<{ id: string; type: string; name: string }>("event_functions", { where: { wedding_id: weddingId }, order: [{ column: "date" }] });
     const existing = await db.select<{ function_id: string }>("moodboards", { where: { wedding_id: weddingId, round: 1 } });
+    // Sample moodboards by area, uploaded by the team, come first; built-in themes fill the rest.
+    const templates = await db.select<Template>("decor_templates", { where: { active: true }, order: [{ column: "sort" }] });
     let created = 0;
     for (const fn of functions) {
       if (existing.some((m) => m.function_id === fn.id)) continue;
-      const rows = themesFor(fn.type, rules.per_function).map((t) => ({
+      const fromTemplates = templates.filter((t) => !t.function_type || t.function_type === fn.type)
+        .sort((a, b) => Number(!!b.function_type) - Number(!!a.function_type))
+        .slice(0, rules.per_function)
+        .map((t) => ({
+          wedding_id: weddingId, function_id: fn.id, round: 1, theme: t.title, design_kind: t.design_kind,
+          palette: t.palette?.length ? t.palette : ["#7A8F6E", "#C9A24B", "#F8F3E9"], description: [t.area, t.description].filter(Boolean).join(": "), status: "generated", template_id: t.id,
+          images: [...(t.examples ?? []).map((e) => ({ kind: "photo", url: e.url, alt: e.caption ?? t.title })), ...(t.reference_image_url ? [{ kind: "photo", url: t.reference_image_url, alt: `${t.area} as it is` }] : [])],
+        }));
+      const themed = themesFor(fn.type, Math.max(0, rules.per_function - fromTemplates.length)).map((t) => ({
         wedding_id: weddingId, function_id: fn.id, round: 1, theme: t.name, design_kind: t.kind,
         palette: t.palette, description: t.description, status: "generated",
         images: [{ kind: "prompt", prompt: `${t.imagePrompt}, Wiwaha by Praman estate near Bengaluru`, alt: t.name }],
       }));
-      // The database refuses this before the décor unlock (40% payment): never bypassed here.
+      const rows = [...fromTemplates, ...themed];
+      // The database refuses this before the décor unlock (its payment part): never bypassed here.
       await db.insert("moodboards", rows);
       created += rows.length;
     }

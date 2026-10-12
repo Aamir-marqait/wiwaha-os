@@ -14,7 +14,7 @@ export async function saveCatalogueRow(key: string, id: string | null, values: C
   if ("error" in parsed) return { error: parsed.error };
   const supabase = await createClient();
   const { error } = id
-    ? await supabase.from(spec.table).update(parsed.row).eq("id", id)
+    ? await supabase.from(spec.table).update(parsed.row).eq("id", id).match(spec.fixed ?? {})
     : await supabase.from(spec.table).insert({ ...(spec.fixed ?? {}), ...parsed.row });
   revalidatePath(`/team/catalogue/${key}`);
   if (error?.code === "23505") return { error: `That ${spec.singular} already exists (a name or code is taken).` };

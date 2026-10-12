@@ -20,6 +20,10 @@ describe("Onboarding", () => {
     expect(String(task.description)).toMatch(/Ananya Iyer/);
     expect(String(task.description)).toMatch(/Prashanth \(Wiwaha\)/);
     expect(w.db.rows("weddings")[0]).toMatchObject({ stage: "planning" });
+    // Planning opens on a date from the policy book; until then, ideas are noted.
+    expect(w.store.messages[0]!.body).toMatch(/Active planning opens on/);
+    expect(String(task.description)).toMatch(/Welcome message to post/);
+    expect(String(task.description)).toMatch(/invite link on the Wedding Room/);
   });
 
   it("is safe to run twice", async () => {

@@ -1,5 +1,5 @@
 import type { PolicyKey } from "@wiwaha/policy";
-import { formatDateIST } from "@wiwaha/db";
+import { addDays, formatDateIST } from "@wiwaha/db";
 import { where } from "../../framework/db";
 import { agentDb, proposeClientMessage, writeText } from "../../framework/kit";
 import { runAgent, type RunOutcome } from "../../framework/runner";
@@ -41,8 +41,14 @@ export async function onboardWedding(deps: AgentDeps, weddingId: string): Promis
     // 2. Welcome letter on each policy channel (gated in draft).
     const primary = contacts.find((c) => c.id === w.primary_contact_id) ?? contacts[0] ?? null;
     const first = primary?.full_name.split(" ")[0] ?? w.title;
-    const template = `Dear ${first},\n\nCongratulations, and welcome to the Wiwaha family! We're honoured that you've chosen our estate for ${formatDateIST(w.event_start, { day: "numeric", month: "long", year: "numeric" })}.\n\n${em ? `${em.full_name.split(" ")[0]} will be your event manager and your first point of contact. ` : ""}Your planning portal is where it all comes together: each stage has a suggested start date, but you choose when to begin. Your login details are on their way by email.\n\nWe've got this handled, so you can simply enjoy the journey.\n\nWarmly,\nTeam Wiwaha`;
-    const letter = await writeText(ctx, { policies: POLICIES, facts: { first_name: first, couple: w.title, event_date: formatDateIST(w.event_start, { day: "numeric", month: "long", year: "numeric" }), event_manager: em?.full_name ?? null }, task: "Write the welcome letter.", template, clientFacing: true });
+    // Active planning opens on a date from the policy book (planning.start), not on booking.
+    const planning = ctx.book.get("planning.start");
+    const opens = formatDateIST(addDays(w.event_start, -planning.recommended_days_before), { day: "numeric", month: "long", year: "numeric" });
+    const pace = planning.allow_early_start
+      ? "Your planning portal is where it all comes together: each stage has a suggested start date, but you choose when to begin."
+      : `Active planning opens on ${opens}. Until then, share any ideas you love in your portal or the family WhatsApp group; we'll note every one and pick them up when planning begins.`;
+    const template = `Dear ${first},\n\nCongratulations, and welcome to the Wiwaha family! We're honoured that you've chosen our estate for ${formatDateIST(w.event_start, { day: "numeric", month: "long", year: "numeric" })}.\n\n${em ? `${em.full_name.split(" ")[0]} will be your event manager and your first point of contact. ` : ""}${pace} Your login details are on their way by email.\n\nWe've got this handled, so you can simply enjoy the journey.\n\nWarmly,\nTeam Wiwaha`;
+    const letter = await writeText(ctx, { policies: POLICIES, facts: { first_name: first, couple: w.title, event_date: formatDateIST(w.event_start, { day: "numeric", month: "long", year: "numeric" }), event_manager: em?.full_name ?? null, planning_opens: opens, early_start_allowed: planning.allow_early_start }, task: "Write the welcome letter.", template, clientFacing: true });
     let letters = 0;
     for (const ch of rules.channels) {
       const to = ch === "whatsapp" ? primary?.phone_e164 : primary?.email;
@@ -59,7 +65,7 @@ export async function onboardWedding(deps: AgentDeps, weddingId: string): Promis
       const staff = staffRoles.length ? await db.select<{ full_name: string; role: string }>("profiles", { where: { role: where.in(staffRoles), active: true } }) : [];
       await db.insert("tasks", {
         scope: "wedding", wedding_id: weddingId, title: "Create the family WhatsApp group", owner_id: w.event_manager_id, owner_role: "event_manager",
-        description: `Add: ${[...key, ...staff.filter((s) => s.role !== "event_manager" || !em || s.full_name === em.full_name).map((s) => `${s.full_name} (Wiwaha)`)].join("; ")}. Then add the Wiwaha number so the Wedding Room agent can log decisions.`,
+        description: `Add: ${[...key, ...staff.filter((s) => s.role !== "event_manager" || !em || s.full_name === em.full_name).map((s) => `${s.full_name} (Wiwaha)`)].join("; ")}. Then add the Wiwaha number so the Wedding Room agent can log decisions, and save the group's invite link on the Wedding Room.\n\nWelcome message to post:\n"Welcome to your Wiwaha family group, ${first}! This is where we'll plan ${w.title}'s celebration together.${planning.allow_early_start ? "" : ` Active planning opens on ${opens}; until then, share any ideas here and we'll note them.`} We've got this handled. Team Wiwaha"`,
         due_at: new Date(ctx.now.getTime() + 24 * 3600_000).toISOString(), priority: "high", proof_kind: "tick", created_by_agent: ONBOARDING,
       });
     }

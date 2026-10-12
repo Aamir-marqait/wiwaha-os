@@ -181,3 +181,56 @@ export async function setWeddingParts(weddingId: string, parts: DatedPart[]): Pr
   if (!error) after(runRouting);
   return done(weddingId, error);
 }
+
+/** Puts chosen catalogue options in front of the couple (they can only pick from what's sent). */
+export async function sendOptions(weddingId: string, vertical: "entertainment" | "extras", optionIds: string[], functionId: string | null, note: string): Promise<Result> {
+  const viewer = await requireStaff(["owner", "event_manager"]);
+  if (!optionIds.length) return { error: "Tick at least one option." };
+  const supabase = await createClient("team");
+  const { data: opts, error } = await supabase.from("service_options").select("id, name, description, image_url").eq("vertical", vertical).eq("active", true).in("id", optionIds.slice(0, 40));
+  if (error) return done(weddingId, error);
+  const now = new Date().toISOString();
+  const { error: e2 } = await supabase.from("wedding_selections").insert((opts ?? []).map((o) => ({
+    wedding_id: weddingId, function_id: functionId || null, option_id: o.id, vertical, name: o.name, description: o.description, image_url: o.image_url,
+    status: "sent", sent_at: now, sent_by: viewer.userId, staff_note: note.trim() || null,
+  })));
+  return done(weddingId, e2);
+}
+
+/** The couple chose it and it's confirmed: it becomes part of the plan (and later, the costing). */
+export async function finaliseSelection(weddingId: string, id: string): Promise<Result> {
+  const viewer = await requireStaff(["owner", "event_manager"]);
+  const supabase = await createClient("team");
+  const { error } = await supabase.from("wedding_selections").update({ status: "final", finalised_at: new Date().toISOString(), finalised_by: viewer.userId }).eq("id", id).eq("status", "chosen");
+  return done(weddingId, error);
+}
+
+/** Take back an option that isn't final yet. */
+export async function withdrawSelection(weddingId: string, id: string): Promise<Result> {
+  await requireStaff(["owner", "event_manager"]);
+  const supabase = await createClient("team");
+  const { error } = await supabase.from("wedding_selections").delete().eq("id", id).neq("status", "final");
+  return done(weddingId, error);
+}
+
+/** "Noted": the family's idea has been seen and will be picked up when planning opens. */
+export async function noteIdea(weddingId: string, ideaId: string): Promise<Result> {
+  const viewer = await requireStaff(["owner", "sales", "event_manager"]);
+  const supabase = await createClient("team");
+  const { error } = await supabase.from("wedding_ideas").update({ noted_at: new Date().toISOString(), noted_by: viewer.userId }).eq("id", ideaId);
+  return done(weddingId, error);
+}
+
+/** The family WhatsApp group's invite link, once the event manager has made it. */
+export async function saveGroupLink(weddingId: string, url: string): Promise<Result> {
+  await requireStaff(["owner", "sales", "event_manager"]);
+  const link = url.trim();
+  if (link && !/^https:\/\/chat\.whatsapp\.com\/\S+$/.test(link)) return { error: "Paste the group's invite link (https://chat.whatsapp.com/…)." };
+  const supabase = await createClient("team");
+  const { error } = await supabase.from("weddings").update({ whatsapp_group_url: link || null }).eq("id", weddingId);
+  if (!error && link) {
+    const { data: t } = await supabase.from("tasks").select("id").eq("wedding_id", weddingId).eq("title", "Create the family WhatsApp group").neq("status", "done").maybeSingle();
+    if (t) await supabase.rpc("complete_task", { p_task_id: t.id, p_note: "Group link saved on the Wedding Room" });
+  }
+  return done(weddingId, error);
+}

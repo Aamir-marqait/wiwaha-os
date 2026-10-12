@@ -6,7 +6,7 @@ import type { AppRole } from "@wiwaha/db";
  * (`components/catalogue-editor.tsx`) renders each from this spec; the
  * database's row-level security decides who may write.
  */
-export type FieldKind = "text" | "textarea" | "number" | "rupees" | "percent" | "date" | "select" | "checkbox";
+export type FieldKind = "text" | "textarea" | "number" | "rupees" | "percent" | "date" | "select" | "checkbox" | "image" | "images";
 export interface FieldSpec {
   key: string;
   label: string;
@@ -39,7 +39,65 @@ const PROOF = ["none", "tick", "photo", "file"] as const;
 const FUNCTION_TYPES = ["haldi", "mehendi", "sangeet", "wedding", "reception", "engagement", "cocktail", "pooja", "other"] as const;
 const VENDOR_CATEGORIES = ["photography", "decor", "catering", "music", "makeup", "lighting", "transport", "priest", "florist", "entertainment", "other"] as const;
 
+const ENTERTAINMENT = ["dj", "live_band", "classical_music", "dhol", "nadaswaram", "anchor", "dancers", "magician", "fireworks", "kids_entertainment", "other"] as const;
+const EXTRAS = ["makeup", "mehendi_artist", "hair_styling", "laundry", "welcome_drinks", "photo_booth", "transport", "spa", "babysitting", "gifting", "other"] as const;
+const DECOR_AREAS = ["Directional boards", "Main door entry", "View cutter", "Lobby", "Staircase", "Mandap", "Stage", "Dining", "Lawn", "Poolside", "Haldi setup", "Mehendi setup", "Sangeet stage", "Photo corner", "Other"] as const;
+
 export const CATALOGUES: Record<string, CatalogueSpec> = {
+  entertainment: {
+    key: "entertainment", table: "service_options", title: "Entertainment", singular: "act",
+    description: "Artists and acts we can offer: DJs, bands, dhol, anchors and more. Couples only ever pick from this list. The price to the client and our cost feed Prashanth's costing.",
+    editRoles: ["owner", "event_manager"], viewRoles: ["owner", "sales", "event_manager", "accounts"],
+    order: [{ column: "sort" }, { column: "name" }],
+    fixed: { vertical: "entertainment" },
+    fields: [
+      { key: "name", label: "Name", kind: "text", required: true, primary: true },
+      { key: "category", label: "Type", kind: "select", options: ENTERTAINMENT, required: true, initial: "dj" },
+      { key: "image_url", label: "Photo", kind: "image" },
+      { key: "unit", label: "Unit", kind: "text", required: true, initial: "per function" },
+      { key: "rate_paise", label: "Price to client (₹)", kind: "rupees" },
+      { key: "cost_paise", label: "Our cost (₹)", kind: "rupees" },
+      { key: "sort", label: "Order", kind: "number", initial: 100 },
+      { key: "active", label: "Active", kind: "checkbox", initial: true },
+      { key: "description", label: "What the couple sees", kind: "textarea" },
+    ],
+  },
+  extras: {
+    key: "extras", table: "service_options", title: "Extras", singular: "extra",
+    description: "Add-on services: makeup, laundry, welcome drinks and more. Tick \"Guests can book\" to offer it on the guest page too.",
+    editRoles: ["owner", "event_manager"], viewRoles: ["owner", "sales", "event_manager", "accounts"],
+    order: [{ column: "sort" }, { column: "name" }],
+    fixed: { vertical: "extras" },
+    fields: [
+      { key: "name", label: "Name", kind: "text", required: true, primary: true },
+      { key: "category", label: "Type", kind: "select", options: EXTRAS, required: true, initial: "makeup" },
+      { key: "image_url", label: "Photo", kind: "image" },
+      { key: "unit", label: "Unit", kind: "text", required: true, initial: "per person" },
+      { key: "rate_paise", label: "Price to client (₹)", kind: "rupees" },
+      { key: "cost_paise", label: "Our cost (₹)", kind: "rupees" },
+      { key: "guest_bookable", label: "Guests can book", kind: "checkbox", initial: false },
+      { key: "sort", label: "Order", kind: "number", initial: 100 },
+      { key: "active", label: "Active", kind: "checkbox", initial: true },
+      { key: "description", label: "What the couple sees", kind: "textarea" },
+    ],
+  },
+  decor_templates: {
+    key: "decor_templates", table: "decor_templates", title: "Décor templates", singular: "template",
+    description: "Sample moodboards by area: a photo of the spot as it is, and photos of what we've done there. The Design agent starts each couple's moodboards from these.",
+    editRoles: ["owner", "event_manager"], viewRoles: ["owner", "sales", "event_manager"],
+    order: [{ column: "sort" }, { column: "area" }, { column: "title" }],
+    fields: [
+      { key: "title", label: "Title", kind: "text", required: true, primary: true, placeholder: "e.g. Marigold arch" },
+      { key: "area", label: "Area", kind: "select", options: DECOR_AREAS, required: true, initial: "Main door entry" },
+      { key: "function_type", label: "Function (optional)", kind: "select", options: ["", ...FUNCTION_TYPES], initial: "" },
+      { key: "design_kind", label: "Standard or custom", kind: "select", options: ["standard", "custom"], required: true, initial: "standard" },
+      { key: "reference_image_url", label: "The area as it is", kind: "image" },
+      { key: "examples", label: "Photos of our work here", kind: "images" },
+      { key: "sort", label: "Order", kind: "number", initial: 100 },
+      { key: "active", label: "Active", kind: "checkbox", initial: true },
+      { key: "description", label: "Description", kind: "textarea" },
+    ],
+  },
   vendors: {
     key: "vendors", table: "vendors", title: "Vendors", singular: "vendor",
     description: "The vendors the Vendor Coordinator asks to lock dates. Preferred vendors are asked first; only designated planners may deliver décor.",
@@ -197,7 +255,7 @@ export function toRow(spec: CatalogueSpec, values: CatalogueValues): { row: Reco
     const s = typeof raw === "string" ? raw.trim() : "";
     if (!s) {
       if (f.required) return { error: `${f.label} is required.` };
-      row[f.key] = null;
+      row[f.key] = f.kind === "images" ? [] : null;
       continue;
     }
     switch (f.kind) {
@@ -217,6 +275,16 @@ export function toRow(spec: CatalogueSpec, values: CatalogueValues): { row: Reco
         const n = Number(s.replace("%", ""));
         if (!Number.isFinite(n) || n < 0 || n > 28) return { error: `${f.label} must be between 0 and 28.` };
         row[f.key] = Math.round(n * 100);
+        break;
+      }
+      case "image":
+        if (!/^https:\/\/\S+$/.test(s)) return { error: `${f.label} must be an https link or an uploaded photo.` };
+        row[f.key] = s;
+        break;
+      case "images": {
+        const urls = s.split(/\s+/).filter(Boolean);
+        if (urls.some((u) => !/^https:\/\/\S+$/.test(u))) return { error: `${f.label}: each photo must be an https link.` };
+        row[f.key] = urls.slice(0, 24).map((url) => ({ url }));
         break;
       }
       case "date":
@@ -241,6 +309,7 @@ export function toValues(spec: CatalogueSpec, row: Record<string, unknown> | nul
     const x = row ? row[f.key] : f.initial;
     if (f.kind === "checkbox") v[f.key] = row ? x === true : f.initial === true;
     else if (x === null || x === undefined) v[f.key] = "";
+    else if (f.kind === "images") v[f.key] = Array.isArray(x) ? x.map((i: unknown) => (i && typeof i === "object" && "url" in i ? String((i as { url: unknown }).url) : "")).filter(Boolean).join("\n") : "";
     else if (row && f.kind === "rupees") v[f.key] = String(Number(x) / 100);
     else if (row && f.kind === "percent") v[f.key] = String(Number(x) / 100);
     else v[f.key] = String(x);
