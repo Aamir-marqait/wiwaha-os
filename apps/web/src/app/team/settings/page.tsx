@@ -1,5 +1,5 @@
 import { Card, PageTitle } from "@wiwaha/ui";
-import { Bot, BookOpen, Clock, History, Link2, List, Plug, Users } from "lucide-react";
+import { Bot, BookOpen, Clock, History, Link2, List, Plug, Sparkles, Users } from "lucide-react";
 import Link from "next/link";
 import { requireStaff } from "@/lib/auth";
 
@@ -14,6 +14,7 @@ export default async function SettingsPage() {
     { href: "/team/settings/agents", icon: Bot, title: "Agents", body: owner ? "Autonomy dial, kill switch and model for each of the 21 agents." : "See which agents are live and how much they may do alone." },
     ...(owner ? [{ href: "/team/settings/team", icon: Users, title: "Team & access", body: "Invite staff, set their role, and choose which headings each person sees." }] : []),
     ...(owner || role === "sales" ? [{ href: "/team/settings/availability", icon: Clock, title: "Site-visit hours", body: "When each sales executive can host a visit (the sales calendar)." }] : []),
+    { href: "/team/settings/claude", icon: Sparkles, title: "Claude connector", body: "Use Wiwaha OS from Claude: connect, and see who is connected." },
     { href: "/team/settings/links", icon: Link2, title: "Links", body: "Where Prashanth, the team, couples and families, and wedding guests sign in or visit." },
     { href: "/team/settings/lists", icon: List, title: "Lists", body: "Vendors, stock, upkeep schedules, the price book, spaces, rooms, dishes and plan templates: add and edit them." },
     { href: "/team/settings/channels", icon: Plug, title: "Connections", body: "WhatsApp, email, phone, Meta, Google and payments: what's live, what each needs, and the manual way until then." },
