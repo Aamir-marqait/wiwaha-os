@@ -7,6 +7,7 @@ import { Wordmark } from "@/components/brand";
 import { StageStatusBadge, UNLOCK_TEXT } from "@/components/stage-status";
 import { startStage } from "./actions";
 import { SnoozeForm } from "./_ui/forms";
+import { AtAGlance } from "./_ui/glance";
 import { loadPortal } from "./_ui/load";
 import { PortalShell } from "./_ui/shell";
 
@@ -19,11 +20,16 @@ export default async function PortalHome() {
   const first = viewer.profile.full_name.split(" ")[0] ?? "";
 
   if (!wedding) {
+    // The portal closes after the wedding day (policy portal.access).
+    const { data: closed } = await supabase.rpc("my_closed_portal");
+    const done = ((closed ?? []) as { title: string; event_end: string }[])[0];
     return (
       <main className="mx-auto max-w-xl px-4 py-16 text-center">
         <Wordmark subtitle={t.your_portal} />
         <p className="mt-10 font-serif text-3xl">{t.namaste}, {first}</p>
-        <p className="mt-2 text-ink-soft">Your planning space will appear here once your event manager has set it up.</p>
+        {done ? (
+          <p className="mt-2 text-ink-soft">Thank you for celebrating {done.title} with us. Your planning portal has now closed; your review form, thank-you and photos come to you by email and WhatsApp. We&rsquo;ve loved every moment.</p>
+        ) : <p className="mt-2 text-ink-soft">Your planning space will appear here once your event manager has set it up.</p>}
         <form action="/auth/signout?to=portal" method="post" className="mt-8"><button className="text-sm text-sage-700 underline">{t.sign_out}</button></form>
       </main>
     );
@@ -44,6 +50,8 @@ export default async function PortalHome() {
       {(messages.data ?? [])[0] ? (
         <Card className="p-4"><p className="text-xs uppercase tracking-wide text-gold-600">{t.from_team}</p><p className="mt-1 whitespace-pre-line text-[15px]">{(messages.data ?? [])[0]!.body as string}</p></Card>
       ) : null}
+
+      <AtAGlance supabase={supabase} weddingId={wedding.id as string} t={t} />
 
       <section>
         <h2 className="mb-1 mt-2 font-serif text-2xl font-semibold">{t.journey}</h2>

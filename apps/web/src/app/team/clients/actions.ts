@@ -1,4 +1,6 @@
 "use server";
+import { addDays, todayIST } from "@wiwaha/db";
+import { revalidatePath } from "next/cache";
 import { requireSection } from "@/lib/auth";
 import { env } from "@/lib/env";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -22,4 +24,16 @@ export async function portalLink(memberId: string): Promise<{ error?: string; li
   const { data, error } = await admin.auth.admin.generateLink({ type: "magiclink", email });
   if (error || !data.properties?.hashed_token) return { error: error?.message ?? "Couldn't create a link." };
   return { link: `${env.appUrl()}/auth/confirm?token_hash=${data.properties.hashed_token}&type=magiclink&next=/portal` };
+}
+
+/** Keep a wedding's portal open for a few more days after the event (logins otherwise close after the wedding day). */
+export async function extendPortal(weddingId: string, days: number): Promise<{ error?: string }> {
+  await requireSection("client", ["owner", "sales", "event_manager"]);
+  const supabase = await createClient("team");
+  const { data: w } = await supabase.from("weddings").select("event_end, portal_access_until").eq("id", weddingId).maybeSingle();
+  if (!w) return { error: "Wedding not found." };
+  const base = [w.portal_access_until as string | null, w.event_end as string, todayIST()].filter((x): x is string => !!x).sort().at(-1)!;
+  const { error } = await supabase.from("weddings").update({ portal_access_until: addDays(base, Math.min(Math.max(days, 1), 30)) }).eq("id", weddingId);
+  revalidatePath("/team/clients");
+  return error ? { error: error.message } : {};
 }

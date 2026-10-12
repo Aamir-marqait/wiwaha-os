@@ -152,6 +152,7 @@ const ROUTES: Record<string, string> = {
   moodboard_shortlisted: "design",
   moodboard_finalised: "design",
   quote_requested: "quote",
+  selection_finalised: "quote",
   quote_approved: "vendor_coordinator",
   vendor_replied: "vendor_coordinator",
   family_message: "wedding_room",

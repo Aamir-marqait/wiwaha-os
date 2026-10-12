@@ -157,6 +157,7 @@ export const CATALOGUES: Record<string, CatalogueSpec> = {
       { key: "category", label: "Category", kind: "select", options: ["venue", "rooms", "catering", "decor", "av", "services"], required: true, initial: "venue" },
       { key: "unit", label: "Charged", kind: "select", options: ["each", "per_day", "per_night", "per_plate", "lump_sum"], required: true, initial: "each" },
       { key: "unit_price_paise", label: "Price (₹)", kind: "rupees", required: true },
+      { key: "cost_paise", label: "Our cost (₹)", kind: "rupees" },
       { key: "gst_rate_bps", label: "GST (%)", kind: "percent", initial: 18 },
       { key: "design_kind", label: "Décor kind", kind: "select", options: ["", "standard", "custom"], initial: "" },
       { key: "active", label: "Active", kind: "checkbox", initial: true },

@@ -11,6 +11,7 @@ export const DESIGN_TOOLS: DbGrants = {
     menus: ["select"],
     quotes: ["select"],
     agent_tasks: ["select", "insert"],
+    wedding_selections: ["select"],
     wedding_stages: ["update"],
     approvals: ["select"],
     contacts: ["select"],

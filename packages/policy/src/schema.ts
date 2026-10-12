@@ -95,6 +95,8 @@ export const policySchemas = {
     channel: z.literal("email"),
     personalised: z.boolean(),
     send_days_after_event: z.number().int().nonnegative(),
+    /** India time of day the form goes out (e.g. "19:00", the evening of the last function). */
+    send_at: z.string().regex(/^\d{2}:\d{2}$/).optional(),
     low_score_threshold: z.number().int().min(1).max(5),
     escalate_to_role: z.literal("owner"),
     escalate_within_hours: z.number().int().positive(),
@@ -191,6 +193,10 @@ export const policySchemas = {
     trigger: z.literal("deposit_paid"),
     channels: z.array(z.enum(["whatsapp", "email"])),
     whatsapp_group_members: z.array(z.enum(["couple", "parent", "planner", "owner", "event_manager", "sales"])),
+  }),
+  "portal.access": z.object({
+    /** Family logins close this many days after the last day of the event (0 = end of the wedding day). */
+    close_days_after_event: z.number().int().nonnegative(),
   }),
   "portal.nudges": z.object({
     nudge_days_after_recommended: z.number().int().nonnegative(),

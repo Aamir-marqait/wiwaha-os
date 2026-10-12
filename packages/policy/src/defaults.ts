@@ -129,7 +129,7 @@ export const DEFAULT_POLICIES = [
     "After the wedding",
     "Reviews",
     "Personalised review form by email after each event; low scores reach Prashanth within 2 hours.",
-    { channel: "email", personalised: true, send_days_after_event: 3, low_score_threshold: 3, escalate_to_role: "owner", escalate_within_hours: 2 },
+    { channel: "email", personalised: true, send_days_after_event: 0, send_at: "19:00", low_score_threshold: 3, escalate_to_role: "owner", escalate_within_hours: 2 },
     { sort: 100 },
   ),
   def(
@@ -299,6 +299,14 @@ export const DEFAULT_POLICIES = [
     { client_visible: true, sort: 52 },
   ),
   def(
+    "portal.access",
+    "Planning",
+    "Portal access",
+    "Couples' and families' portal logins work until the end of the wedding day. After that, the review form, thank-you and photos come by email and WhatsApp.",
+    { close_days_after_event: 0 },
+    { client_visible: true, sort: 85 },
+  ),
+  def(
     "portal.nudges",
     "Planning",
     "Portal reminders",
@@ -376,7 +384,7 @@ export const DEFAULT_POLICIES = [
     "offboarding.sequence",
     "After the wedding",
     "Farewell sequence",
-    "Three days after the event the couple gets a thank-you note, their photo-sharing link and the review form; the parting gift follows the next day, the newsletter invitation after that, and a referral ask two weeks later. We send anniversary wishes every year.",
+    "The review form goes out by email on the evening of the last function. Three days after the event the couple gets a thank-you note and their photo-sharing link; the parting gift follows the next day, the newsletter invitation after that, and a referral ask two weeks later. We send anniversary wishes every year.",
     { steps: [ { key: "thank_you", days_after_event: 3 }, { key: "photo_sharing", days_after_event: 3 }, { key: "review_form", days_after_event: 3 }, { key: "parting_gift", days_after_event: 4 }, { key: "newsletter", days_after_event: 5 }, { key: "referral_ask", days_after_event: 14 } ], anniversary_wishes: true },
     { sort: 111 },
   ),

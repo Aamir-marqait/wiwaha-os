@@ -47,6 +47,8 @@ export async function setVendorStatus(weddingId: string, bookingId: string, stat
   await requireStaff(["owner", "event_manager"]);
   const supabase = await createClient("team");
   const { error } = await supabase.from("vendor_bookings").update({ status, replied_at: new Date().toISOString() }).eq("id", bookingId);
+  // The database queues the Vendor Coordinator (checklist, or the next vendor after a decline).
+  if (!error) after(runRouting);
   return done(weddingId, error);
 }
 
@@ -232,5 +234,30 @@ export async function saveGroupLink(weddingId: string, url: string): Promise<Res
     const { data: t } = await supabase.from("tasks").select("id").eq("wedding_id", weddingId).eq("title", "Create the family WhatsApp group").neq("status", "done").maybeSingle();
     if (t) await supabase.rpc("complete_task", { p_task_id: t.id, p_note: "Group link saved on the Wedding Room" });
   }
+  return done(weddingId, error);
+}
+
+/** Prashanth approves (or sends back) the costing; approving releases the quote to the couple. */
+export async function decideCosting(weddingId: string, approvalId: string, decision: "approved" | "rejected"): Promise<Result> {
+  await requireStaff(["owner"]);
+  const { decide } = await import("@/app/team/approvals/actions");
+  const r = await decide(approvalId, decision, null, decision === "approved" ? "Approved from the costing view" : "Sent back from the costing view");
+  revalidatePath(`/team/weddings/${weddingId}`);
+  return r;
+}
+
+/** The welcome text at the top of the guest page. */
+export async function saveGuestWelcome(weddingId: string, text: string): Promise<Result> {
+  await requireStaff(["owner", "sales", "event_manager"]);
+  const supabase = await createClient("team");
+  const { error } = await supabase.from("weddings").update({ guest_welcome: text.trim().slice(0, 2000) || null }).eq("id", weddingId);
+  return done(weddingId, error);
+}
+
+/** Staff confirm, complete or cancel a guest's add-on request. */
+export async function setGuestRequestStatus(weddingId: string, id: string, status: "confirmed" | "done" | "cancelled"): Promise<Result> {
+  const viewer = await requireStaff(["owner", "sales", "event_manager", "accounts"]);
+  const supabase = await createClient("team");
+  const { error } = await supabase.from("guest_requests").update({ status, handled_by: viewer.userId }).eq("id", id);
   return done(weddingId, error);
 }

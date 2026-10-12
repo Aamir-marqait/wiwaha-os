@@ -27,6 +27,36 @@ describe("Vendor Coordinator", () => {
     expect(again.status === "done" && again.result.requested).toBe(0);
   });
 
+  it("sends each vendor its work order from the approved quote, and turns an accepted one into checklist tasks", async () => {
+    const w = testWorld();
+    seedWedding(w, { paid: ["deposit", "contract"] });
+    vendors(w);
+    w.db.rows("quotes").push({ id: "q1", wedding_id: "wd1", version: 1, status: "client_approved" });
+    w.db.rows("quote_lines").push(
+      { id: "l1", quote_id: "q1", description: "Haldi décor: Marigold arch", quantity: 1, function_id: "fn-haldi", category: "decor", sort: 10 },
+      { id: "l2", quote_id: "q1", description: "Wedding: DJ Rhythm", quantity: 1, function_id: "fn-wed", category: "entertainment:dj", sort: 20 },
+      { id: "l3", quote_id: "q1", description: "Estate exclusive use", quantity: 2, function_id: null, category: "venue", sort: 30 },
+    );
+    w.db.rows("quote_line_costs").push({ id: "l1", unit_cost_paise: 60_000_00 }, { id: "l2", unit_cost_paise: 30_000_00 });
+    await lockVendors(w.deps, "wd1");
+    const decor = w.db.rows("vendor_bookings").find((b) => b.vendor_id === "decor-planner")!;
+    expect(decor.work_order).toEqual([{ description: "Haldi décor: Marigold arch", quantity: 1, function_id: "fn-haldi", function_name: "Haldi", date: "2027-02-12", unit_cost_paise: 60_000_00 }]);
+    expect(decor.amount_paise).toBe(60_000_00);
+    expect(w.db.rows("vendor_bookings").find((b) => b.vendor_id === "dj-a")!.work_order).toHaveLength(1);
+    expect(w.store.messages.find((m) => /Marigold arch/.test(m.body))!.body).toMatch(/Work order:/);
+    // No client prices go to a vendor.
+    expect(w.store.messages.every((m) => !/₹/.test(m.body))).toBe(true);
+
+    decor.status = "confirmed";
+    await onVendorReplied(w.deps, decor.id as string);
+    const tasks = w.db.rows("tasks").filter((t) => String(t.title).startsWith("Check with decor-planner"));
+    expect(tasks).toHaveLength(1);
+    expect(tasks[0]).toMatchObject({ owner_role: "event_manager", wedding_id: "wd1", proof_kind: "tick" });
+    // Safe to repeat.
+    await onVendorReplied(w.deps, decor.id as string);
+    expect(w.db.rows("tasks").filter((t) => String(t.title).startsWith("Check with decor-planner"))).toHaveLength(1);
+  });
+
   it("chases after the policy wait, then hands to the event manager", async () => {
     const w = testWorld();
     seedWedding(w, { paid: ["deposit", "contract"] });

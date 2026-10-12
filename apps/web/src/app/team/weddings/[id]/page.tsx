@@ -8,6 +8,8 @@ import { EFFECT_LABELS, isEffect } from "@/lib/payment-parts";
 import { createClient } from "@/lib/supabase/server";
 import { OperationsPanels } from "./closeout";
 import { FamilyForm, FunctionsEditor } from "./family-forms";
+import { CostingCard } from "./costing";
+import { GuestPanel } from "./guest-panel";
 import { Lifecycle } from "./lifecycle";
 import { PaymentForm } from "./panel-forms";
 import { PlanningPanels } from "./panels";
@@ -76,7 +78,12 @@ export default async function WeddingRoom({ params, searchParams }: { params: Pr
         </div>
       ) : null}
       {tab === "entertainment" ? <SelectionsPanel supabase={supabase} weddingId={id} vertical="entertainment" canEdit={canVertical} /> : null}
-      {tab === "extras" ? <SelectionsPanel supabase={supabase} weddingId={id} vertical="extras" canEdit={canVertical} /> : null}
+      {tab === "extras" ? (
+        <div className="grid gap-5 lg:grid-cols-2">
+          <SelectionsPanel supabase={supabase} weddingId={id} vertical="extras" canEdit={canVertical} />
+          <GuestPanel supabase={supabase} w={{ id, title: w.title as string, guest_token: w.guest_token as string, guest_welcome: (w.guest_welcome as string | null) ?? null }} canEdit={canEdit} />
+        </div>
+      ) : null}
       {tab === "fnb" ? <div className="space-y-5"><PlanningPanels supabase={supabase} weddingId={id} role={role} show={["menus"]} /></div> : null}
       {tab === "venue" ? <div className="space-y-5"><OperationsPanels supabase={supabase} weddingId={id} role={role} eventEnded={eventEnded} show={["rooms", "run_of_show", "inspection"]} /></div> : null}
       {tab === "vendors" ? <div className="space-y-5"><PlanningPanels supabase={supabase} weddingId={id} role={role} show={["vendors"]} /></div> : null}
@@ -194,7 +201,7 @@ async function Payments({ supabase, w, id, role, eventEnded }: { supabase: Supa;
         </Card>
       </div>
       <div className="space-y-5">
-        <PlanningPanels supabase={supabase} weddingId={id} role={role} show={["quote"]} />
+        {role === "owner" || role === "accounts" ? <CostingCard supabase={supabase} weddingId={id} role={role} /> : <PlanningPanels supabase={supabase} weddingId={id} role={role} show={["quote"]} />}
         <OperationsPanels supabase={supabase} weddingId={id} role={role} eventEnded={eventEnded} show={["invoices"]} />
       </div>
     </div>
