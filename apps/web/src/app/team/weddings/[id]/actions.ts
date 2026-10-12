@@ -84,7 +84,7 @@ export async function recordInspection(weddingId: string, items: { area: string;
 
 /**
  * Accounts record a payment that arrived by bank transfer, UPI or cheque. The database does the rest:
- * receipt number, the milestone's effect (the 40% signs the contract and opens décor) and the receipt message.
+ * receipt number, the milestone's effect (the part that signs the contract opens décor) and the receipt message.
  */
 export async function recordPayment(weddingId: string, paymentId: string, input: { method: string; reference: string; rupees: number }): Promise<Result> {
   await requireStaff(["owner", "accounts"]);
@@ -259,5 +259,14 @@ export async function setGuestRequestStatus(weddingId: string, id: string, statu
   const viewer = await requireStaff(["owner", "sales", "event_manager", "accounts"]);
   const supabase = await createClient("team");
   const { error } = await supabase.from("guest_requests").update({ status, handled_by: viewer.userId }).eq("id", id);
+  return done(weddingId, error);
+}
+
+/** Prashanth or the event manager opens a stage now, ahead of its date (the family can't). */
+export async function openStageNow(weddingId: string, stageId: string): Promise<Result> {
+  await requireStaff(["owner", "event_manager"]);
+  const supabase = await createClient("team");
+  const { error } = await supabase.rpc("start_stage", { p_stage_id: stageId });
+  if (!error) after(runRouting);
   return done(weddingId, error);
 }

@@ -10,7 +10,7 @@ import { ONBOARDING_TOOLS } from "./tools";
 export const ONBOARDING = "onboarding";
 const POLICIES: readonly PolicyKey[] = ["onboarding.welcome", "planning.start", "portal.stage_cards", "audit.portal_edits", "honesty.commitments"];
 
-/** The 10% deposit arrived: welcome letter, portal logins, and the family WhatsApp group. */
+/** The advance arrived: welcome letter, portal logins, and the family WhatsApp group. */
 export async function onboardWedding(deps: AgentDeps, weddingId: string): Promise<RunOutcome<{ invited: number; letters: number }>> {
   return runAgent(deps, ONBOARDING, { action: "onboard", weddingId, input: { wedding_id: weddingId }, fallbackTitle: "Welcome a newly booked couple" }, async (ctx) => {
     const db = agentDb(ctx, ONBOARDING_TOOLS);

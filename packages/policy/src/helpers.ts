@@ -35,21 +35,22 @@ export function splitPayments(book: PolicyBook, totalPaise: number): { milestone
 
 /**
  * What must happen before décor work may begin, from 'decor.providers' and
- * 'payments.schedule' (e.g. "the 40% contract payment"). Null when décor has
+ * 'payments.schedule' (e.g. "the 50% advance payment"). Null when décor has
  * no unlock condition.
  */
 export function decorUnlockLabel(book: PolicyBook): string | null {
   const unlock = book.get("decor.providers").requires_payment_unlock;
-  const milestone = unlock === "deposit_paid" ? "deposit" : unlock === "contract_paid" ? "contract" : null;
-  if (milestone) {
-    const m = book.get("payments.schedule").milestones.find((x) => x.milestone === milestone);
-    if (m) return `the ${m.percent_bps / 100}% ${milestone} payment`;
+  // A part unlocks by what it does, not its name: "books" both holds the date and signs the contract.
+  const effects = unlock === "deposit_paid" ? ["holds_date", "books"] : unlock === "contract_paid" ? ["signs_contract", "books"] : null;
+  if (effects) {
+    const m = book.get("payments.schedule").milestones.find((x) => effects.includes(x.effect));
+    if (m) return `the ${m.percent_bps / 100}% ${m.effect === "books" ? "advance" : unlock === "deposit_paid" ? "deposit" : "contract"} payment`;
   }
   switch (unlock) {
     case "none": return null;
     case "brief_started": return "your wedding brief is started";
     case "quote_approved": return "your quote is approved";
     case "event_complete": return "the event is complete";
-    default: return `the ${milestone ?? unlock.replace(/_/g, " ")} step`;
+    default: return `the ${unlock.replace(/_/g, " ")} step`;
   }
 }

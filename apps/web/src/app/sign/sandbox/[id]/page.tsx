@@ -21,7 +21,7 @@ export default async function SandboxSign({ params }: { params: Promise<{ id: st
     if (!name || !sandboxEsign()) return;
     const admin = createAdminClient("system");
     await admin.from("contracts").update({ status: "signed", signed_at: new Date().toISOString(), esign_completed_at: new Date().toISOString(), esign_ref: `sbx_signed_by:${name.slice(0, 80)}` }).eq("id", id).eq("status", "sent");
-    // The DB guard allows sent → signed; already-signed (40% paid) just records the e-signature.
+    // The DB guard allows sent → signed; already-signed (contract part paid) just records the e-signature.
     await admin.from("contracts").update({ esign_completed_at: new Date().toISOString() }).eq("id", id).is("esign_completed_at", null);
     redirect(`/sign/sandbox/${id}`);
   }

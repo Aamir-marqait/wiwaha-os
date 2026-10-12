@@ -27,11 +27,11 @@
 3. Expired holds are released by `pg_cron` every 15 minutes (and before any new hold), and the Chief of Staff queues a "your hold lapsed" note to the family for approval.
 
 ## 4. The 8:30 am brief (1 min)
-**Today → Morning brief → Write now** (the cron does this daily at 8:30 IST). It covers decisions waiting, today's visits, *the one* follow-up call due (Deepak), the hold expiring (Rhea), overdue tasks and the 40% payment due.
+**Today → Morning brief → Write now** (the cron does this daily at 8:30 IST). It covers decisions waiting, today's visits, *the one* follow-up call due (Deepak), the hold expiring (Rhea), overdue tasks and the next payment due.
 
 ## 5. Control and audit (2 min)
 1. **Settings → Agents**: all 21 agents. Chief of Staff and Lead Desk are live in **Draft**; the rest wait for their phase. Flip Lead Desk **off**, and a new enquiry lands in *Needs a person* instead. Flip it back on.
 2. **Settings → Activity log**: every agent run (model, tokens, cost, policy versions). The **Edits (audit)** tab shows every human change with user, time and IP.
 
 ## 6. The couple's portal (1 min)
-Sign in at **/portal/login** as Ananya ("Use a password instead"). Her stage cards show: the brief is in progress, **Ceremonies** can start early (press Start), and **Décor & moodboards** stays locked until the 40% contract payment.
+Sign in at **/portal/login** as Ananya ("Use a password instead"). Her stage cards show: the brief is in progress, **Ceremonies** is open (press Start), and **Décor & moodboards** is paid for by the 50% advance but opens 90 days before the wedding; until then she can share ideas under **Ideas**.

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { seedWedding, testWorld } from "../../framework/testing";
-import { chaseVendors, lockVendors, onVendorReplied } from "./agent";
+import { chaseVendors, lockVendors, onVendorReplied, onWorkOrderApproved } from "./agent";
 
 function vendors(w: ReturnType<typeof testWorld>) {
   const v = (id: string, category: string, extra: Record<string, unknown> = {}) => ({ id, name: id, category, email: `${id}@vendors.test`, contact_name: null, preferred: true, designated_planner: false, active: true, rating: 4, ...extra });
@@ -12,7 +12,7 @@ function vendors(w: ReturnType<typeof testWorld>) {
 }
 
 describe("Vendor Coordinator", () => {
-  it("asks one preferred vendor per category (décor only via a designated planner), through approval", async () => {
+  it("drafts one preferred vendor per category (décor only via a designated planner); nothing goes out until we approve", async () => {
     const w = testWorld();
     seedWedding(w, { paid: ["deposit", "contract"] });
     vendors(w);
@@ -20,8 +20,10 @@ describe("Vendor Coordinator", () => {
     expect(out.status === "done" && out.result.requested).toBe(3);
     const asked = w.db.rows("vendor_bookings").map((b) => b.vendor_id).sort();
     expect(asked).toEqual(["decor-planner", "dj-a", "photo-a"]);
-    expect(w.store.approvals.every((a) => a.kind === "vendor_message")).toBe(true);
-    expect(w.store.messages.every((m) => m.clientVisible === false && /\/vendor\/reply\//.test(m.body))).toBe(true);
+    // Work orders are only drafted: no email, no approval request an agent could auto-send.
+    expect(w.store.messages).toHaveLength(0);
+    expect(w.db.rows("vendor_bookings").every((b) => !b.work_order_approved_at)).toBe(true);
+    expect(w.store.notifications.some((n) => /work orders? to approve/.test(n.title))).toBe(true);
     // Idempotent.
     const again = await lockVendors(w.deps, "wd1");
     expect(again.status === "done" && again.result.requested).toBe(0);
@@ -43,7 +45,16 @@ describe("Vendor Coordinator", () => {
     expect(decor.work_order).toEqual([{ description: "Haldi décor: Marigold arch", quantity: 1, function_id: "fn-haldi", function_name: "Haldi", date: "2027-02-12", unit_cost_paise: 60_000_00 }]);
     expect(decor.amount_paise).toBe(60_000_00);
     expect(w.db.rows("vendor_bookings").find((b) => b.vendor_id === "dj-a")!.work_order).toHaveLength(1);
-    expect(w.store.messages.find((m) => /Marigold arch/.test(m.body))!.body).toMatch(/Work order:/);
+    // Not sent until approved by us.
+    expect((await onWorkOrderApproved(w.deps, decor.id as string)).status === "done").toBe(true);
+    expect(w.store.messages).toHaveLength(0);
+    decor.work_order_approved_at = w.now.toISOString();
+    const sent = await onWorkOrderApproved(w.deps, decor.id as string);
+    expect(sent.status === "done" && sent.result.sent).toBe(true);
+    const mail = w.store.messages.find((m) => /Marigold arch/.test(m.body))!;
+    expect(mail).toMatchObject({ status: "approved", channel: "email", clientVisible: false });
+    expect(mail.body).toMatch(/Work order:/);
+    expect(mail.body).toMatch(/\/vendor\/reply\//);
     // No client prices go to a vendor.
     expect(w.store.messages.every((m) => !/₹/.test(m.body))).toBe(true);
 
@@ -61,7 +72,7 @@ describe("Vendor Coordinator", () => {
     const w = testWorld();
     seedWedding(w, { paid: ["deposit", "contract"] });
     vendors(w);
-    w.db.rows("vendor_bookings").push({ id: "vb1", vendor_id: "dj-a", wedding_id: "wd1", status: "requested", reply_token: "tok", chase_count: 0, last_chased_at: null, requested_at: new Date(w.now.getTime() - 49 * 3600_000).toISOString(), replied_at: null });
+    w.db.rows("vendor_bookings").push({ id: "vb1", vendor_id: "dj-a", wedding_id: "wd1", status: "requested", reply_token: "tok", chase_count: 0, last_chased_at: null, requested_at: new Date(w.now.getTime() - 49 * 3600_000).toISOString(), work_order_approved_at: new Date(w.now.getTime() - 49 * 3600_000).toISOString(), replied_at: null });
     const first = await chaseVendors(w.deps);
     expect(first.status === "done" && first.result.chased).toBe(1);
     const soon = await chaseVendors(w.deps);

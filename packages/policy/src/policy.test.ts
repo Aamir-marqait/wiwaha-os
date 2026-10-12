@@ -5,7 +5,8 @@ const HANDOFF_RULES: Record<string, string> = {
   "honesty.commitments": "Agents never make a commitment that isn't in the policy book. Unknown → escalate to a human.",
   "pricing.phone": "No prices quoted on the phone; invite the caller to visit. Out-of-town callers may get the approved \"starting from\" band plus the brochure and video tour on WhatsApp.",
   "followup.after_visit": "Exactly one follow-up call, two days after a site visit. No response = stop calling.",
-  "payments.schedule": "10% deposit holds the date; 40% within two weeks signs the contract; 50% due 30 days before the event.",
+  // Changed by the founders on 2026-10-12 (decisions D37): two parts by default, editable by Prashanth.
+  "payments.schedule": "Two parts: a 50% advance on booking holds the date and signs the contract; the other 50% is due 30 days before the event. This is the standard split; Prashanth can change it, or give a wedding its own parts.",
   "contract.template": "Plain black-and-white template; e-signature.",
   "decor.providers": "Only the in-house team or a designated planner. Venue provides infrastructure (power, complimentary rooms).",
   moodboards: "About five per function, broad themes first, then detail. Standard and custom labelled clearly.",
@@ -29,11 +30,11 @@ describe("policy defaults", () => {
     for (const k of NON_NEGOTIABLE_KEYS) expect(book.ruleText(k)).toBe(HANDOFF_RULES[k]);
   });
 
-  it("encodes 10/40/50 with the right due rules", () => {
+  it("encodes the two-part default with the right due rules", () => {
     const ms = PolicyBook.defaults().get("payments.schedule").milestones;
-    expect(ms.map((m) => m.percent_bps)).toEqual([1000, 4000, 5000]);
-    expect(ms[1]).toMatchObject({ due: "days_after_booking", days: 14 });
-    expect(ms[2]).toMatchObject({ due: "days_before_event", days: 30 });
+    expect(ms.map((m) => m.percent_bps)).toEqual([5000, 5000]);
+    expect(ms[0]).toMatchObject({ due: "on_booking", effect: "books" });
+    expect(ms[1]).toMatchObject({ due: "days_before_event", days: 30, effect: "final" });
   });
 
   it("allows exactly one follow-up call two days after a visit", () => {
@@ -47,10 +48,10 @@ describe("policy defaults", () => {
   });
 
   it("describes the décor unlock from the payment schedule", () => {
-    expect(decorUnlockLabel(PolicyBook.defaults())).toBe("the 40% contract payment");
+    expect(decorUnlockLabel(PolicyBook.defaults())).toBe("the 50% advance payment");
   });
 
-  it("locks décor behind the 40% contract payment", () => {
+  it("locks décor behind the payment that signs the contract", () => {
     const book = PolicyBook.defaults();
     const decor = book.get("portal.stage_cards").cards.find((c) => c.key === "decor");
     expect(decor?.unlock).toBe("contract_paid");

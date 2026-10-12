@@ -15,8 +15,8 @@ Use the same logins as the Phase 1 demo (`docs/runbooks/demo-script.md`; passwor
 1. On a visited lead, **Booking → Mark as booked**: dates, a value (e.g. ₹20,00,000) and Arjun as event manager. You land in the new Wedding Room.
 2. **Approvals → Contract**: read it and approve. In the outbox, open the `/sign/sandbox/…` link and sign. Then open the deposit link `/pay/sandbox/…` and pay (test).
 3. On the next tick (or **Approvals**), you get the receipt, the welcome letter, the portal invites and a task to create the family WhatsApp group. The Planner's T-minus plan appears in **Tasks**.
-4. Sign in to `/portal` as the couple. Switch the language to **ಕನ್ನಡ** or **हिन्दी**. **Start** the brief and fill in the functions. Try **Décor**: it's locked until the 40% payment.
-5. Pay the 40% link. Décor opens: start it, see five moodboards per function (standard and custom labelled), and shortlist one. As Arjun, **Finalise** it. If it's custom, Prashanth approves it.
+4. Sign in to `/portal` as the couple. Switch the language to **ಕನ್ನಡ** or **हिन्दी**. **Start** the brief and fill in the functions. Try **Décor**: it opens 90 days before the wedding, and never before the advance is paid.
+5. As Arjun (event manager), open Décor early from the Wedding Room if you want to demo it now. Décor opens: start it, see five moodboards per function (standard and custom labelled), and shortlist one. As Arjun, **Finalise** it. If it's custom, Prashanth approves it.
 6. Start **Menus** and approve. The quote is prepared, and a custom line waits for Prashanth (**Set** its price on the wedding page, then approve). The couple approves the quote in the portal, and vendor emails wait in Approvals. Open a `/vendor/reply/…` link to confirm.
 
 ## Phase 4: the day and after (7 min)

@@ -73,11 +73,10 @@ export const DEFAULT_POLICIES = [
     "payments.schedule",
     "Bookings",
     "Payments",
-    "10% deposit holds the date; 40% within two weeks signs the contract; 50% due 30 days before the event.",
+    "Two parts: a 50% advance on booking holds the date and signs the contract; the other 50% is due 30 days before the event. This is the standard split; Prashanth can change it, or give a wedding its own parts.",
     {
       milestones: [
-        { milestone: "deposit", label: "10% deposit — holds your date", percent_bps: 1000, due: "on_booking", effect: "holds_date" },
-        { milestone: "contract", label: "40% — signs the contract", percent_bps: 4000, due: "days_after_booking", days: 14, effect: "signs_contract" },
+        { milestone: "advance", label: "50% advance — books your date", percent_bps: 5000, due: "on_booking", effect: "books" },
         { milestone: "final", label: "50% — final payment", percent_bps: 5000, due: "days_before_event", days: 30, effect: "final" },
       ],
       reminder_offsets_days: [7, 3, 0],
@@ -294,7 +293,7 @@ export const DEFAULT_POLICIES = [
     "onboarding.welcome",
     "Bookings",
     "Welcome and logins",
-    "When the 10% deposit arrives, the couple receives a welcome letter and their portal logins on WhatsApp and email, and a family WhatsApp group is set up with the key family contacts and our management.",
+    "When the advance arrives, the couple receives a welcome letter and their portal logins on WhatsApp and email, and a family WhatsApp group is set up with the key family contacts and our management.",
     { trigger: "deposit_paid", channels: ["whatsapp", "email"], whatsapp_group_members: ["couple", "parent", "owner", "event_manager"] },
     { client_visible: true, sort: 52 },
   ),

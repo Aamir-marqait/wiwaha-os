@@ -40,7 +40,7 @@ begin
   -- not 100%
   v_parts := jsonb_build_array(
     jsonb_build_object('id', v_paid.id, 'label', v_paid.label, 'percent_bps', v_paid.percent_bps, 'due_on', v_paid.due_on, 'effect', v_paid.effect),
-    jsonb_build_object('label', 'Rest', 'percent_bps', 5000, 'due_on', '2031-01-01', 'effect', 'final'));
+    jsonb_build_object('label', 'Rest', 'percent_bps', 10000 - v_paid.percent_bps - 1000, 'due_on', '2031-01-01', 'effect', 'final'));
   begin perform app.set_payment_parts(v_w, v_parts); v_ok := true; exception when others then v_ok := false; end;
   assert not v_ok, 'parts must add up to 100%';
 
@@ -54,9 +54,9 @@ begin
   -- a valid four-part split (as the service role, standing in for the owner)
   v_parts := jsonb_build_array(
     jsonb_build_object('id', v_paid.id, 'label', v_paid.label, 'percent_bps', v_paid.percent_bps, 'due_on', v_paid.due_on, 'effect', v_paid.effect),
-    jsonb_build_object('label', '30% signs the contract', 'percent_bps', 3000, 'due_on', '2030-01-01', 'effect', 'signs_contract'),
-    jsonb_build_object('label', '30% second part', 'percent_bps', 3000, 'due_on', '2030-06-01', 'effect', 'none'),
-    jsonb_build_object('label', 'Final', 'percent_bps', 10000 - v_paid.percent_bps - 6000, 'due_on', '2031-01-01', 'effect', 'final'));
+    jsonb_build_object('label', 'Second part', 'percent_bps', 2000, 'due_on', '2030-01-01', 'effect', 'none'),
+    jsonb_build_object('label', 'Third part', 'percent_bps', 2000, 'due_on', '2030-06-01', 'effect', 'none'),
+    jsonb_build_object('label', 'Final', 'percent_bps', 10000 - v_paid.percent_bps - 4000, 'due_on', '2031-01-01', 'effect', 'final'));
   perform app.set_payment_parts(v_w, v_parts);
   assert (select count(*) from public.payments where wedding_id = v_w) = 4, 'four parts';
   select contract_value_paise into v_total from public.weddings where id = v_w;

@@ -2,7 +2,10 @@ import { Badge, Card, CardHeader, PageTitle, buttonClass } from "@wiwaha/ui";
 import { formatDateIST, todayIST } from "@wiwaha/db";
 import Link from "next/link";
 import { requireSection } from "@/lib/auth";
+import { ActionButton } from "@/components/action-button";
 import { createClient } from "@/lib/supabase/server";
+import { approveWorkOrder, cancelWorkOrder } from "./actions";
+import { rupees } from "@wiwaha/db";
 
 export const metadata = { title: "Vendors" };
 
@@ -14,9 +17,10 @@ const TONE: Record<string, "sage" | "gold" | "burgundy" | "neutral"> = { confirm
 export default async function VendorsPage() {
   const viewer = await requireSection("vendors");
   const supabase = await createClient();
-  const [vendors, bookings] = await Promise.all([
+  const [vendors, bookings, drafts] = await Promise.all([
     supabase.from("vendors").select("id, name, category, contact_name, phone_e164, email, preferred, designated_planner, active").order("category").order("name"),
-    supabase.from("vendor_bookings").select("id, status, vendor_id, wedding:weddings(id, title, event_start)").in("status", ["requested", "confirmed"]),
+    supabase.from("vendor_bookings").select("id, status, vendor_id, wedding:weddings(id, title, event_start)").in("status", ["requested", "confirmed"]).not("work_order_approved_at", "is", null),
+    supabase.from("vendor_bookings").select("id, amount_paise, work_order, vendor:vendors(name, category, email), wedding:weddings(id, title, event_start)").eq("status", "requested").is("work_order_approved_at", null).order("requested_at"),
   ]);
   const today = todayIST();
   const upcoming = new Map<string, { id: string; status: string; wedding: { id: string; title: string; event_start: string } }[]>();
@@ -33,6 +37,37 @@ export default async function VendorsPage() {
     <>
       <PageTitle title="Vendors" subtitle="Who we work with, and which weddings each is booked for."
         action={canEdit ? <Link href="/team/catalogue/vendors" className={buttonClass("primary", "sm")}>Add or edit vendors</Link> : undefined} />
+      {(drafts.data ?? []).length ? (
+        <Card className="mb-5">
+          <CardHeader title="Work orders to approve" subtitle="Drafted from the couple's approved quote. Nothing goes to a vendor until one of us approves it." />
+          <ul className="divide-y divide-line/70">
+            {(drafts.data ?? []).map((d) => {
+              const v = one(d.vendor as unknown as { name: string; category: string; email: string | null } | null);
+              const w = one(d.wedding as unknown as { id: string; title: string; event_start: string } | null);
+              const items = (d.work_order ?? []) as { description: string; quantity: number; function_name: string | null }[];
+              return (
+                <li key={d.id as string} className="px-4 py-3 sm:px-5">
+                  <div className="flex flex-wrap items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="font-medium">{v?.name} <span className="text-sm font-normal capitalize text-ink-soft">· {v?.category}</span></p>
+                      <p className="text-xs text-ink-soft">{w ? <Link href={`/team/weddings/${w.id}?tab=vendors`} className="text-sage-700 hover:underline">{w.title}</Link> : null}{w ? ` · ${formatDateIST(w.event_start)}` : ""}{d.amount_paise != null ? ` · our cost ${rupees(Number(d.amount_paise))}` : ""}{v?.email ? "" : " · no email: share by phone"}</p>
+                    </div>
+                    {canEdit ? (
+                      <span className="flex gap-1">
+                        <ActionButton action={cancelWorkOrder.bind(null, d.id as string)} variant="ghost" confirm="Drop this work order? It won't be sent.">Drop</ActionButton>
+                        <ActionButton action={approveWorkOrder.bind(null, d.id as string)} variant="primary">Approve and send</ActionButton>
+                      </span>
+                    ) : null}
+                  </div>
+                  <ul className="mt-2 space-y-0.5 text-sm">
+                    {items.length ? items.map((i, n) => <li key={n}>• {i.description}{i.quantity !== 1 ? ` × ${i.quantity}` : ""}</li>) : <li className="text-ink-soft">General coverage for all functions</li>}
+                  </ul>
+                </li>
+              );
+            })}
+          </ul>
+        </Card>
+      ) : null}
       {byCategory.size === 0 ? <Card className="p-5 text-sm text-ink-soft">No vendors yet.</Card> : null}
       <div className="grid gap-5 lg:grid-cols-2">
         {[...byCategory.entries()].map(([category, list]) => (

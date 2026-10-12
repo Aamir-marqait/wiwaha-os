@@ -93,7 +93,7 @@ export function seedWedding(w: ReturnType<typeof testWorld>, opts: { paid?: ("de
     { wedding_id: "wd1", contact_id: "c-mother", relation: "mother of the bride", is_key_contact: false },
   );
   const pay = (id: string, milestone: string, label: string, amount: number, due: string, sort: number) =>
-    ({ id, wedding_id: "wd1", milestone, label, amount_paise: amount, due_on: due, status: paid.has(milestone as "deposit") ? "paid" : "scheduled", paid_amount_paise: paid.has(milestone as "deposit") ? amount : null, receipt_number: paid.has(milestone as "deposit") ? `RCPT-${sort}` : null, link_url: null, link_id: null, reminders_sent: [], sort });
+    ({ id, wedding_id: "wd1", milestone, label, effect: ({ deposit: "holds_date", contract: "signs_contract", final: "final" } as Record<string, string>)[milestone] ?? "none", amount_paise: amount, due_on: due, status: paid.has(milestone as "deposit") ? "paid" : "scheduled", paid_amount_paise: paid.has(milestone as "deposit") ? amount : null, receipt_number: paid.has(milestone as "deposit") ? `RCPT-${sort}` : null, link_url: null, link_id: null, reminders_sent: [], sort });
   db.rows("payments").push(
     pay("pay-dep", "deposit", "Deposit (10%)", 200_000_00, "2026-10-03", 1),
     pay("pay-con", "contract", "Contract payment (40%)", 800_000_00, "2026-10-17", 2),

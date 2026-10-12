@@ -140,12 +140,12 @@ describe("Lead Desk: drafting and the gate", () => {
     expect(out.result.reply!.flags).not.toContain("decor_policy");
   });
 
-  it("décor before the 40% payment: never promised, unlock explained from the policy book", async () => {
+  it("décor before the advance: never promised, unlock explained from the policy book", async () => {
     ctx = setup(lead({ message: "Can you start our décor moodboards now? We'd love to see designs before we pay anything." }));
     const out = await processLead(ctx.deps, "lead-1");
     if (out.status !== "done") throw new Error(out.status);
     expect(out.result.intents).toContain("decor_early");
-    expect(out.result.reply!.body).toMatch(/moodboards begin once the 40% contract payment is made/);
+    expect(out.result.reply!.body).toMatch(/moodboards begin once the 50% advance payment is made/);
     expect(out.result.reply!.flags).not.toContain("unlock_bypass");
   });
 

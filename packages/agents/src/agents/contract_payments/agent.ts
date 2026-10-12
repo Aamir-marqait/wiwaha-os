@@ -27,7 +27,10 @@ async function loadWedding(db: Db, weddingId: string) {
 function effectOf(book: RunContext["book"], p: PaymentRow): string | null {
   return p.effect ?? book.get("payments.schedule").milestones.find((m) => m.milestone === p.milestone)?.effect ?? null;
 }
-const advanceOf = (book: RunContext["book"], payments: PaymentRow[]) => payments.find((p) => effectOf(book, p) === "holds_date") ?? payments[0];
+/** "books" (the two-part advance) both holds the date and signs the contract. */
+const holdsDate = (e: string | null) => e === "holds_date" || e === "books";
+const signsContract = (e: string | null) => e === "signs_contract" || e === "books";
+const advanceOf = (book: RunContext["book"], payments: PaymentRow[]) => payments.find((p) => holdsDate(effectOf(book, p))) ?? payments[0];
 
 /** True when Prashanth gave this wedding its own split, so the standard terms don't apply. */
 function isCustomSplit(book: RunContext["book"], payments: PaymentRow[]): boolean {
@@ -130,11 +133,11 @@ export async function onPaymentReceived(deps: AgentDeps, paymentId: string): Pro
     const { w, contact, payments } = await loadWedding(db, p.wedding_id);
     const effect = effectOf(ctx.book, p);
     const next = payments.filter((x) => x.sort > p.sort && x.status !== "paid")[0] ?? null;
-    const nextLink = next && effectOf(ctx.book, next) === "signs_contract" ? await ensureLink(ctx, db, next, w, contact) : null;
-    const line = effect === "holds_date" ? "Your date is now held for you." : effect === "signs_contract" ? "Your contract is now signed." : "";
+    const nextLink = next && signsContract(effectOf(ctx.book, next)) ? await ensureLink(ctx, db, next, w, contact) : null;
+    const line = effect === "books" ? "Your date is now held for you and your contract is signed." : effect === "holds_date" ? "Your date is now held for you." : effect === "signs_contract" ? "Your contract is now signed." : "";
     const body = `Namaste ${firstName(contact?.full_name)}, thank you! We've received ${rupees(p.paid_amount_paise ?? p.amount_paise)} for "${p.label}" (receipt ${p.receipt_number ?? "to follow"}). ${line}${next ? ` The next payment, ${next.label.toLowerCase()} of ${rupees(next.amount_paise)}, is due on ${formatDateIST(next.due_on)}${nextLink ? `: ${nextLink}` : "."}` : " That completes your payments."}\n\nWarmly,\nTeam Wiwaha`;
     await proposeClientMessage(ctx, { channel: contact?.phone_e164 ? "whatsapp" : "email", to: contact?.phone_e164 ?? contact?.email ?? null, subject: `Receipt ${p.receipt_number ?? ""}`, body, weddingId: w.id, approvalKind: CONTRACT_GATE.messageApproval, title: `Receipt for ${w.title}: ${p.label}`, summary: rupees(p.paid_amount_paise ?? p.amount_paise) });
-    if (effect === "holds_date") {
+    if (holdsDate(effect)) {
       await db.insert("agent_tasks", { kind: "deposit_paid", from_agent: CONTRACT_PAYMENTS, wedding_id: w.id, payload: { payment_id: p.id } });
       if (w.stage === "booking") await db.update("weddings", { id: w.id }, { stage: "onboarding" });
     }

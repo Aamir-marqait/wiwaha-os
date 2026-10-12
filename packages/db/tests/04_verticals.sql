@@ -65,7 +65,7 @@ do $$
 declare v_stage uuid;
 begin
   assert (select (value ->> 'allow_early_start')::boolean from public.policies where key = 'planning.start') = false, 'hard start by default';
-  update public.payments set status = 'paid' where wedding_id = 'c0000000-0000-4000-8000-000000000001' and effect in ('holds_date', 'signs_contract');
+  update public.payments set status = 'paid' where wedding_id = 'c0000000-0000-4000-8000-000000000001' and effect in ('holds_date', 'signs_contract', 'books');
   update public.wedding_stages set started_at = null, status = 'not_started', recommended_start = current_date + 30
    where wedding_id = 'c0000000-0000-4000-8000-000000000001' and key = 'extras' returning id into v_stage;
   perform set_config('test.stage', v_stage::text, false);

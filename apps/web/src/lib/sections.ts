@@ -5,13 +5,14 @@ import type { AppRole } from "@wiwaha/db";
  * (profiles.sections, set by the owner) or, when unset, their role's defaults.
  * Sections only shape what's shown; RLS still decides what can be read or changed.
  */
-export const SECTIONS = ["sales_marketing", "venue", "weddings", "vendors", "accounts", "client"] as const;
+export const SECTIONS = ["sales_marketing", "venue", "weddings", "decor", "vendors", "accounts", "client"] as const;
 export type Section = (typeof SECTIONS)[number];
 
 export const SECTION_LABELS: Record<Section, string> = {
   sales_marketing: "Sales & Marketing",
   venue: "Venue",
   weddings: "Weddings",
+  decor: "Décor",
   vendors: "Vendors",
   accounts: "Accounts",
   client: "Client",
@@ -21,6 +22,7 @@ export const SECTION_HINTS: Record<Section, string> = {
   sales_marketing: "Leads, visits, phone, sales numbers, marketing",
   venue: "Calendar, spaces, rooms, estate upkeep and stock",
   weddings: "Every wedding: functions, décor, food, entertainment, extras",
+  decor: "Décor stock with photos, templates by area, and what goes to which event",
   vendors: "Vendor list and what each is booked for",
   accounts: "Payments, invoices, costs and profit",
   client: "Couples' and families' portal logins",
@@ -31,6 +33,7 @@ export const SECTION_ROLES: Record<Section, readonly AppRole[]> = {
   sales_marketing: ["owner", "sales", "event_manager"],
   venue: ["owner", "sales", "event_manager", "staff", "accounts"],
   weddings: ["owner", "sales", "event_manager", "accounts"],
+  decor: ["owner", "sales", "event_manager", "staff", "accounts"],
   vendors: ["owner", "sales", "event_manager", "accounts"],
   accounts: ["owner", "accounts"],
   client: ["owner", "sales", "event_manager"],
@@ -39,8 +42,8 @@ export const SECTION_ROLES: Record<Section, readonly AppRole[]> = {
 const ROLE_DEFAULTS: Record<AppRole, readonly Section[]> = {
   owner: SECTIONS,
   sales: ["sales_marketing", "venue", "weddings", "client"],
-  event_manager: ["venue", "weddings", "vendors", "client"],
-  staff: ["venue"],
+  event_manager: ["venue", "weddings", "decor", "vendors", "client"],
+  staff: ["venue", "decor"],
   accounts: ["accounts", "weddings"],
   client: [],
   vendor: [],
