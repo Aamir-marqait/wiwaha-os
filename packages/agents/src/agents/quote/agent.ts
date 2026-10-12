@@ -1,6 +1,7 @@
 import type { Json } from "@wiwaha/db";
 import { addDays, rupees } from "@wiwaha/db";
 import type { PolicyKey } from "@wiwaha/policy";
+import { maybeRequestQuote } from "../../domain/readiness";
 import { where, type Db } from "../../framework/db";
 import { agentDb, deliver, istDate, requestApproval } from "../../framework/kit";
 import { runAgent, type RunOutcome } from "../../framework/runner";
@@ -11,10 +12,34 @@ import { QUOTE_TOOLS } from "./tools";
 export const QUOTE = "quote";
 const POLICIES: readonly PolicyKey[] = ["quotes.rules", "discounts", "decor.providers"];
 
-interface PriceItem { id: string; code: string; category: string; name: string; unit: string; unit_price_paise: number; gst_rate_bps: number; design_kind: string | null }
-export interface QuoteLine { price_book_item_id: string | null; function_id: string | null; description: string; quantity: number; unit_price_paise: number; gst_rate_bps: number; line_total_paise: number; off_book: boolean; sort: number }
+interface PriceItem { id: string; code: string; category: string; name: string; unit: string; unit_price_paise: number; cost_paise?: number | null; gst_rate_bps: number; design_kind: string | null }
+/**
+ * A quote line is also a costing line: the price agreed with the couple
+ * (unit_price_paise), what the price book prescribed when it was made, and our
+ * cost, so Prashanth can compare and edit before anything goes to the couple.
+ */
+export interface QuoteLine { price_book_item_id: string | null; function_id: string | null; description: string; quantity: number; unit_price_paise: number; gst_rate_bps: number; line_total_paise: number; off_book: boolean; sort: number; prescribed_unit_paise: number | null; unit_cost_paise: number | null; selection_id: string | null; category: string | null }
 
 const DECOR_CODE: Record<string, string> = { wedding: "DEC-MANDAP-S", haldi: "DEC-HALDI-S", mehendi: "DEC-HALDI-S", sangeet: "DEC-SANGEET-S", reception: "DEC-SANGEET-S" };
+
+/** "Margin 32% on the lines with a known cost." (blank when no costs are known). */
+export function margin(lines: Pick<QuoteLine, "line_total_paise" | "unit_cost_paise" | "quantity">[]): string {
+  const known = lines.filter((l) => l.unit_cost_paise != null);
+  if (!known.length) return "No costs entered yet.";
+  const revenue = known.reduce((a, l) => a + l.line_total_paise, 0);
+  const cost = known.reduce((a, l) => a + Math.round((l.unit_cost_paise ?? 0) * l.quantity), 0);
+  return `Margin ${revenue ? Math.round(((revenue - cost) / revenue) * 100) : 0}% on the ${known.length} line${known.length === 1 ? "" : "s"} with a known cost.`;
+}
+
+/** A selection was made final: the quote may now be ready (the Chief of Staff routes this here). */
+export async function onSelectionFinalised(deps: AgentDeps, weddingId: string): Promise<RunOutcome<{ requested: boolean }>> {
+  return runAgent(deps, QUOTE, { action: "selection_finalised", weddingId, input: {}, fallbackTitle: "Check whether the quote is ready" }, async (ctx) => {
+    const db = agentDb(ctx, QUOTE_TOOLS);
+    const requested = await maybeRequestQuote(db, weddingId, QUOTE);
+    await ctx.log({ action: "selection_finalised", status: "ok", weddingId, input: {}, output: { requested } });
+    return { requested };
+  });
+}
 
 export function totals(lines: Pick<QuoteLine, "line_total_paise" | "gst_rate_bps">[]) {
   const subtotal = lines.reduce((a, l) => a + l.line_total_paise, 0);
@@ -35,7 +60,7 @@ export async function buildLines(db: Db, weddingId: string): Promise<{ lines: Qu
   const lines: QuoteLine[] = [];
   const push = (item: PriceItem | null, description: string, quantity: number, unit: number | null, fnId: string | null, offBook = false) => {
     const price = unit ?? item?.unit_price_paise ?? 0;
-    lines.push({ price_book_item_id: item?.id ?? null, function_id: fnId, description, quantity, unit_price_paise: price, gst_rate_bps: item?.gst_rate_bps ?? 1800, line_total_paise: Math.round(price * quantity), off_book: offBook || !item, sort: (lines.length + 1) * 10 });
+    lines.push({ price_book_item_id: item?.id ?? null, function_id: fnId, description, quantity, unit_price_paise: price, gst_rate_bps: item?.gst_rate_bps ?? 1800, line_total_paise: Math.round(price * quantity), off_book: offBook || !item, sort: (lines.length + 1) * 10, prescribed_unit_paise: item?.unit_price_paise ?? null, unit_cost_paise: item?.cost_paise ?? null, selection_id: null, category: item?.category ?? null });
   };
   push(byCode("VEN-DAY"), `Estate exclusive use (${days} day${days > 1 ? "s" : ""})`, days, null, null);
   for (const fn of fns) {
@@ -53,6 +78,19 @@ export async function buildLines(db: Db, weddingId: string): Promise<{ lines: Qu
     push(byCode("AV-SOUND"), `${fn.name}: sound and lighting`, 1, null, fn.id);
   }
   push(byCode("SVC-VALET"), `Valet and parking team (${days} day${days > 1 ? "s" : ""})`, days, null, null);
+  // Entertainment and extras the couple chose and the team made final, priced from their list.
+  const picks = await db.select<{ id: string; option_id: string | null; function_id: string | null; vertical: string; name: string; quantity: number }>("wedding_selections", { where: { wedding_id: weddingId, status: "final" } });
+  const options = picks.length ? await db.select<{ id: string; category: string; rate_paise: number | null; cost_paise: number | null }>("service_options", { where: { id: where.in(picks.map((p) => p.option_id ?? "")) } }) : [];
+  for (const p of picks) {
+    const o = options.find((x) => x.id === p.option_id);
+    const fn = fns.find((f) => f.id === p.function_id);
+    const price = o?.rate_paise ?? 0;
+    lines.push({
+      price_book_item_id: null, function_id: p.function_id, description: `${fn ? `${fn.name}: ` : ""}${p.name}${o?.rate_paise == null ? " (Prashanth to confirm price)" : ""}`,
+      quantity: p.quantity, unit_price_paise: price, gst_rate_bps: 1800, line_total_paise: Math.round(price * p.quantity), off_book: o?.rate_paise == null,
+      sort: (lines.length + 1) * 10, prescribed_unit_paise: o?.rate_paise ?? null, unit_cost_paise: o?.cost_paise ?? null, selection_id: p.id, category: o ? `${p.vertical}:${o.category}` : p.vertical,
+    });
+  }
   return { lines, offBook: lines.filter((l) => l.off_book).length };
 }
 
@@ -67,11 +105,13 @@ export async function prepareQuote(deps: AgentDeps, weddingId: string): Promise<
     const version = (prior[0]?.version ?? 0) + 1;
     const rules = ctx.book.get("quotes.rules");
     const [q] = await db.insert<{ id: string }>("quotes", { wedding_id: weddingId, version, status: "pending_approval", subtotal_paise: t.subtotal, tax_paise: t.tax, total_paise: t.total, valid_until: addDays(istDate(ctx.now), rules.validity_days), created_by_agent: QUOTE });
-    await db.insert("quote_lines", lines.map((l) => ({ ...l, quote_id: q!.id })));
+    // Our cost and the prescribed rate go in a table the couple can't read.
+    const inserted = await db.insert<{ id: string }>("quote_lines", lines.map(({ prescribed_unit_paise: _p, unit_cost_paise: _c, ...l }) => ({ ...l, quote_id: q!.id })));
+    await db.insert("quote_line_costs", inserted.map((row, i) => ({ id: row.id, prescribed_unit_paise: lines[i]!.prescribed_unit_paise, unit_cost_paise: lines[i]!.unit_cost_paise })));
     const approvalId = await requestApproval(ctx, {
       kind: QUOTE_GATE.approval, weddingId, priority: offBook ? 1 : 2,
-      title: `Quote v${version} for ${w?.title ?? "a wedding"}: ${rupees(t.total)}`,
-      summary: offBook ? `${offBook} off-book or custom line(s) need your price and approval` : "All lines from the price book",
+      title: `Costing for ${w?.title ?? "a wedding"} (quote v${version}): ${rupees(t.total)}`,
+      summary: `${offBook ? `${offBook} off-book or custom line(s) need your price. ` : "All lines from the price book. "}${margin(lines)} Review and edit on the Wedding Room's Payments tab; approving sends it to the couple for their consent.`,
       payload: { quote_id: q!.id, off_book_lines: offBook },
       flags: offBook ? ["off_book"] : [],
     });

@@ -1,7 +1,7 @@
 import { Card, CardHeader, PageTitle, Stat } from "@wiwaha/ui";
 import { addDays, formatDateIST, rupees, todayIST } from "@wiwaha/db";
 import Link from "next/link";
-import { requireStaff } from "@/lib/auth";
+import { requireSection } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 
 export const metadata = { title: "Numbers" };
@@ -10,7 +10,7 @@ interface Numbers { new_enquiries: number; visits_booked: number; bookings: numb
 
 /** Prashanth's dashboard: the five morning numbers, the booking calendar, approvals and profit. */
 export default async function OwnerPage() {
-  await requireStaff(["owner"]);
+  await requireSection("accounts", ["owner"]);
   const supabase = await createClient();
   const today = todayIST();
   const [nums, approvals, bookings, profit] = await Promise.all([

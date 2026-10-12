@@ -10,12 +10,12 @@ begin
   assert (select count(*) from public.agents) = 21, 'expected 21 agents';
   assert (select count(*) from public.agents where enabled and implemented and autonomy = 'draft') = 21, 'all 21 agents built, switched on, in draft';
   assert (select count(*) from public.agents where autonomy <> 'draft') = 0, 'every agent ships in draft';
-  assert (select count(*) from public.policies) = 37, 'policy book seeded (Phase 1–4 rules)';
+  assert (select count(*) from public.policies) = 38, 'policy book seeded (Phase 1–4 rules, plus portal access from D36)';
   assert (select rule_text from public.policies where key = 'followup.after_visit')
          = 'Exactly one follow-up call, two days after a site visit. No response = stop calling.', 'follow-up wording';
   assert (select count(*) from public.rooms where active) = 30, '30 rooms today';
   assert (select count(*) from public.rooms) = 60, '60 rooms after expansion';
-  assert (select count(*) from public.wedding_stages where wedding_id = 'c0000000-0000-4000-8000-000000000001') = 8, '8 stage cards';
+  assert (select count(*) from public.wedding_stages where wedding_id = 'c0000000-0000-4000-8000-000000000001') = 10, '10 stage cards (entertainment and extras since D35)';
   assert (select sum(amount_paise) from public.payments where wedding_id = 'c0000000-0000-4000-8000-000000000001') = 4500000 * 100, 'payments sum to contract';
   assert (select amount_paise from public.payments where wedding_id = 'c0000000-0000-4000-8000-000000000001' and milestone = 'deposit') = 450000 * 100, '10% deposit';
   assert (select due_on from public.payments where wedding_id = 'c0000000-0000-4000-8000-000000000001' and milestone = 'final') = current_date + 120 - 30, '50% due T-30';

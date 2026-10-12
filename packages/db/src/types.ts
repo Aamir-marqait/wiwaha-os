@@ -49,6 +49,8 @@ export interface Profile {
   active: boolean;
   preferred_language: LanguageCode;
   title: string | null;
+  /** Team-app sections this person sees; null = their role's defaults. */
+  sections: string[] | null;
   created_at: string;
 }
 
@@ -264,7 +266,11 @@ export interface Payment {
   due_on: string;
   status: PaymentStatus;
   paid_at: string | null;
+  /** What paying this part unlocks. */
+  effect: PaymentEffect | null;
 }
+
+export type PaymentEffect = "holds_date" | "signs_contract" | "final" | "none";
 
 export interface Task {
   id: string;

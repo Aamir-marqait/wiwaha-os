@@ -4,7 +4,7 @@ import { Wordmark } from "@/components/brand";
 import { LoginForm } from "@/components/login-form";
 import { getViewer, isStaff } from "@/lib/auth";
 
-export const metadata: Metadata = { title: "Team sign in" };
+export const metadata: Metadata = { title: "Wiwaha team login" };
 
 export default async function TeamLogin({ searchParams }: { searchParams: Promise<{ next?: string }> }) {
   const viewer = await getViewer();
@@ -23,8 +23,8 @@ export default async function TeamLogin({ searchParams }: { searchParams: Promis
       <section className="flex items-center justify-center px-4 py-12">
         <div className="w-full max-w-sm">
           <div className="mb-8 lg:hidden"><Wordmark subtitle="Operating system" /></div>
-          <h1 className="font-serif text-3xl font-semibold text-ink">Team sign in</h1>
-          <p className="mb-6 mt-1 text-sm text-ink-soft">For the Wiwaha team. Couples and families, please use the <a className="text-sage-700 underline" href="/portal/login">client portal</a>.</p>
+          <h1 className="font-serif text-3xl font-semibold text-ink">Wiwaha team login</h1>
+          <p className="mb-6 mt-1 text-sm text-ink-soft">For the Wiwaha team. Couples and families, please use the <a className="text-sage-700 underline" href="/portal/login">client login</a>.</p>
           <LoginForm surface="team" next={next} />
         </div>
       </section>

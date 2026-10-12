@@ -13,6 +13,7 @@ export const MENU_TOOLS: DbGrants = {
     moodboards: ["select"],
     quotes: ["select"],
     agent_tasks: ["select", "insert"],
+    wedding_selections: ["select"],
     tasks: ["select", "insert"],
     wedding_stages: ["update"],
     contacts: ["select"],

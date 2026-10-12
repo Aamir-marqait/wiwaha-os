@@ -12,6 +12,7 @@ import { releaseEntry, rerunLeadDesk } from "../actions";
 import { HoldForm, StatusSelect } from "./lead-controls";
 import { BookVisit, VisitCard, type SlotOption } from "./visit-panel";
 import { BookedForm } from "./booked-form";
+import { standardSplit } from "@/lib/standard-split";
 import { findSlots, formatSlot, istDate, SupabaseDb } from "@wiwaha/agents";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -24,6 +25,7 @@ export default async function LeadPage({ params, searchParams }: { params: Promi
   const { id } = await params;
   const { created } = await searchParams;
   const supabase = await createClient();
+  const standard = await standardSplit(supabase);
 
   const { data: lead } = await supabase.from("leads").select("*, contact:contacts(*)").eq("id", id).maybeSingle();
   if (!lead) notFound();
@@ -169,7 +171,7 @@ export default async function LeadPage({ params, searchParams }: { params: Promi
               {lead.wedding_id ? (
                 <p className="mt-2 text-sm">Booked. <Link href={`/team/weddings/${lead.wedding_id as string}`} className="text-sage-700 underline">Open the Wedding Room →</Link></p>
               ) : (
-                <div className="mt-3"><BookedForm leadId={id} defaultTitle={contact.full_name} defaultDate={lead.date_wanted as string | null} managers={(people ?? []).filter((p) => p.role === "event_manager" || p.role === "owner").map((p) => ({ id: p.id as string, name: p.full_name as string }))} /></div>
+                <div className="mt-3"><BookedForm standard={standard} canChangeSplit={viewer.profile.role === "owner"} leadId={id} defaultTitle={contact.full_name} defaultDate={lead.date_wanted as string | null} managers={(people ?? []).filter((p) => p.role === "event_manager" || p.role === "owner").map((p) => ({ id: p.id as string, name: p.full_name as string }))} /></div>
               )}
             </Card>
           ) : null}

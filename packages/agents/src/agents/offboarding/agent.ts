@@ -2,14 +2,14 @@ import type { Json, MessageChannel } from "@wiwaha/db";
 import { addDays } from "@wiwaha/db";
 import type { PolicyKey } from "@wiwaha/policy";
 import { where } from "../../framework/db";
-import { agentDb, claimRun, istDate, istInstant, proposeClientMessage, writeText } from "../../framework/kit";
+import { agentDb, claimRun, istClock, istDate, istInstant, proposeClientMessage, writeText } from "../../framework/kit";
 import { runAgent, type RunContext, type RunOutcome } from "../../framework/runner";
 import type { AgentDeps } from "../../framework/types";
 import { OFFBOARDING_GATE } from "./gate";
 import { OFFBOARDING_TOOLS } from "./tools";
 
 export const OFFBOARDING = "offboarding";
-const POLICIES: readonly PolicyKey[] = ["farewell", "offboarding.sequence", "reviews.after_event", "honesty.commitments"];
+const POLICIES: readonly PolicyKey[] = ["farewell", "offboarding.sequence", "reviews.after_event", "portal.access", "honesty.commitments"];
 type StepKey = "thank_you" | "photo_sharing" | "review_form" | "parting_gift" | "newsletter" | "referral_ask";
 
 interface Wedding { id: string; title: string; event_start: string; event_end: string; primary_contact_id: string | null; event_manager_id: string | null; stage: string; status: string }
@@ -70,7 +70,8 @@ export async function sendOffboardingSteps(deps: AgentDeps): Promise<RunOutcome<
         let messageId: string | null = null, approvalId: string | null = null, status = "drafted";
         if (s.key === "review_form") {
           const [r] = await db.select<{ id: string; form_token: string | null; form_sent_at: string | null }>("reviews", { where: { wedding_id: weddingId } });
-          if (c.email && r?.form_token) {
+          if (r?.form_sent_at) status = "skipped"; // already sent on the evening of the last function
+          else if (c.email && r?.form_token) {
             const p = await proposeClientMessage(ctx, { channel: "email", to: c.email, subject: `${c.full_name.split(" ")[0]}, how was your celebration?`, weddingId, approvalKind: OFFBOARDING_GATE.messageApproval, title: `Review form for ${w.title}`, body: `Dear ${c.full_name.split(" ")[0]},\n\nWe'd love to hear how ${w.title}'s celebration felt for you and your family. It takes two minutes: ${link}/review/${r.form_token}\n\nThank you,\nTeam Wiwaha` });
             messageId = p.messageId; approvalId = p.approvalId;
             await db.update("reviews", { id: r.id }, { form_sent_at: ctx.now.toISOString() });
@@ -82,6 +83,14 @@ export async function sendOffboardingSteps(deps: AgentDeps): Promise<RunOutcome<
             tasks++;
           }
           if (s.key === "newsletter" && c.consent_email && !c.newsletter_opt_in) await db.update("contacts", { id: c.id }, { newsletter_opt_in: true });
+          // Photos are shared in the portal only while it's open (policy portal.access); after that a person sends the link.
+          const portalClosed = istDate(ctx.now) > addDays(w.event_end, ctx.book.get("portal.access").close_days_after_event);
+          if (s.key === "photo_sharing" && portalClosed) {
+            await db.insert("tasks", { scope: "wedding", wedding_id: weddingId, title: `Share the photo link with ${w.title}`, description: "Their portal has closed, so send the link to their photos on WhatsApp or email. Tick when sent.", owner_id: w.event_manager_id, owner_role: "event_manager", due_at: istInstant(today, "17:00"), priority: "normal", proof_kind: "tick", created_by_agent: OFFBOARDING });
+            tasks++;
+            await db.update("offboarding_steps", { id: s.id }, { status: "skipped" });
+            continue;
+          }
           const m = await compose(ctx, s.key, w, c, link);
           if (m) {
             const p = await proposeClientMessage(ctx, { channel: m.channel, to: m.channel === "email" ? c.email : c.phone_e164, subject: m.subject, weddingId, approvalKind: OFFBOARDING_GATE.messageApproval, title: `${m.subject} (${w.title})`, body: m.body });
@@ -94,6 +103,39 @@ export async function sendOffboardingSteps(deps: AgentDeps): Promise<RunOutcome<
     }
     await ctx.log({ action: "offboarding_steps", status: drafted ? "gated" : "ok", input: { today }, output: { drafted, tasks }, policyKeys: [...POLICIES], policyVersions: ctx.book.versions(POLICIES) });
     return { drafted, tasks };
+  });
+}
+
+/**
+ * The review form on the evening of the last function (policy reviews.after_event:
+ * send_days_after_event 0, send_at "19:00"), once, by email.
+ */
+export async function sendEveningReviewForms(deps: AgentDeps): Promise<RunOutcome<{ drafted: number }>> {
+  return runAgent(deps, OFFBOARDING, { action: "evening_review_forms", input: {}, fallbackTitle: "Send review forms" }, async (ctx) => {
+    const db = agentDb(ctx, OFFBOARDING_TOOLS);
+    const rules = ctx.book.get("reviews.after_event");
+    const today = istDate(ctx.now);
+    if (rules.send_at && istClock(ctx.now) < rules.send_at) return { drafted: 0 };
+    const lastDay = addDays(today, -rules.send_days_after_event);
+    const weddings = await db.select<Wedding>("weddings", { where: { event_end: lastDay, status: where.in(["active", "completed"]) } });
+    const link = deps.channels?.appUrl ?? "";
+    let drafted = 0;
+    for (const w of weddings) {
+      const [c] = w.primary_contact_id ? await db.select<Contact>("contacts", { where: { id: w.primary_contact_id } }) : [];
+      if (!c?.email) continue;
+      let [r] = await db.select<{ id: string; form_token: string | null; form_sent_at: string | null }>("reviews", { where: { wedding_id: w.id } });
+      if (!r) {
+        await db.insert("reviews", { wedding_id: w.id, contact_id: w.primary_contact_id });
+        [r] = await db.select<{ id: string; form_token: string | null; form_sent_at: string | null }>("reviews", { where: { wedding_id: w.id } });
+      }
+      if (!r?.form_token || r.form_sent_at) continue;
+      const first = c.full_name.split(" ")[0];
+      await proposeClientMessage(ctx, { channel: "email", to: c.email, subject: `${first}, how was your celebration?`, weddingId: w.id, approvalKind: OFFBOARDING_GATE.messageApproval, title: `Review form for ${w.title} (this evening)`, body: `Dear ${first},\n\nThank you for celebrating with us today. While it's all fresh, we'd love to hear how it felt for you and your family. It takes two minutes: ${link}/review/${r.form_token}\n\nWith love,\nTeam Wiwaha` });
+      await db.update("reviews", { id: r.id }, { form_sent_at: ctx.now.toISOString() });
+      drafted++;
+    }
+    await ctx.log({ action: "evening_review_forms", status: drafted ? "gated" : "ok", input: { today }, output: { drafted }, policyKeys: ["reviews.after_event"], policyVersions: ctx.book.versions(["reviews.after_event"]) });
+    return { drafted };
   });
 }
 

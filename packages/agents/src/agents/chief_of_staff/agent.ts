@@ -152,6 +152,7 @@ const ROUTES: Record<string, string> = {
   moodboard_shortlisted: "design",
   moodboard_finalised: "design",
   quote_requested: "quote",
+  selection_finalised: "quote",
   quote_approved: "vendor_coordinator",
   vendor_replied: "vendor_coordinator",
   family_message: "wedding_room",
@@ -233,6 +234,8 @@ export async function routeTasks(deps: AgentDeps, dispatch: Dispatcher, limit = 
 function humanTitle(task: AgentTaskRow, agentName: string | null): string {
   if (task.kind === "stage_started") {
     const key = (task.payload as { stage_key?: string } | null)?.stage_key ?? "a stage";
+    // Entertainment and extras are picked by people from the lists, not by an agent.
+    if (key === "entertainment" || key === "extras") return `Couple opened ${key === "extras" ? "Extras" : "Entertainment"}: send them options from the list`;
     return `Couple started "${key.replace(/_/g, " ")}": ${agentName ?? "no agent"} isn't live yet, please pick it up`;
   }
   return `${task.kind.replace(/_/g, " ")}: needs a person`;

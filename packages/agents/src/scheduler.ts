@@ -6,7 +6,7 @@ import { sendPaymentReminders } from "./agents/contract_payments/agent";
 import { lockPlateCounts } from "./agents/menu/agent";
 import { chaseVendors } from "./agents/vendor_coordinator/agent";
 import { nudgeStages } from "./agents/wedding_room/agent";
-import { anniversaryWishes, sendOffboardingSteps } from "./agents/offboarding/agent";
+import { anniversaryWishes, sendEveningReviewForms, sendOffboardingSteps } from "./agents/offboarding/agent";
 import { draftWeek } from "./agents/content_studio/agent";
 import { weeklyAdsReport } from "./agents/ads_analyst/agent";
 import { estateSweep } from "./agents/estate/agent";
@@ -38,6 +38,7 @@ const JOBS: ScheduledJob[] = [
   { name: "estate_sweep", run: estateSweep },
   { name: "close_outs", run: startCloseOuts },
   { name: "reconcile_payments", run: reconcilePayments },
+  { name: "evening_review_forms", run: sendEveningReviewForms },
   { name: "offboarding_steps", run: sendOffboardingSteps },
   { name: "anniversaries", run: anniversaryWishes },
   { name: "content_week", run: draftWeek },

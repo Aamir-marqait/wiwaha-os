@@ -4,7 +4,7 @@ import { Badge, Card, CardHeader, PageTitle, Stat } from "@wiwaha/ui";
 import Link from "next/link";
 import { ActionButton } from "@/components/action-button";
 import { SOURCE_LABELS } from "@/components/lead-badges";
-import { requireStaff } from "@/lib/auth";
+import { requireSection } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { markReplyPosted } from "./actions";
 import { ReviewForm } from "./review-form";
@@ -14,7 +14,7 @@ export const metadata = { title: "Sales" };
 const pct = (a: number, b: number) => (b ? `${Math.round((a / b) * 100)}%` : "—");
 
 export default async function SalesPage() {
-  await requireStaff(["owner", "sales"]);
+  await requireSection("sales_marketing", ["owner", "sales"]);
   const supabase = await createClient();
   const since = new Date(Date.now() - 30 * 86_400_000).toISOString();
   const [funnel, calls, visits, reviews, outbox] = await Promise.all([

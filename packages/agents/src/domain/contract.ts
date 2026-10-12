@@ -17,6 +17,8 @@ export interface ContractData {
   complimentaryRooms: number;
   totalPaise: number;
   payments: { label: string; amountPaise: number; dueOn: string }[];
+  /** The wedding has its own split (set by Prashanth), not the standard one. */
+  customParts?: boolean;
   version: number;
   preparedOn: string;
 }
@@ -46,7 +48,7 @@ export function renderContract(book: PolicyBook, d: ContractData): string {
     "| --- | --- | --- |",
     ...d.payments.map((p) => `| ${p.label} | ${rupees(p.amountPaise)} | ${formatDateIST(p.dueOn)} |`),
     "",
-    `Terms: ${rule("payments.schedule")}`,
+    d.customParts ? "Terms: each payment is due on or before the date shown above." : `Terms: ${rule("payments.schedule")}`,
     "",
     "## Décor and infrastructure",
     rule("decor.providers"),

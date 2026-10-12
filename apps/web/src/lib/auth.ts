@@ -3,6 +3,7 @@ import type { AppRole, Profile } from "@wiwaha/db";
 import { STAFF_ROLES } from "@wiwaha/db";
 import { redirect } from "next/navigation";
 import { cache } from "react";
+import { type Section, SECTION_LABELS, sectionsFor } from "./sections";
 import { createClient } from "./supabase/server";
 
 export interface Viewer {
@@ -31,6 +32,18 @@ export async function requireStaff(roles?: readonly AppRole[]): Promise<Viewer> 
   if (!viewer) redirect("/login");
   if (!viewer.profile.active || !isStaff(viewer.profile.role)) redirect("/portal");
   if (roles && !roles.includes(viewer.profile.role)) redirect("/team?denied=1");
+  return viewer;
+}
+
+/** The sections this viewer sees in the team app. */
+export function viewerSections(viewer: Viewer): Section[] {
+  return sectionsFor(viewer.profile.role, viewer.profile.sections);
+}
+
+/** For pages under a heading: staff who have that section (the owner always does). */
+export async function requireSection(section: Section, roles?: readonly AppRole[]): Promise<Viewer> {
+  const viewer = await requireStaff(roles);
+  if (!viewerSections(viewer).includes(section)) redirect(`/team?denied=${encodeURIComponent(SECTION_LABELS[section])}`);
   return viewer;
 }
 

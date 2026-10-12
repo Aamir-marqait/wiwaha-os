@@ -59,6 +59,21 @@ describe("Contract & Payments", () => {
     expect(w.store.notifications.some((n) => n.userId === STAFF.accounts.id || n.role === "accounts")).toBe(true);
   });
 
+  it("follows a wedding's own parts: a renamed 25% advance still holds the date", async () => {
+    const w = testWorld();
+    seedWedding(w);
+    for (const p of w.db.rows("payments")) {
+      if (p.id === "pay-dep") Object.assign(p, { milestone: "part_1", label: "Advance (25%)", effect: "holds_date", status: "paid", paid_amount_paise: p.amount_paise, receipt_number: "RCPT-9" });
+      if (p.id === "pay-con") Object.assign(p, { milestone: "part_2", label: "Second part (25%)", effect: "signs_contract" });
+    }
+    const out = await onPaymentReceived(w.deps, "pay-dep");
+    expect(out.status).toBe("done");
+    expect(w.db.rows("agent_tasks").find((t) => t.kind === "deposit_paid")).toBeTruthy();
+    const receipt = w.store.messages.find((m) => /RCPT-9/.test(m.body))!;
+    expect(receipt.body).toMatch(/date is now held/);
+    expect(receipt.body).toMatch(/pay\/sandbox\/pay-con/); // the part that signs the contract gets its link
+  });
+
   it("reminds at T-7 and T-3 once each, and flags overdue payments", async () => {
     const at = (d: string) => testWorld({ now: new Date(`${d}T04:30:00Z`) });
     const w7 = at("2026-10-10");

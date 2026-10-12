@@ -8,7 +8,7 @@ import { draftContract, onContractDecided, onFinalPaymentStage, onPaymentReceive
 import { generateMoodboards, onCustomDecided, onFinalised, onShortlisted } from "./agents/design/agent";
 import { onMenuApproved, proposeMenus } from "./agents/menu/agent";
 import { onboardWedding } from "./agents/onboarding/agent";
-import { onQuoteDecided, prepareQuote } from "./agents/quote/agent";
+import { onQuoteDecided, onSelectionFinalised, prepareQuote } from "./agents/quote/agent";
 import { lockVendors, onVendorReplied } from "./agents/vendor_coordinator/agent";
 import { onFamilyMessage } from "./agents/wedding_room/agent";
 import { buildRunOfShow, generatePlan, onRunOfShowDecided } from "./agents/planner/agent";
@@ -72,6 +72,7 @@ const HANDLERS: Record<string, Record<string, Handler>> = {
   },
   quote: {
     quote_requested: onWedding(prepareQuote),
+    selection_finalised: onWedding(onSelectionFinalised),
     approval_decided: decided(onQuoteDecided),
   },
   vendor_coordinator: {

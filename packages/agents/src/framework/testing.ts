@@ -45,9 +45,9 @@ export function testWorld(opts: { llm?: LlmClient; now?: Date; seed?: Record<str
   db.unique("content_posts", "scheduled_for", "platform");
   let invoiceSeq = 0;
   db.onRpc("next_invoice_number", (args) => `${String(args.p_prefix)}/2027/${String(++invoiceSeq).padStart(4, "0")}`);
-  // moodboards_guard_unlock: no décor work before the contract (40%) payment.
+  // moodboards_guard_unlock: no décor work before the part that signs the contract is paid.
   db.beforeInsert("moodboards", (r, d) => {
-    if (!d.rows("payments").some((p) => p.wedding_id === r.wedding_id && p.milestone === "contract" && p.status === "paid")) {
+    if (!d.rows("payments").some((p) => p.wedding_id === r.wedding_id && (p.effect ?? (p.milestone === "contract" ? "signs_contract" : null)) === "signs_contract" && p.status === "paid")) {
       throw Object.assign(new Error("Décor opens after: contract paid"), { code: "P0001" });
     }
   });

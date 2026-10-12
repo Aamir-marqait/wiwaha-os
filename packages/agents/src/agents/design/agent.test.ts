@@ -23,6 +23,23 @@ describe("Design", () => {
     expect(boards.every((b) => b.round === 1)).toBe(true);
   });
 
+  it("starts from the team's décor templates by area, then fills with built-in themes", async () => {
+    const w = testWorld();
+    seedWedding(w, { paid: ["deposit", "contract"] });
+    w.db.rows("decor_templates").push(
+      { id: "tpl-door", area: "Main door entry", title: "Marigold arch", function_type: "haldi", description: "Marigold strings and brass urlis", reference_image_url: "https://img.test/door.jpg", examples: [{ url: "https://img.test/arch-1.jpg" }], palette: ["#F2A900"], design_kind: "standard", active: true, sort: 1 },
+      { id: "tpl-lobby", area: "Lobby", title: "Ivory lobby", function_type: null, description: null, reference_image_url: null, examples: [], palette: [], design_kind: "custom", active: true, sort: 2 },
+      { id: "tpl-off", area: "Staircase", title: "Old staircase", function_type: null, description: null, reference_image_url: null, examples: [], palette: [], design_kind: "standard", active: false, sort: 3 },
+    );
+    await generateMoodboards(w.deps, "wd1");
+    const haldi = w.db.rows("moodboards").filter((b) => b.function_id === "fn-haldi");
+    expect(haldi).toHaveLength(5);
+    expect(haldi[0]).toMatchObject({ theme: "Marigold arch", template_id: "tpl-door", description: "Main door entry: Marigold strings and brass urlis" });
+    expect((haldi[0]!.images as { url?: string }[]).map((i) => i.url)).toEqual(["https://img.test/arch-1.jpg", "https://img.test/door.jpg"]);
+    expect(haldi[1]).toMatchObject({ theme: "Ivory lobby", design_kind: "custom" });
+    expect(w.db.rows("moodboards").some((b) => b.theme === "Old staircase")).toBe(false);
+  });
+
   it("refines a shortlisted board, and sends custom décor to Prashanth when finalised", async () => {
     const w = testWorld();
     seedWedding(w, { paid: ["deposit", "contract"] });

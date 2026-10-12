@@ -3,7 +3,7 @@ import { formatDateIST, type LeadStatus } from "@wiwaha/db";
 import Link from "next/link";
 import { LeadStatusBadge, ScoreBadge, SOURCE_LABELS } from "@/components/lead-badges";
 import { relativeFromNow } from "@/components/time";
-import { requireStaff } from "@/lib/auth";
+import { requireSection } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 
 export const metadata = { title: "Leads" };
@@ -24,7 +24,7 @@ type Row = {
 };
 
 export default async function LeadsPage({ searchParams }: { searchParams: Promise<{ tab?: string; q?: string; hot?: string }> }) {
-  const viewer = await requireStaff(["owner", "sales", "event_manager"]);
+  const viewer = await requireSection("sales_marketing", ["owner", "sales", "event_manager"]);
   const { tab = "open", q = "", hot } = await searchParams;
   const current = TABS.find((t) => t.key === tab) ?? TABS[0]!;
   const supabase = await createClient();

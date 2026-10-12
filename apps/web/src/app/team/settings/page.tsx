@@ -1,5 +1,5 @@
 import { Card, PageTitle } from "@wiwaha/ui";
-import { Bot, BookOpen, Clock, History, Plug, Users } from "lucide-react";
+import { Bot, BookOpen, Clock, History, List, Plug, Users } from "lucide-react";
 import Link from "next/link";
 import { requireStaff } from "@/lib/auth";
 
@@ -12,8 +12,9 @@ export default async function SettingsPage() {
   const items = [
     { href: "/team/settings/policy", icon: BookOpen, title: "Policy book", body: owner ? "The rules every agent answers from. Edit a rule and the next agent answer reflects it." : "The rules every agent answers from." },
     { href: "/team/settings/agents", icon: Bot, title: "Agents", body: owner ? "Autonomy dial, kill switch and model for each of the 21 agents." : "See which agents are live and how much they may do alone." },
-    ...(owner ? [{ href: "/team/settings/team", icon: Users, title: "Team & invites", body: "Invite staff by email and set their role." }] : []),
+    ...(owner ? [{ href: "/team/settings/team", icon: Users, title: "Team & access", body: "Invite staff, set their role, and choose which headings each person sees." }] : []),
     ...(owner || role === "sales" ? [{ href: "/team/settings/availability", icon: Clock, title: "Site-visit hours", body: "When each sales executive can host a visit (the sales calendar)." }] : []),
+    { href: "/team/settings/lists", icon: List, title: "Lists", body: "Vendors, stock, upkeep schedules, the price book, spaces, rooms, dishes and plan templates: add and edit them." },
     { href: "/team/settings/channels", icon: Plug, title: "Connections", body: "WhatsApp, email, phone, Meta, Google and payments: what's live, what each needs, and the manual way until then." },
     { href: "/team/settings/activity", icon: History, title: "Activity log", body: owner ? "Every agent action, and every edit with user, time and IP." : "Every agent action." },
   ];

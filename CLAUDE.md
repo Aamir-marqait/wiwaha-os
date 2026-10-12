@@ -13,11 +13,11 @@ These live as **data** in the policy book (`policies` table, typed by `packages/
 | Honesty | Agents never make a commitment that isn't in the policy book. If something is unknown, escalate to a human. |
 | Pricing on calls | No prices quoted on the phone; invite the caller to visit. Out-of-town callers may get the approved "starting from" band plus the brochure and video tour on WhatsApp. |
 | Follow-up | Exactly one follow-up call, two days after a site visit. If there's no response, stop calling. |
-| Payments | 10% deposit holds the date; 40% within two weeks signs the contract; 50% due 30 days before the event. |
+| Payments | 10% deposit holds the date; 40% within two weeks signs the contract; 50% due 30 days before the event. This is the standard split; Prashanth can change it, or give one wedding its own parts (D34). |
 | Contract | Plain black-and-white template; e-signature. |
 | Décor | Only the in-house team or a designated planner. The venue provides infrastructure (power, complimentary rooms). |
 | Moodboards | About five per function: broad themes first, then detail. Standard and custom are labelled clearly. |
-| Planning start | Recommended about 90 days before. The couple can start any stage earlier, but never before its payment unlock. |
+| Planning start | Active planning opens 90 days before the event (changed 2026-10-12, D35). Until then the couple can share ideas, which we note; no stage starts before its opening date or its payment unlock. |
 | Audit | Every portal edit logs user, time and IP address. |
 | Reviews | Personalised review form by email after each event; low scores reach Prashanth within 2 hours. |
 | Farewell | Thank-you note, parting gift (chocolates or an Amazon voucher), added to the newsletter. |

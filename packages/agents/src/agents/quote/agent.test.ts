@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { decide, seedWedding, testWorld } from "../../framework/testing";
-import { buildLines, onQuoteDecided, prepareQuote, totals } from "./agent";
+import { maybeRequestQuote } from "../../domain/readiness";
+import { buildLines, onQuoteDecided, onSelectionFinalised, prepareQuote, totals } from "./agent";
 
 function ready(w: ReturnType<typeof testWorld>, weddingKind: "standard" | "custom") {
   w.db.rows("menus").push(
@@ -26,6 +27,34 @@ describe("Quote", () => {
     expect(t.total).toBe(t.subtotal + t.tax);
   });
 
+  it("costing: every line shows the prescribed rate and our cost; final entertainment and extras are priced from their list", async () => {
+    const w = testWorld();
+    seedWedding(w, { paid: ["deposit", "contract"] });
+    ready(w, "standard");
+    w.db.rows("service_options").push({ id: "opt-dj", vertical: "entertainment", category: "dj", name: "DJ Rhythm", rate_paise: 50_000_00, cost_paise: 32_000_00 });
+    w.db.rows("wedding_selections").push(
+      { id: "sel-1", wedding_id: "wd1", option_id: "opt-dj", function_id: "fn-wed", vertical: "entertainment", name: "DJ Rhythm", quantity: 1, status: "final" },
+      { id: "sel-2", wedding_id: "wd1", option_id: "opt-dj", function_id: "fn-haldi", vertical: "entertainment", name: "DJ Rhythm", quantity: 1, status: "declined" },
+    );
+    const { lines } = await buildLines(w.db, "wd1");
+    const dj = lines.find((l) => l.selection_id === "sel-1")!;
+    expect(dj).toMatchObject({ description: "Wedding: DJ Rhythm", unit_price_paise: 50_000_00, prescribed_unit_paise: 50_000_00, unit_cost_paise: 32_000_00, category: "entertainment:dj", off_book: false });
+    expect(lines.some((l) => l.selection_id === "sel-2")).toBe(false);
+    expect(lines.find((l) => /Estate exclusive use/.test(l.description))!.prescribed_unit_paise).toBe(450_000_00);
+  });
+
+  it("waits while an entertainment or extras option is still with the couple", async () => {
+    const w = testWorld();
+    seedWedding(w, { paid: ["deposit", "contract"] });
+    ready(w, "standard");
+    w.db.rows("wedding_selections").push({ id: "sel-1", wedding_id: "wd1", option_id: null, function_id: null, vertical: "extras", name: "Bridal makeup", quantity: 1, status: "sent" });
+    expect(await maybeRequestQuote(w.db, "wd1", "test")).toBe(false);
+    w.db.rows("wedding_selections")[0]!.status = "final";
+    const out = await onSelectionFinalised(w.deps, "wd1");
+    expect(out.status === "done" && out.result.requested).toBe(true);
+    expect(w.db.rows("agent_tasks").filter((t) => t.kind === "quote_requested")).toHaveLength(1);
+  });
+
   it("a custom décor line is off-book and waits for Prashanth; nothing reaches the couple", async () => {
     const w = testWorld();
     seedWedding(w, { paid: ["deposit", "contract"] });
@@ -36,6 +65,9 @@ describe("Quote", () => {
     expect(a).toMatchObject({ kind: "quote", priority: 1, guardrailFlags: ["off_book"] });
     expect(w.db.rows("quotes")[0]).toMatchObject({ status: "pending_approval" });
     expect(w.db.rows("quote_lines").filter((l) => l.off_book)).toHaveLength(1);
+    // Our costs never sit on the lines the couple can read.
+    expect(w.db.rows("quote_lines").every((l) => !("unit_cost_paise" in l) && !("prescribed_unit_paise" in l))).toBe(true);
+    expect(w.db.rows("quote_line_costs")).toHaveLength(w.db.rows("quote_lines").length);
     expect(w.db.rows("outbox")).toHaveLength(0);
   });
 

@@ -6,7 +6,10 @@ import { InspectionForm } from "./inspection-form";
 type Supa = Awaited<ReturnType<typeof createClient>>;
 
 /** Phase 4 panels: run-of-show, rooms, handover inspection and invoices. */
-export async function OperationsPanels({ supabase, weddingId, role, eventEnded }: { supabase: Supa; weddingId: string; role: string; eventEnded: boolean }) {
+export type OperationsCard = "run_of_show" | "rooms" | "inspection" | "invoices";
+
+export async function OperationsPanels({ supabase, weddingId, role, eventEnded, show }: { supabase: Supa; weddingId: string; role: string; eventEnded: boolean; show: readonly OperationsCard[] }) {
+  const on = (k: OperationsCard) => show.includes(k);
   const money = role === "owner" || role === "accounts";
   const [ros, rooms, inspection, invoices] = await Promise.all([
     supabase.from("run_of_show_items").select("id, starts_at, ends_at, title, owner_label, fn:event_functions(name, date)").eq("wedding_id", weddingId).order("starts_at"),
@@ -25,6 +28,7 @@ export async function OperationsPanels({ supabase, weddingId, role, eventEnded }
   const allocated = (rooms.data ?? []).filter((r) => r.room);
   return (
     <>
+      {on("run_of_show") ? (
       <Card>
         <CardHeader title="Run-of-show" subtitle="Drafted by the Planner from templates; shared after the event manager approves" />
         {byFn.size === 0 ? <p className="px-5 py-4 text-sm text-ink-soft">Appears once the brief is reviewed and functions have start times.</p> : (
@@ -38,7 +42,9 @@ export async function OperationsPanels({ supabase, weddingId, role, eventEnded }
           </div>
         )}
       </Card>
+      ) : null}
 
+      {on("rooms") ? (
       <Card>
         <CardHeader title="Rooms" subtitle={`${allocated.length} of ${(rooms.data ?? []).length} guests placed · ${(rooms.data ?? []).filter((r) => r.complimentary).length} complimentary`} />
         <ul className="divide-y divide-line/70">
@@ -54,8 +60,9 @@ export async function OperationsPanels({ supabase, weddingId, role, eventEnded }
           })}
         </ul>
       </Card>
+      ) : null}
 
-      {eventEnded ? (
+      {eventEnded && on("inspection") ? (
         <Card>
           <CardHeader title="Handover inspection" subtitle="Photos and damage check; Finance proposes the security-deposit decision to Prashanth" />
           <div className="px-4 py-3 sm:px-5">
@@ -70,7 +77,7 @@ export async function OperationsPanels({ supabase, weddingId, role, eventEnded }
         </Card>
       ) : null}
 
-      {money && (invoices.data ?? []).length ? (
+      {on("invoices") && money && (invoices.data ?? []).length ? (
         <Card>
           <CardHeader title="Invoices" />
           <ul className="divide-y divide-line/70">

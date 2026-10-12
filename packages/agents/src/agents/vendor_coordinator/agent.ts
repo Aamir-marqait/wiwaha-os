@@ -1,10 +1,11 @@
 import type { Json } from "@wiwaha/db";
-import { formatDateIST } from "@wiwaha/db";
+import { addDays, formatDateIST } from "@wiwaha/db";
 import type { PolicyKey } from "@wiwaha/policy";
 import { where, type Db } from "../../framework/db";
-import { agentDb, alertStaff, proposeClientMessage } from "../../framework/kit";
+import { agentDb, alertStaff, istInstant, proposeClientMessage } from "../../framework/kit";
 import { runAgent, type RunContext, type RunOutcome } from "../../framework/runner";
 import type { AgentDeps } from "../../framework/types";
+import { workOrderCost, workOrderFor, type WorkOrderItem, type WorkOrderLine } from "../../domain/work-orders";
 import { VENDOR_GATE } from "./gate";
 import { VENDOR_TOOLS } from "./tools";
 
@@ -12,11 +13,11 @@ export const VENDOR_COORDINATOR = "vendor_coordinator";
 const POLICIES: readonly PolicyKey[] = ["vendors.lockin", "decor.providers"];
 
 interface Vendor { id: string; name: string; category: string; email: string | null; contact_name: string | null; preferred: boolean; designated_planner: boolean; active: boolean; rating: number | null }
-interface Booking { id: string; vendor_id: string; wedding_id: string; status: string; reply_token: string; chase_count: number; last_chased_at: string | null; requested_at: string; replied_at: string | null }
+interface Booking { id: string; vendor_id: string; wedding_id: string; status: string; reply_token: string; chase_count: number; last_chased_at: string | null; requested_at: string; replied_at: string | null; work_order?: WorkOrderItem[] | null; checklist_created_at?: string | null }
 
 async function weddingFacts(db: Db, weddingId: string) {
   const [w] = await db.select<{ id: string; title: string; code: string; event_start: string; event_end: string; guest_count: number | null; event_manager_id: string | null }>("weddings", { where: { id: weddingId } });
-  const fns = await db.select<{ name: string; date: string; start_time: string | null; guest_count: number | null }>("event_functions", { where: { wedding_id: weddingId }, order: [{ column: "date" }] });
+  const fns = await db.select<{ id: string; name: string; date: string; start_time: string | null; guest_count: number | null }>("event_functions", { where: { wedding_id: weddingId }, order: [{ column: "date" }] });
   return { w: w!, fns };
 }
 
@@ -25,10 +26,19 @@ function email(ctx: RunContext, v: Vendor, b: Booking, w: { title: string; code:
   const schedule = fns.map((f) => `- ${f.name}: ${formatDateIST(f.date, { weekday: "short", day: "numeric", month: "short" })}${f.start_time ? ` ${f.start_time.slice(0, 5)}` : ""}${f.guest_count ? `, ${f.guest_count} guests` : ""}`).join("\n");
   return chase
     ? `Dear ${v.contact_name ?? v.name},\n\nA gentle reminder about ${w.title}'s wedding at Wiwaha by Praman (${formatDateIST(w.event_start)}–${formatDateIST(w.event_end)}). Could you confirm your availability here: ${link}\n\nThank you,\nTeam Wiwaha`
-    : `Dear ${v.contact_name ?? v.name},\n\nWe'd love you to join ${w.title}'s wedding at Wiwaha by Praman (${w.code}), ${formatDateIST(w.event_start)} to ${formatDateIST(w.event_end)}, for ${v.category}.\n\n${schedule}\n\nPlease confirm or decline here: ${link}\n\nThank you,\nTeam Wiwaha`;
+    : `Dear ${v.contact_name ?? v.name},\n\nWe'd love you to join ${w.title}'s wedding at Wiwaha by Praman (${w.code}), ${formatDateIST(w.event_start)} to ${formatDateIST(w.event_end)}, for ${v.category}.\n\n${schedule}${b.work_order?.length ? `\n\nWork order:\n${b.work_order.map((i) => `- ${i.description}${i.quantity !== 1 ? ` × ${i.quantity}` : ""}`).join("\n")}` : ""}\n\nPlease confirm or decline here: ${link}\n\nThank you,\nTeam Wiwaha`;
 }
 
-/** Quote approved: ask one preferred vendor per category to lock the dates. */
+/** Lines of the quote the couple approved: what the work orders are made from. */
+async function approvedLines(db: Db, weddingId: string): Promise<WorkOrderLine[]> {
+  const [q] = await db.select<{ id: string }>("quotes", { where: { wedding_id: weddingId, status: "client_approved" }, order: [{ column: "version", ascending: false }], limit: 1 });
+  if (!q) return [];
+  const lines = await db.select<Omit<WorkOrderLine, "unit_cost_paise"> & { id: string }>("quote_lines", { where: { quote_id: q.id }, order: [{ column: "sort" }] });
+  const costs = lines.length ? await db.select<{ id: string; unit_cost_paise: number | null }>("quote_line_costs", { where: { id: where.in(lines.map((l) => l.id)) } }) : [];
+  return lines.map((l) => ({ ...l, unit_cost_paise: costs.find((c) => c.id === l.id)?.unit_cost_paise ?? null }));
+}
+
+/** Quote approved: ask one preferred vendor per category to lock the dates, each with its work order. */
 export async function lockVendors(deps: AgentDeps, weddingId: string): Promise<RunOutcome<{ requested: number }>> {
   return runAgent(deps, VENDOR_COORDINATOR, { action: "lock_vendors", weddingId, input: {}, fallbackTitle: "Lock vendor dates" }, async (ctx) => {
     const db = agentDb(ctx, VENDOR_TOOLS);
@@ -37,13 +47,15 @@ export async function lockVendors(deps: AgentDeps, weddingId: string): Promise<R
     const vendors = await db.select<Vendor>("vendors", { where: { active: true, preferred: true } });
     const existing = await db.select<Booking>("vendor_bookings", { where: { wedding_id: weddingId } });
     const categories = [...new Set(vendors.map((v) => v.category))];
+    const lines = await approvedLines(db, weddingId);
     let requested = 0;
     for (const cat of categories) {
       if (existing.some((b) => vendors.find((v) => v.id === b.vendor_id)?.category === cat && b.status !== "declined")) continue;
       const pool = vendors.filter((v) => v.category === cat && (cat !== "decor" || (decor.allowed.includes("designated_planner") && v.designated_planner)));
       const v = pool.sort((a, b) => (b.rating ?? 0) - (a.rating ?? 0))[0];
       if (!v) continue;
-      const [b] = await db.insert<Booking>("vendor_bookings", { vendor_id: v.id, wedding_id: weddingId, status: "requested", brief: `${w.title}: ${fns.map((f) => f.name).join(", ")}` });
+      const order = workOrderFor(cat, lines, fns);
+      const [b] = await db.insert<Booking>("vendor_bookings", { vendor_id: v.id, wedding_id: weddingId, status: "requested", brief: `${w.title}: ${fns.map((f) => f.name).join(", ")}`, work_order: order, amount_paise: workOrderCost(order) });
       if (v.email) await proposeClientMessage(ctx, { channel: "email", to: v.email, subject: `Booking request: ${w.title} (${formatDateIST(w.event_start)})`, body: email(ctx, v, b!, w, fns), weddingId, approvalKind: VENDOR_GATE.messageApproval, title: `Lock-in email to ${v.name} (${cat})`, clientVisible: false });
       requested++;
     }
@@ -65,11 +77,25 @@ export async function onVendorReplied(deps: AgentDeps, bookingId: string): Promi
       const asked = await db.select<Booking>("vendor_bookings", { where: { wedding_id: b.wedding_id } });
       const next = (await db.select<Vendor>("vendors", { where: { active: true, category: declined?.category ?? "" } })).filter((v) => !asked.some((a) => a.vendor_id === v.id)).sort((x, y) => Number(y.preferred) - Number(x.preferred) || (y.rating ?? 0) - (x.rating ?? 0))[0];
       if (next && next.email) {
-        const [nb] = await db.insert<Booking>("vendor_bookings", { vendor_id: next.id, wedding_id: b.wedding_id, status: "requested", brief: `${w.title}: ${fns.map((f) => f.name).join(", ")}` });
+        const [nb] = await db.insert<Booking>("vendor_bookings", { vendor_id: next.id, wedding_id: b.wedding_id, status: "requested", brief: `${w.title}: ${fns.map((f) => f.name).join(", ")}`, work_order: b.work_order ?? [], amount_paise: workOrderCost(b.work_order ?? []) });
         await proposeClientMessage(ctx, { channel: "email", to: next.email, subject: `Booking request: ${w.title}`, body: email(ctx, next, nb!, w, fns), weddingId: b.wedding_id, approvalKind: VENDOR_GATE.messageApproval, title: `Lock-in email to ${next.name} (${next.category}, after a decline)`, clientVisible: false });
       } else {
         await alertStaff(deps, { userIds: w.event_manager_id ? [w.event_manager_id] : undefined, role: w.event_manager_id ? undefined : VENDOR_GATE.escalateTo, title: `No ${declined?.category ?? ""} vendor available for ${w.title}`, body: `${declined?.name ?? "The vendor"} declined and there's no other vendor in this category.`, link: `/team/weddings/${b.wedding_id}`, weddingId: b.wedding_id, whatsapp: true });
       }
+    }
+    // Accepted: one checklist task per work-order item, owned by the event manager.
+    let checklist = 0;
+    if (b.status === "confirmed" && !b.checklist_created_at) {
+      const [v] = await db.select<Vendor>("vendors", { where: { id: b.vendor_id } });
+      const items: WorkOrderItem[] = b.work_order?.length ? b.work_order : [{ description: `${v?.category ?? "Vendor"} for all functions`, quantity: 1, function_id: null, function_name: null, date: null, unit_cost_paise: null }];
+      await db.insert("tasks", items.map((i) => ({
+        scope: "wedding", wedding_id: b.wedding_id, title: `Check with ${v?.name ?? "the vendor"}: ${i.description}`,
+        description: `From ${v?.name ?? "the vendor"}'s accepted work order${i.function_name ? ` for the ${i.function_name}` : ""}. Confirm it's ready, then tick.`,
+        owner_id: w.event_manager_id, owner_role: "event_manager", due_at: istInstant(addDays(i.date ?? w.event_start, -2), "11:00"),
+        priority: "normal", proof_kind: "tick", created_by_agent: VENDOR_COORDINATOR,
+      })));
+      await db.update("vendor_bookings", { id: b.id }, { checklist_created_at: ctx.now.toISOString() });
+      checklist = items.length;
     }
     const all = await db.select<Booking>("vendor_bookings", { where: { wedding_id: b.wedding_id, status: where.neq("declined") } });
     const allConfirmed = all.length > 0 && all.every((x) => x.status === "confirmed");
@@ -77,7 +103,7 @@ export async function onVendorReplied(deps: AgentDeps, bookingId: string): Promi
       await db.update("wedding_stages", { wedding_id: b.wedding_id, key: "vendors" }, { status: "done", completed_at: ctx.now.toISOString() });
       await alertStaff(deps, { userIds: w.event_manager_id ? [w.event_manager_id] : undefined, role: w.event_manager_id ? undefined : "event_manager", title: `Vendors locked for ${w.title}`, body: `All ${all.length} vendors confirmed.`, link: `/team/weddings/${b.wedding_id}`, weddingId: b.wedding_id });
     }
-    await ctx.log({ action: "vendor_replied", status: "ok", weddingId: b.wedding_id, input: { booking_id: bookingId, status: b.status }, output: { all_confirmed: allConfirmed } });
+    await ctx.log({ action: "vendor_replied", status: "ok", weddingId: b.wedding_id, input: { booking_id: bookingId, status: b.status }, output: { all_confirmed: allConfirmed, checklist } });
     return { allConfirmed };
   });
 }

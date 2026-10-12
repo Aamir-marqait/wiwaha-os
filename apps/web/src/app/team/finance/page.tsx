@@ -1,14 +1,14 @@
 import { Badge, Card, CardHeader, PageTitle, buttonClass } from "@wiwaha/ui";
 import { formatDateIST, rupees, todayIST } from "@wiwaha/db";
 import Link from "next/link";
-import { requireStaff } from "@/lib/auth";
+import { requireSection } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { CostForm } from "./cost-form";
 
 export const metadata = { title: "Finance" };
 
 export default async function FinancePage() {
-  await requireStaff(["owner", "accounts"]);
+  await requireSection("accounts", ["owner", "accounts"]);
   const supabase = await createClient();
   const month = todayIST().slice(0, 7);
   const [invoices, costs, profit, weddings, policy] = await Promise.all([

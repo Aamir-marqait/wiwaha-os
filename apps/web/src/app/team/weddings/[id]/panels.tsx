@@ -9,7 +9,10 @@ type Supa = Awaited<ReturnType<typeof createClient>>;
 const one = <T,>(v: T | T[] | null): T | null => (Array.isArray(v) ? v[0] ?? null : v);
 
 /** Phase 3 panels for the staff Wedding Room: contract, quote, décor, menus, vendors, decisions. */
-export async function PlanningPanels({ supabase, weddingId, role }: { supabase: Supa; weddingId: string; role: string }) {
+export type PlanningCard = "contract" | "brief" | "menus" | "decor" | "quote" | "vendors" | "decisions";
+
+export async function PlanningPanels({ supabase, weddingId, role, show }: { supabase: Supa; weddingId: string; role: string; show: readonly PlanningCard[] }) {
+  const on = (k: PlanningCard) => show.includes(k);
   const [contracts, quotes, boards, menus, bookings, decisions, brief] = await Promise.all([
     supabase.from("contracts").select("id, version, status, sent_at, esign_url, esign_completed_at, signed_at").eq("wedding_id", weddingId).order("version", { ascending: false }),
     supabase.from("quotes").select("id, version, status, subtotal_paise, tax_paise, total_paise, valid_until, lines:quote_lines(id, description, quantity, unit_price_paise, line_total_paise, gst_rate_bps, off_book, sort)").eq("wedding_id", weddingId).order("version", { ascending: false }).limit(1),
@@ -26,6 +29,7 @@ export async function PlanningPanels({ supabase, weddingId, role }: { supabase: 
 
   return (
     <>
+      {on("contract") ? (
       <Card>
         <CardHeader title="Contract" subtitle="Drafted from the policy book; Prashanth approves before e-signature." />
         <div className="px-4 py-3 text-sm sm:px-5">
@@ -39,7 +43,9 @@ export async function PlanningPanels({ supabase, weddingId, role }: { supabase: 
           ) : <p className="text-ink-soft">The Contract agent drafts this right after booking.</p>}
         </div>
       </Card>
+      ) : null}
 
+      {on("brief") ? (
       <Card>
         <CardHeader title="Brief" subtitle={brief.data ? `${String(brief.data.status)}${brief.data.submitted_at ? ` · ${formatDateIST(brief.data.submitted_at as string)}` : ""}` : "Not started"} />
         {brief.data ? (
@@ -50,7 +56,9 @@ export async function PlanningPanels({ supabase, weddingId, role }: { supabase: 
           </dl>
         ) : null}
       </Card>
+      ) : null}
 
+      {on("menus") ? (
       <Card>
         <CardHeader title="Menus" subtitle="Proposed by the Menu agent; the couple approves; the chef confirms." />
         <ul className="divide-y divide-line/70">
@@ -69,7 +77,9 @@ export async function PlanningPanels({ supabase, weddingId, role }: { supabase: 
           ))}
         </ul>
       </Card>
+      ) : null}
 
+      {on("decor") ? (
       <Card>
         <CardHeader title="Décor" subtitle="Shortlisted by the couple. Finalise; custom work goes to Prashanth." />
         <ul className="divide-y divide-line/70">
@@ -90,7 +100,9 @@ export async function PlanningPanels({ supabase, weddingId, role }: { supabase: 
           ))}
         </ul>
       </Card>
+      ) : null}
 
+      {on("quote") ? (
       <Card>
         <CardHeader title="Quote" subtitle={quote ? `v${quote.version} · ${String(quote.status).replace(/_/g, " ")}${quote.valid_until ? ` · valid until ${formatDateIST(quote.valid_until)}` : ""}` : "Prepared once menus and décor are final"} />
         {quote ? (
@@ -115,9 +127,11 @@ export async function PlanningPanels({ supabase, weddingId, role }: { supabase: 
           </>
         ) : null}
       </Card>
+      ) : null}
 
+      {on("vendors") ? (
       <Card>
-        <CardHeader title="Vendors" subtitle="Lock-in requests from the Vendor Coordinator" />
+        <CardHeader title="Vendors" subtitle="Lock-in requests from the Vendor Coordinator" action={<a href="/team/catalogue/vendors" className="text-sm text-sage-700 underline">Vendor list</a>} />
         <ul className="divide-y divide-line/70">
           {(bookings.data ?? []).length === 0 ? <li className="px-5 py-4 text-sm text-ink-soft">Requests go out once the quote is approved.</li> : null}
           {(bookings.data ?? []).map((b) => {
@@ -139,7 +153,9 @@ export async function PlanningPanels({ supabase, weddingId, role }: { supabase: 
           })}
         </ul>
       </Card>
+      ) : null}
 
+      {on("decisions") ? (
       <Card>
         <CardHeader title="Decisions" subtitle="Logged by the Wedding Room agent from the family group and portal chat" />
         <ul className="divide-y divide-line/70">
@@ -153,6 +169,7 @@ export async function PlanningPanels({ supabase, weddingId, role }: { supabase: 
         </ul>
         <div className="border-t border-line px-4 py-3 sm:px-5"><PostBox weddingId={weddingId} /></div>
       </Card>
+      ) : null}
     </>
   );
 }
