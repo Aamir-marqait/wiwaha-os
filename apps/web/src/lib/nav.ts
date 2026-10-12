@@ -49,6 +49,7 @@ const GROUPS: NavGroup[] = [
   ] },
   { section: null, title: "Admin", items: [
     { href: "/team/settings/links", label: "Links", icon: Link2 },
+    { href: "/team/settings/claude", label: "Claude connector", icon: Sparkles },
     { href: "/team/settings/lists", label: "Lists", icon: List },
     { href: "/team/settings/team", label: "Team & access", icon: UserCog, roles: ["owner"] },
     { href: "/team/settings", label: "Settings", icon: Settings, exact: true },

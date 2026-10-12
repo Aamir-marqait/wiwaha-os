@@ -28,6 +28,7 @@ const BLURBS: Record<string, string> = {
   "/team/decor/assignments": "Which décor goes to which event and area.",
   "/team/catalogue/vendors": "Add and edit vendors.",
   "/team/settings/links": "Login and guest links to share.",
+  "/team/settings/claude": "Use Wiwaha OS from Claude.",
   "/team/settings/lists": "Every list the team maintains.",
   "/team/settings/team": "Invite people and choose what each sees.",
 };

@@ -18,7 +18,9 @@ const schema = z.object({
 });
 
 function safeNext(next: string | undefined, surface: "team" | "portal"): string {
-  return next && next.startsWith(`/${surface}`) && !next.startsWith("//") ? next : `/${surface}`;
+  // Team sign-in may also return to the Claude connector's approval page.
+  const ok = next && !next.startsWith("//") && (next.startsWith(`/${surface}`) || (surface === "team" && next.startsWith("/oauth/authorize?")));
+  return ok ? next : `/${surface}`;
 }
 
 export async function signIn(_prev: AuthState, form: FormData): Promise<AuthState> {
