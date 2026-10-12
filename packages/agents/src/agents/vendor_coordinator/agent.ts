@@ -13,7 +13,7 @@ export const VENDOR_COORDINATOR = "vendor_coordinator";
 const POLICIES: readonly PolicyKey[] = ["vendors.lockin", "decor.providers"];
 
 interface Vendor { id: string; name: string; category: string; email: string | null; contact_name: string | null; preferred: boolean; designated_planner: boolean; active: boolean; rating: number | null }
-interface Booking { id: string; vendor_id: string; wedding_id: string; status: string; reply_token: string; chase_count: number; last_chased_at: string | null; requested_at: string; replied_at: string | null; work_order?: WorkOrderItem[] | null; checklist_created_at?: string | null }
+interface Booking { id: string; vendor_id: string; wedding_id: string; status: string; reply_token: string; chase_count: number; last_chased_at: string | null; requested_at: string; replied_at: string | null; work_order?: WorkOrderItem[] | null; checklist_created_at?: string | null; work_order_approved_at?: string | null }
 
 async function weddingFacts(db: Db, weddingId: string) {
   const [w] = await db.select<{ id: string; title: string; code: string; event_start: string; event_end: string; guest_count: number | null; event_manager_id: string | null }>("weddings", { where: { id: weddingId } });
@@ -55,13 +55,37 @@ export async function lockVendors(deps: AgentDeps, weddingId: string): Promise<R
       const v = pool.sort((a, b) => (b.rating ?? 0) - (a.rating ?? 0))[0];
       if (!v) continue;
       const order = workOrderFor(cat, lines, fns);
-      const [b] = await db.insert<Booking>("vendor_bookings", { vendor_id: v.id, wedding_id: weddingId, status: "requested", brief: `${w.title}: ${fns.map((f) => f.name).join(", ")}`, work_order: order, amount_paise: workOrderCost(order) });
-      if (v.email) await proposeClientMessage(ctx, { channel: "email", to: v.email, subject: `Booking request: ${w.title} (${formatDateIST(w.event_start)})`, body: email(ctx, v, b!, w, fns), weddingId, approvalKind: VENDOR_GATE.messageApproval, title: `Lock-in email to ${v.name} (${cat})`, clientVisible: false });
+      // Drafted only: a work order reaches the vendor after one of us approves it (approve_work_order).
+      await db.insert<Booking>("vendor_bookings", { vendor_id: v.id, wedding_id: weddingId, status: "requested", brief: `${w.title}: ${fns.map((f) => f.name).join(", ")}`, work_order: order, amount_paise: workOrderCost(order) });
       requested++;
     }
+    if (requested) await alertStaff(deps, { userIds: w.event_manager_id ? [w.event_manager_id] : undefined, role: w.event_manager_id ? undefined : "owner", title: `${requested} vendor work order${requested === 1 ? "" : "s"} to approve: ${w.title}`, body: "Check each work order and approve it before it goes to the vendor.", link: "/team/vendors", weddingId });
     await db.update("wedding_stages", { wedding_id: weddingId, key: "vendors" }, { status: "in_progress", owner_label: "Your event manager and the Vendor Coordinator" });
     await ctx.log({ action: "lock_vendors", status: "ok", weddingId, input: {}, output: { requested, categories } as Json, policyKeys: [...POLICIES], policyVersions: ctx.book.versions(POLICIES) });
     return { requested };
+  });
+}
+
+/**
+ * One of us approved a work order: it goes to the vendor now. A person
+ * approved it, so the email is not gated again; it waits in "To send" when
+ * email isn't live yet.
+ */
+export async function onWorkOrderApproved(deps: AgentDeps, bookingId: string): Promise<RunOutcome<{ sent: boolean }>> {
+  return runAgent(deps, VENDOR_COORDINATOR, { action: "work_order_approved", input: { booking_id: bookingId }, fallbackTitle: "Send an approved work order" }, async (ctx) => {
+    const db = agentDb(ctx, VENDOR_TOOLS);
+    const [b] = await db.select<Booking>("vendor_bookings", { where: { id: bookingId } });
+    if (!b || !b.work_order_approved_at || b.status !== "requested") return { sent: false };
+    const [v] = await db.select<Vendor>("vendors", { where: { id: b.vendor_id } });
+    const { w, fns } = await weddingFacts(db, b.wedding_id);
+    if (!v?.email) {
+      await alertStaff(deps, { userIds: w.event_manager_id ? [w.event_manager_id] : undefined, role: w.event_manager_id ? undefined : "event_manager", title: `Call ${v?.name ?? "the vendor"} with the work order`, body: `${w.title}: there's no email for this vendor. Share the work order by phone or WhatsApp.`, link: `/team/weddings/${b.wedding_id}?tab=vendors`, weddingId: b.wedding_id });
+      return { sent: false };
+    }
+    await deps.store.createMessage({ weddingId: b.wedding_id, channel: "email", direction: "outbound", status: "approved", authorKind: "agent", agentKey: VENDOR_COORDINATOR, toAddress: v.email, subject: `Work order: ${w.title} (${formatDateIST(w.event_start)})`, body: email(ctx, v, b, w, fns), clientVisible: false });
+    await db.update("vendor_bookings", { id: b.id }, { requested_at: ctx.now.toISOString() });
+    await ctx.log({ action: "work_order_approved", status: "ok", weddingId: b.wedding_id, subjectTable: "vendor_bookings", subjectId: b.id, input: { booking_id: bookingId }, output: { to: v.email } });
+    return { sent: true };
   });
 }
 
@@ -77,8 +101,8 @@ export async function onVendorReplied(deps: AgentDeps, bookingId: string): Promi
       const asked = await db.select<Booking>("vendor_bookings", { where: { wedding_id: b.wedding_id } });
       const next = (await db.select<Vendor>("vendors", { where: { active: true, category: declined?.category ?? "" } })).filter((v) => !asked.some((a) => a.vendor_id === v.id)).sort((x, y) => Number(y.preferred) - Number(x.preferred) || (y.rating ?? 0) - (x.rating ?? 0))[0];
       if (next && next.email) {
-        const [nb] = await db.insert<Booking>("vendor_bookings", { vendor_id: next.id, wedding_id: b.wedding_id, status: "requested", brief: `${w.title}: ${fns.map((f) => f.name).join(", ")}`, work_order: b.work_order ?? [], amount_paise: workOrderCost(b.work_order ?? []) });
-        await proposeClientMessage(ctx, { channel: "email", to: next.email, subject: `Booking request: ${w.title}`, body: email(ctx, next, nb!, w, fns), weddingId: b.wedding_id, approvalKind: VENDOR_GATE.messageApproval, title: `Lock-in email to ${next.name} (${next.category}, after a decline)`, clientVisible: false });
+        await db.insert<Booking>("vendor_bookings", { vendor_id: next.id, wedding_id: b.wedding_id, status: "requested", brief: `${w.title}: ${fns.map((f) => f.name).join(", ")}`, work_order: b.work_order ?? [], amount_paise: workOrderCost(b.work_order ?? []) });
+        await alertStaff(deps, { userIds: w.event_manager_id ? [w.event_manager_id] : undefined, role: w.event_manager_id ? undefined : "owner", title: `${declined?.name ?? "A vendor"} declined: approve the work order for ${next.name}`, body: `${w.title}: the next ${next.category} vendor is ready once you approve.`, link: "/team/vendors", weddingId: b.wedding_id });
       } else {
         await alertStaff(deps, { userIds: w.event_manager_id ? [w.event_manager_id] : undefined, role: w.event_manager_id ? undefined : VENDOR_GATE.escalateTo, title: `No ${declined?.category ?? ""} vendor available for ${w.title}`, body: `${declined?.name ?? "The vendor"} declined and there's no other vendor in this category.`, link: `/team/weddings/${b.wedding_id}`, weddingId: b.wedding_id, whatsapp: true });
       }
@@ -114,10 +138,10 @@ export async function chaseVendors(deps: AgentDeps): Promise<RunOutcome<{ chased
     const db = agentDb(ctx, VENDOR_TOOLS);
     const rules = ctx.book.get("vendors.lockin");
     const cutoff = ctx.now.getTime() - rules.chase_after_hours * 3600_000;
-    const open = await db.select<Booking>("vendor_bookings", { where: { status: "requested", replied_at: where.isNull() } });
+    const open = (await db.select<Booking>("vendor_bookings", { where: { status: "requested", replied_at: where.isNull() } })).filter((b) => !!b.work_order_approved_at);
     let chased = 0, escalated = 0;
     for (const b of open) {
-      if (Date.parse(b.last_chased_at ?? b.requested_at) > cutoff) continue;
+      if (Date.parse(b.last_chased_at ?? b.work_order_approved_at ?? b.requested_at) > cutoff) continue;
       const [v] = await db.select<Vendor>("vendors", { where: { id: b.vendor_id } });
       const { w, fns } = await weddingFacts(db, b.wedding_id);
       if (b.chase_count < rules.max_chases && v?.email) {

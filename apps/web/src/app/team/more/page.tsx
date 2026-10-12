@@ -1,5 +1,4 @@
 import { Card, PageTitle } from "@wiwaha/ui";
-import { List } from "lucide-react";
 import Link from "next/link";
 import { requireStaff, viewerSections } from "@/lib/auth";
 import { visibleGroups } from "@/lib/nav";
@@ -15,11 +14,22 @@ const BLURBS: Record<string, string> = {
   "/team/calendar": "Every space, hold and booking.",
   "/team/estate": "Maintenance, stock, purchases and readings.",
   "/team/weddings": "Every wedding, by stage.",
-  "/team/vendors": "Vendors and what each is booked for.",
+  "/team/vendors": "Work orders to approve, and what each vendor is booked for.",
   "/team/finance": "Invoices, costs, profit and Tally export.",
   "/team/owner": "The five morning numbers, bookings and profit.",
   "/team/clients": "Couples' and families' portal logins.",
-  "/team/settings": "Policy book, agents, team and access, connections.",
+  "/team/settings": "Policy book, agents, connections, activity log.",
+  "/team/leads/import": "Bring in leads from Meta, Google or a spreadsheet.",
+  "/team/catalogue/spaces": "Lawns, halls and other spaces.",
+  "/team/catalogue/rooms": "Guest rooms.",
+  "/team/weddings/new": "Book a walk-in, call or referral.",
+  "/team/decor": "Every piece we own, with photos, count and condition.",
+  "/team/decor/templates": "Sample moodboards, area by area.",
+  "/team/decor/assignments": "Which décor goes to which event and area.",
+  "/team/catalogue/vendors": "Add and edit vendors.",
+  "/team/settings/links": "Login and guest links to share.",
+  "/team/settings/lists": "Every list the team maintains.",
+  "/team/settings/team": "Invite people and choose what each sees.",
 };
 const IN_BOTTOM_BAR = new Set(["/team", "/team/tasks", "/team/approvals"]);
 
@@ -45,14 +55,7 @@ export default async function MorePage() {
                   </Card>
                 </Link>
               ))}
-              {g.title === "Admin" ? (
-                <Link href="/team/settings/lists">
-                  <Card className="flex items-start gap-3 p-4 transition-shadow hover:shadow-md">
-                    <List className="mt-0.5 size-5 text-sage-700" aria-hidden />
-                    <div><p className="font-medium">Lists</p><p className="text-sm text-ink-soft">Vendors, stock, prices, spaces, rooms, dishes, entertainment, extras and templates.</p></div>
-                  </Card>
-                </Link>
-              ) : null}
+
             </div>
           </section>
         ))}

@@ -9,7 +9,7 @@ export const sandboxEsign = () => demo() && !process.env.DIGIO_CLIENT_ID && !pro
 
 /**
  * Marks a payment paid (idempotent). The database trigger issues the receipt
- * number, applies the milestone's effect (40% signs the contract and opens
+ * number, applies the milestone's effect (the part that signs the contract opens
  * décor) and queues the Contract & Payments agent.
  */
 export async function markPaymentPaid(paymentId: string, p: { amountPaise?: number; method?: "upi" | "card" | "netbanking" | "bank_transfer" | "other"; gateway: string; ref: string | null }) {

@@ -77,11 +77,17 @@ export async function onFamilyMessage(deps: AgentDeps, messageId: string): Promi
       const r = ctx.book.get("menus.rules");
       reply = `Our kitchen offers ${r.cuisines.join(", ")}, or you're welcome to bring your own caterer (${r.outside_caterer_rules.charAt(0).toLowerCase()}${r.outside_caterer_rules.slice(1)}) Menus and tastings are in your portal under Menus & tasting.`;
     } else if (topic === "decor_early" || topic === "decor") {
-      const [stage] = await db.select<{ status: string; started_at: string | null }>("wedding_stages", { where: { wedding_id: m.wedding_id, key: "decor" } });
-      const unlock = decorUnlockLabel(ctx.book);
+      const [stage] = await db.select<{ status: string; started_at: string | null; recommended_start: string | null }>("wedding_stages", { where: { wedding_id: m.wedding_id, key: "decor" } });
+      // This wedding's own part that signs the contract (Prashanth may have changed the split), else the policy's.
+      const parts = await db.select<{ label: string; status: string; effect: string | null }>("payments", { where: { wedding_id: m.wedding_id } });
+      const signing = parts.find((p) => p.status !== "paid" && (p.effect === "signs_contract" || p.effect === "books"));
+      const unlock = signing ? `the "${signing.label}" payment` : decorUnlockLabel(ctx.book);
+      const notYet = !ctx.book.get("planning.start").allow_early_start && !!stage?.recommended_start && stage.recommended_start > istDate(ctx.now);
       reply = stage?.status === "locked" && unlock
-        ? `Décor design and moodboards open once ${unlock} is made, and then you can start whenever you like. ${ctx.book.ruleText("decor.providers")}`
-        : stage?.started_at ? "Your moodboards are in the portal under Décor & moodboards. Shortlist the ones you love and we'll refine them." : "Décor is open for you: press Start on Décor & moodboards in your portal whenever you're ready.";
+        ? `Décor design and moodboards open once ${unlock} is made${notYet ? ` and from ${formatDateIST(stage!.recommended_start!, { day: "numeric", month: "long" })}` : ""}. ${ctx.book.ruleText("decor.providers")}`
+        : stage?.started_at ? "Your moodboards are in the portal under Décor & moodboards. Shortlist the ones you love and we'll refine them."
+        : notYet ? `Décor opens on ${formatDateIST(stage!.recommended_start!, { day: "numeric", month: "long" })}. Until then, share any ideas you love in your portal under Ideas, and we'll note them.`
+        : "Décor is open for you: press Start on Décor & moodboards in your portal whenever you're ready.";
     } else if (topic === "discount") {
       await deps.store.queueHuman({ agentKey: WEDDING_ROOM, reason: "escalation", assignedRole: "owner", weddingId: m.wedding_id, title: `${w!.title} asked about a discount`, detail: m.body });
       escalated = true;

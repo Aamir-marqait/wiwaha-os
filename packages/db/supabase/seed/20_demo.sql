@@ -80,7 +80,7 @@ on conflict do nothing;
 -- ₹45 L contract → 10/40/50 schedule from the policy book; deposit is paid.
 select app.create_payment_schedule('c0000000-0000-4000-8000-000000000001', 4500000 * 100);
 update public.payments set status = 'paid', paid_at = now() - interval '9 days', paid_amount_paise = amount_paise, method = 'upi'
- where wedding_id = 'c0000000-0000-4000-8000-000000000001' and milestone = 'deposit';
+ where wedding_id = 'c0000000-0000-4000-8000-000000000001' and milestone = 'advance';
 
 select app.create_stage_cards('c0000000-0000-4000-8000-000000000001');
 update public.wedding_stages set started_at = now() - interval '8 days', status = 'in_progress',

@@ -30,7 +30,7 @@ export async function Lifecycle({ supabase, w }: { supabase: Supa; w: { id: stri
   ]);
   const days = Number((planning.data?.value as { recommended_days_before?: number } | null)?.recommended_days_before ?? 90);
   const opens = addDays(w.event_start, -days);
-  const advance = (payments.data ?? []).some((p) => p.status === "paid" && p.effect === "holds_date");
+  const advance = (payments.data ?? []).some((p) => p.status === "paid" && (p.effect === "holds_date" || p.effect === "books"));
   const contract = (contracts.data ?? []).some((c) => ["sent", "signed"].includes(c.status as string));
   const signed = (contracts.data ?? []).some((c) => c.status === "signed");
   const group = !!w.whatsapp_group_url || groupTask.data?.status === "done";

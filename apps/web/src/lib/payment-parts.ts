@@ -1,10 +1,11 @@
 import { addDays } from "@wiwaha/db";
 
 /** What paying a part unlocks (payments.effect). */
-export const EFFECTS = ["holds_date", "signs_contract", "final", "none"] as const;
+export const EFFECTS = ["books", "holds_date", "signs_contract", "final", "none"] as const;
 export type Effect = (typeof EFFECTS)[number];
 export const EFFECT_LABELS: Record<Effect, string> = {
-  holds_date: "Advance: holds the date",
+  books: "Advance: holds the date and signs the contract",
+  holds_date: "Holds the date only",
   signs_contract: "Signs the contract and opens planning",
   final: "Final payment",
   none: "Nothing extra",
@@ -29,7 +30,7 @@ export function dueText(p: Pick<RelativePart, "due" | "days">): string {
 
 /** The plain-English rule agents read, e.g. "10% on booking holds the date; ...". */
 export function scheduleRuleText(parts: RelativePart[]): string {
-  const effect: Record<Effect, string> = { holds_date: " holds the date", signs_contract: " signs the contract", final: "", none: "" };
+  const effect: Record<Effect, string> = { books: " holds the date and signs the contract", holds_date: " holds the date", signs_contract: " signs the contract", final: "", none: "" };
   return parts.map((p) => `${p.percent}% ${p.due === "on_booking" ? "on booking" : `due ${dueText(p)}`}${effect[p.effect]}`).join("; ") + ".";
 }
 

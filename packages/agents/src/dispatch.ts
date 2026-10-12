@@ -9,7 +9,7 @@ import { generateMoodboards, onCustomDecided, onFinalised, onShortlisted } from 
 import { onMenuApproved, proposeMenus } from "./agents/menu/agent";
 import { onboardWedding } from "./agents/onboarding/agent";
 import { onQuoteDecided, onSelectionFinalised, prepareQuote } from "./agents/quote/agent";
-import { lockVendors, onVendorReplied } from "./agents/vendor_coordinator/agent";
+import { lockVendors, onVendorReplied, onWorkOrderApproved } from "./agents/vendor_coordinator/agent";
 import { onFamilyMessage } from "./agents/wedding_room/agent";
 import { buildRunOfShow, generatePlan, onRunOfShowDecided } from "./agents/planner/agent";
 import { allocateRooms } from "./agents/rooms_guests/agent";
@@ -79,6 +79,7 @@ const HANDLERS: Record<string, Record<string, Handler>> = {
     quote_approved: onWedding(lockVendors),
     stage_started: onWedding(lockVendors),
     vendor_replied: (d, _t, p) => (str(p.booking_id) ? onVendorReplied(d, str(p.booking_id)!) : null),
+    work_order_approved: (d, _t, p) => (str(p.booking_id) ? onWorkOrderApproved(d, str(p.booking_id)!) : null),
   },
   wedding_room: {
     family_message: (d, _t, p) => (str(p.message_id) ? onFamilyMessage(d, str(p.message_id)!) : null),

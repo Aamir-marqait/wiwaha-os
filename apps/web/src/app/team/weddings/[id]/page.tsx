@@ -2,13 +2,16 @@ import { Badge, Card, CardHeader, cn } from "@wiwaha/ui";
 import { formatDateIST, formatDateTimeIST, rupees, todayIST, type StageStatus } from "@wiwaha/db";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { ActionButton } from "@/components/action-button";
 import { StageStatusBadge, UNLOCK_TEXT } from "@/components/stage-status";
+import { openStageNow } from "./actions";
 import { requireStaff } from "@/lib/auth";
 import { EFFECT_LABELS, isEffect } from "@/lib/payment-parts";
 import { createClient } from "@/lib/supabase/server";
 import { OperationsPanels } from "./closeout";
 import { FamilyForm, FunctionsEditor } from "./family-forms";
 import { CostingCard } from "./costing";
+import { DecorStockCard } from "./decor-stock";
 import { GuestPanel } from "./guest-panel";
 import { Lifecycle } from "./lifecycle";
 import { PaymentForm } from "./panel-forms";
@@ -74,7 +77,8 @@ export default async function WeddingRoom({ params, searchParams }: { params: Pr
       {tab === "decor" ? (
         <div className="space-y-5">
           <PlanningPanels supabase={supabase} weddingId={id} role={role} show={["decor"]} />
-          <p className="text-sm text-ink-soft">Moodboards start from the <Link href="/team/catalogue/decor_templates" className="text-sage-700 underline">décor templates by area</Link>.</p>
+          <DecorStockCard supabase={supabase} weddingId={id} />
+          <p className="text-sm text-ink-soft">Moodboards start from the <Link href="/team/decor/templates" className="text-sage-700 underline">décor templates by area</Link>.</p>
         </div>
       ) : null}
       {tab === "entertainment" ? <SelectionsPanel supabase={supabase} weddingId={id} vertical="entertainment" canEdit={canVertical} /> : null}
@@ -117,7 +121,10 @@ async function Overview({ supabase, w, id, role, canEdit }: { supabase: Supa; w:
                   <p className="text-sm font-medium">{s.name as string}</p>
                   <p className="text-xs text-ink-soft">Opens {s.recommended_start ? formatDateIST(s.recommended_start as string) : "on booking"} · {UNLOCK_TEXT[s.unlock_rule as string] ?? (s.unlock_rule as string)}{s.started_at ? ` · started ${formatDateIST(s.started_at as string)}` : ""}</p>
                 </div>
-                <StageStatusBadge status={s.status as StageStatus} />
+                <span className="flex shrink-0 flex-col items-end gap-1">
+                  <StageStatusBadge status={s.status as StageStatus} />
+                  {s.status === "not_started" && (role === "owner" || role === "event_manager") ? <ActionButton action={openStageNow.bind(null, id, s.id as string)} variant="ghost" confirm={`Open "${s.name as string}" now for the family?`}>Open now</ActionButton> : null}
+                </span>
               </li>
             ))}
           </ul>

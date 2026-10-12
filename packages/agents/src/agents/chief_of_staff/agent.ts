@@ -155,6 +155,7 @@ const ROUTES: Record<string, string> = {
   selection_finalised: "quote",
   quote_approved: "vendor_coordinator",
   vendor_replied: "vendor_coordinator",
+  work_order_approved: "vendor_coordinator",
   family_message: "wedding_room",
   // Phase 4
   plan_requested: "planner",

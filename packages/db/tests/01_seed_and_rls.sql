@@ -17,7 +17,9 @@ begin
   assert (select count(*) from public.rooms) = 60, '60 rooms after expansion';
   assert (select count(*) from public.wedding_stages where wedding_id = 'c0000000-0000-4000-8000-000000000001') = 10, '10 stage cards (entertainment and extras since D35)';
   assert (select sum(amount_paise) from public.payments where wedding_id = 'c0000000-0000-4000-8000-000000000001') = 4500000 * 100, 'payments sum to contract';
-  assert (select amount_paise from public.payments where wedding_id = 'c0000000-0000-4000-8000-000000000001' and milestone = 'deposit') = 450000 * 100, '10% deposit';
+  assert (select count(*) from public.payments where wedding_id = 'c0000000-0000-4000-8000-000000000001') = 2, 'two parts by default (D37)';
+  assert (select amount_paise from public.payments where wedding_id = 'c0000000-0000-4000-8000-000000000001' and milestone = 'advance') = 2250000 * 100, '50% advance';
+  assert (select effect from public.payments where wedding_id = 'c0000000-0000-4000-8000-000000000001' and milestone = 'advance') = 'books', 'the advance books the date';
   assert (select due_on from public.payments where wedding_id = 'c0000000-0000-4000-8000-000000000001' and milestone = 'final') = current_date + 120 - 30, '50% due T-30';
   assert (select count(*) from public.profiles) = 8, 'demo profiles created by auth trigger';
   assert (select role from public.profiles where email = 'prashanth@wiwaha.example') = 'owner', 'owner role from app_metadata';
@@ -33,11 +35,11 @@ begin
   assert v_touches = 2, 'Sneha should have two touches';
 end $$;
 
--- Stage locks after seed: brief started, ceremonies unlocked, décor locked (40% unpaid).
+-- Stage locks after seed: brief started, ceremonies unlocked, décor unlocked (the 50% advance is paid; it opens on its date).
 do $$
 begin
   assert (select status from public.wedding_stages where wedding_id = 'c0000000-0000-4000-8000-000000000001' and key = 'ceremonies') = 'not_started', 'ceremonies unlocked';
-  assert (select status from public.wedding_stages where wedding_id = 'c0000000-0000-4000-8000-000000000001' and key = 'decor') = 'locked', 'décor locked before 40%';
+  assert (select status from public.wedding_stages where wedding_id = 'c0000000-0000-4000-8000-000000000001' and key = 'decor') = 'not_started', 'décor unlocked by the advance';
 end $$;
 
 -- ---------------------------------------------------------------------------
@@ -55,18 +57,18 @@ begin
   assert (select count(*) from public.audit_log) = 0, 'client sees no audit log';
   assert (select count(*) from public.approvals) = 0, 'client sees no approvals';
   assert (select count(*) from public.cost_entries) = 0, 'client sees no costs';
-  assert (select count(*) from public.payments) = 3, 'couple can view payments';
+  assert (select count(*) from public.payments) = 2, 'couple can view payments';
   assert (select count(*) from public.policies where not client_visible) = 0, 'client sees only client-visible policies';
   assert (select count(*) from public.calendar_entries) = 0, 'client does not see the master calendar';
   assert (select count(*) from public.price_book_items) = 0, 'client does not see the price book';
 end $$;
--- Décor cannot start before the 40% payment.
+-- Décor is paid for but can't start before it opens (90 days before; D35, D37).
 do $$
 begin
   perform public.start_stage((select id from public.wedding_stages where key = 'decor'));
-  raise exception 'décor should not start before the 40%% payment';
+  raise exception 'décor should not start before it opens';
 exception when others then
-  if sqlerrm not like 'This stage unlocks after%' then raise; end if;
+  if sqlerrm not like 'This opens on%' then raise; end if;
 end $$;
 -- Ceremonies can start early (brief already started).
 do $$
@@ -233,12 +235,19 @@ begin
 end $$;
 rollback;
 
--- Paying the 40% unlocks décor.
+-- Décor stays locked until the advance (which signs the contract) is paid.
 begin;
-update public.payments set status = 'paid', paid_at = now() where wedding_id = 'c0000000-0000-4000-8000-000000000001' and milestone = 'contract';
+update public.payments set status = 'scheduled', paid_at = null where wedding_id = 'c0000000-0000-4000-8000-000000000001' and milestone = 'advance';
+update public.wedding_stages set status = 'locked' where wedding_id = 'c0000000-0000-4000-8000-000000000001' and key = 'decor';
 do $$
 begin
-  assert (select status from public.wedding_stages where wedding_id = 'c0000000-0000-4000-8000-000000000001' and key = 'decor') = 'not_started', 'décor unlocked after 40%';
+  perform app.refresh_stage_locks('c0000000-0000-4000-8000-000000000001');
+  assert (select status from public.wedding_stages where wedding_id = 'c0000000-0000-4000-8000-000000000001' and key = 'decor') = 'locked', 'décor locked before the advance';
+end $$;
+update public.payments set status = 'paid', paid_at = now() where wedding_id = 'c0000000-0000-4000-8000-000000000001' and milestone = 'advance';
+do $$
+begin
+  assert (select status from public.wedding_stages where wedding_id = 'c0000000-0000-4000-8000-000000000001' and key = 'decor') = 'not_started', 'décor unlocked after the advance';
 end $$;
 rollback;
 

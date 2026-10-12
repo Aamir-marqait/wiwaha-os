@@ -41,7 +41,7 @@ const VENDOR_CATEGORIES = ["photography", "decor", "catering", "music", "makeup"
 
 const ENTERTAINMENT = ["dj", "live_band", "classical_music", "dhol", "nadaswaram", "anchor", "dancers", "magician", "fireworks", "kids_entertainment", "other"] as const;
 const EXTRAS = ["makeup", "mehendi_artist", "hair_styling", "laundry", "welcome_drinks", "photo_booth", "transport", "spa", "babysitting", "gifting", "other"] as const;
-const DECOR_AREAS = ["Directional boards", "Main door entry", "View cutter", "Lobby", "Staircase", "Mandap", "Stage", "Dining", "Lawn", "Poolside", "Haldi setup", "Mehendi setup", "Sangeet stage", "Photo corner", "Other"] as const;
+export const DECOR_AREAS = ["Directional boards", "Main door entry", "View cutter", "Lobby", "Staircase", "Mandap", "Stage", "Dining", "Lawn", "Poolside", "Haldi setup", "Mehendi setup", "Sangeet stage", "Photo corner", "Other"] as const;
 
 export const CATALOGUES: Record<string, CatalogueSpec> = {
   entertainment: {

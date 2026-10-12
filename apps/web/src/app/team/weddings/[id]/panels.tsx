@@ -18,7 +18,7 @@ export async function PlanningPanels({ supabase, weddingId, role, show }: { supa
     supabase.from("quotes").select("id, version, status, subtotal_paise, tax_paise, total_paise, valid_until, lines:quote_lines(id, description, quantity, unit_price_paise, line_total_paise, gst_rate_bps, off_book, sort)").eq("wedding_id", weddingId).order("version", { ascending: false }).limit(1),
     supabase.from("moodboards").select("id, round, theme, design_kind, status, palette, description, client_feedback, fn:event_functions(name)").eq("wedding_id", weddingId).in("status", ["shortlisted", "finalised", "approved"]).order("created_at"),
     supabase.from("menus").select("id, cuisine, status, plate_count, plate_count_lock_on, plate_count_locked_at, outside_caterer, tasting_status, fn:event_functions(name)").eq("wedding_id", weddingId).order("created_at"),
-    supabase.from("vendor_bookings").select("id, status, chase_count, requested_at, replied_at, vendor:vendors(name, category)").eq("wedding_id", weddingId).order("requested_at"),
+    supabase.from("vendor_bookings").select("id, status, chase_count, requested_at, replied_at, work_order_approved_at, vendor:vendors(name, category)").eq("wedding_id", weddingId).order("requested_at"),
     supabase.from("wedding_decisions").select("id, topic, decision, decided_by_name, source, created_at").eq("wedding_id", weddingId).order("created_at", { ascending: false }).limit(20),
     supabase.from("wedding_briefs").select("status, answers, submitted_at").eq("wedding_id", weddingId).maybeSingle(),
   ]);
@@ -131,7 +131,7 @@ export async function PlanningPanels({ supabase, weddingId, role, show }: { supa
 
       {on("vendors") ? (
       <Card>
-        <CardHeader title="Vendors" subtitle="Lock-in requests from the Vendor Coordinator" action={<a href="/team/catalogue/vendors" className="text-sm text-sage-700 underline">Vendor list</a>} />
+        <CardHeader title="Vendors" subtitle="Work orders from the approved quote; each goes out only after we approve it" action={<a href="/team/catalogue/vendors" className="text-sm text-sage-700 underline">Vendor list</a>} />
         <ul className="divide-y divide-line/70">
           {(bookings.data ?? []).length === 0 ? <li className="px-5 py-4 text-sm text-ink-soft">Requests go out once the quote is approved.</li> : null}
           {(bookings.data ?? []).map((b) => {
@@ -140,8 +140,9 @@ export async function PlanningPanels({ supabase, weddingId, role, show }: { supa
               <li key={b.id as string} className="flex items-start justify-between gap-2 px-4 py-3 sm:px-5">
                 <div><p className="text-sm font-medium">{v?.name}</p><p className="text-xs capitalize text-ink-soft">{v?.category} · asked {formatDateIST(b.requested_at as string)}{Number(b.chase_count) ? ` · chased ${b.chase_count as number}×` : ""}</p></div>
                 <span className="flex flex-col items-end gap-1">
-                  <Badge tone={b.status === "confirmed" ? "solid" : b.status === "declined" ? "burgundy" : "gold"}>{b.status as string}</Badge>
-                  {b.status === "requested" && canDecor ? (
+                  <Badge tone={b.status === "confirmed" ? "solid" : b.status === "declined" ? "burgundy" : "gold"}>{b.status === "requested" && !b.work_order_approved_at ? "work order to approve" : (b.status as string)}</Badge>
+                  {b.status === "requested" && !b.work_order_approved_at ? <a href="/team/vendors" className="text-xs text-sage-700 underline">Approve in Vendors</a> : null}
+                  {b.status === "requested" && b.work_order_approved_at && canDecor ? (
                     <span className="flex gap-1">
                       <ActionButton action={setVendorStatus.bind(null, weddingId, b.id as string, "confirmed")}>Confirmed</ActionButton>
                       <ActionButton action={setVendorStatus.bind(null, weddingId, b.id as string, "declined")} variant="ghost">Declined</ActionButton>
