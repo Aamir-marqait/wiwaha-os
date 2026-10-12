@@ -117,7 +117,7 @@ export async function PlanningPanels({ supabase, weddingId, role }: { supabase: 
       </Card>
 
       <Card>
-        <CardHeader title="Vendors" subtitle="Lock-in requests from the Vendor Coordinator" />
+        <CardHeader title="Vendors" subtitle="Lock-in requests from the Vendor Coordinator" action={<a href="/team/catalogue/vendors" className="text-sm text-sage-700 underline">Vendor list</a>} />
         <ul className="divide-y divide-line/70">
           {(bookings.data ?? []).length === 0 ? <li className="px-5 py-4 text-sm text-ink-soft">Requests go out once the quote is approved.</li> : null}
           {(bookings.data ?? []).map((b) => {

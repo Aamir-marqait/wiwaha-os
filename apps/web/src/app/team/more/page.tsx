@@ -1,5 +1,5 @@
 import { Card, PageTitle } from "@wiwaha/ui";
-import { BarChart3, CalendarDays, IndianRupee, Megaphone, Phone, Send, Settings, Trees } from "lucide-react";
+import { BarChart3, CalendarDays, IndianRupee, List, Megaphone, Phone, Send, Settings, Trees } from "lucide-react";
 import Link from "next/link";
 import { requireStaff } from "@/lib/auth";
 
@@ -20,6 +20,7 @@ export default async function MorePage() {
       { href: "/team/sales", icon: BarChart3, title: "Sales", body: "Funnel by source, calls answered, visits, reviews." },
       { href: "/team/voice", icon: Phone, title: "Phone concierge", body: "Rehearse calls with the Voice Concierge." },
     ] : []),
+    { href: "/team/settings/lists", icon: List, title: "Lists", body: "Vendors, stock, prices, spaces, rooms, dishes and plan templates." },
     { href: "/team/settings", icon: Settings, title: "Settings", body: "Policy book, agents, team, visit hours, activity log." },
   ];
   return (

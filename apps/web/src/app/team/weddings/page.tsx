@@ -1,4 +1,4 @@
-import { Card, EmptyState, PageTitle, Badge } from "@wiwaha/ui";
+import { Card, EmptyState, PageTitle, Badge, buttonClass } from "@wiwaha/ui";
 import { daysBetween, formatDateIST, rupees, todayIST } from "@wiwaha/db";
 import Link from "next/link";
 import { requireStaff } from "@/lib/auth";
@@ -13,8 +13,8 @@ export default async function WeddingsPage() {
   const today = todayIST();
   return (
     <>
-      <PageTitle title="Weddings" subtitle={viewer.profile.role === "event_manager" ? "The weddings assigned to you" : "Every booked celebration, each with its own Wedding Room"} />
-      {(data ?? []).length === 0 ? <EmptyState title="No weddings yet">When a lead books, their Wedding Room appears here.</EmptyState> : (
+      <PageTitle title="Weddings" subtitle={viewer.profile.role === "event_manager" ? "The weddings assigned to you" : "Every booked celebration, each with its own Wedding Room"} action={["owner", "sales"].includes(viewer.profile.role) ? <Link href="/team/weddings/new" className={buttonClass("primary")}>+ New wedding</Link> : null} />
+      {(data ?? []).length === 0 ? <EmptyState title="No weddings yet">When a lead books, or you add a wedding with + New wedding, its Wedding Room appears here.</EmptyState> : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {(data ?? []).map((w) => {
             const m = (Array.isArray(w.manager) ? w.manager[0] : w.manager) as { full_name: string } | null;

@@ -96,3 +96,76 @@ export async function recordPayment(weddingId: string, paymentId: string, input:
   if (!error) after(runRouting);
   return done(weddingId, error);
 }
+
+// ---------------------------------------------------------------------------
+// Functions and family, added by staff (couples add theirs in the portal brief)
+// ---------------------------------------------------------------------------
+const FUNCTION_TYPES = ["haldi", "mehendi", "sangeet", "wedding", "reception", "engagement", "cocktail", "pooja", "other"];
+export interface FunctionInput { type: string; name: string; date: string; start: string; end: string; guests: string; spaceId: string; rituals: string }
+
+export async function saveFunction(weddingId: string, functionId: string | null, f: FunctionInput): Promise<Result> {
+  await requireStaff(["owner", "sales", "event_manager"]);
+  if (!FUNCTION_TYPES.includes(f.type)) return { error: "Choose the type of function." };
+  if (!f.name.trim()) f.name = f.type[0]!.toUpperCase() + f.type.slice(1);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(f.date)) return { error: "Each function needs a date." };
+  const guests = f.guests ? Number(f.guests) : null;
+  if (guests !== null && (!Number.isInteger(guests) || guests < 1)) return { error: "Guests must be a whole number." };
+  const row = { wedding_id: weddingId, type: f.type, name: f.name.trim(), date: f.date, start_time: f.start || null, end_time: f.end || null, guest_count: guests, space_id: f.spaceId || null, rituals: f.rituals.trim() || null };
+  const supabase = await createClient("team");
+  const { error } = functionId ? await supabase.from("event_functions").update(row).eq("id", functionId).eq("wedding_id", weddingId) : await supabase.from("event_functions").insert(row);
+  return done(weddingId, error);
+}
+
+export async function deleteFunction(weddingId: string, functionId: string): Promise<Result> {
+  await requireStaff(["owner", "sales", "event_manager"]);
+  const supabase = await createClient("team");
+  const { error } = await supabase.from("event_functions").delete().eq("id", functionId).eq("wedding_id", weddingId);
+  if (error?.code === "23503") return { error: "This function already has menus, moodboards or a run-of-show. Change it instead of deleting it." };
+  return done(weddingId, error);
+}
+
+const RELATIONS = ["bride", "groom", "parent", "sibling", "relative", "planner", "friend", "other"];
+const MEMBER_ROLE: Record<string, string> = { bride: "couple", groom: "couple", parent: "parent", planner: "planner" };
+export interface FamilyInput { name: string; phone: string; email: string; relation: string; keyContact: boolean; portal: boolean }
+
+/** A family member: their contact, a place in the family list, and (optionally) their own portal login. */
+export async function addFamilyMember(weddingId: string, p: FamilyInput): Promise<Result> {
+  await requireStaff(["owner", "sales", "event_manager"]);
+  const { normalisePhone } = await import("@wiwaha/db");
+  const name = p.name.trim();
+  const email = p.email.trim().toLowerCase();
+  const phone = p.phone.trim() ? normalisePhone(p.phone) : null;
+  if (name.length < 2) return { error: "Add their name." };
+  if (p.phone.trim() && !phone) return { error: "That phone number doesn't look right." };
+  if (email && !/^\S+@\S+\.\S+$/.test(email)) return { error: "That email doesn't look right." };
+  if (p.portal && !email) return { error: "A portal login needs an email." };
+  const relation = RELATIONS.includes(p.relation) ? p.relation : "other";
+  const supabase = await createClient("team");
+
+  // Same phone = same person: reuse their contact rather than duplicate it.
+  let contactId: string | null = null;
+  if (phone) contactId = ((await supabase.from("contacts").select("id").eq("phone_e164", phone).maybeSingle()).data?.id as string | undefined) ?? null;
+  if (!contactId) {
+    const { data, error } = await supabase.from("contacts").insert({ full_name: name, phone_e164: phone, email: email || null, role: relation, consent_whatsapp: !!phone, consent_email: !!email }).select("id").single();
+    if (error) return done(weddingId, error);
+    contactId = data.id as string;
+  }
+  const { error: e2 } = await supabase.from("wedding_contacts").upsert({ wedding_id: weddingId, contact_id: contactId, relation: relation.charAt(0).toUpperCase() + relation.slice(1), is_key_contact: p.keyContact }, { onConflict: "wedding_id,contact_id" });
+  if (e2) return done(weddingId, e2);
+
+  if (p.portal) {
+    const role = MEMBER_ROLE[relation] ?? "family";
+    const couple = role === "couple";
+    const { error: e3 } = await supabase.from("wedding_members").insert({
+      wedding_id: weddingId, contact_id: contactId, email, display_name: name.split(" ")[0], member_role: role,
+      can_start_stages: couple, can_edit_brief: couple || role === "parent" || role === "planner", can_approve: couple, can_view_payments: couple, can_manage_members: couple,
+    });
+    if (e3 && e3.code !== "23505") return done(weddingId, e3);
+    after(async () => {
+      const { createAdminClient } = await import("@/lib/supabase/admin");
+      const { env } = await import("@/lib/env");
+      await createAdminClient("system").auth.admin.inviteUserByEmail(email, { data: { full_name: name }, redirectTo: `${env.appUrl()}/auth/callback?next=/portal` });
+    });
+  }
+  return done(weddingId, null);
+}

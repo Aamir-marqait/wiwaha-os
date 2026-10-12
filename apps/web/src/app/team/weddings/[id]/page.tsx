@@ -8,30 +8,36 @@ import { createClient } from "@/lib/supabase/server";
 import { PlanningPanels } from "./panels";
 import { PaymentForm } from "./panel-forms";
 import { OperationsPanels } from "./closeout";
+import { FamilyForm, FunctionsEditor } from "./family-forms";
 import { todayIST } from "@wiwaha/db";
 
 export const metadata = { title: "Wedding Room" };
 
-export default async function WeddingRoom({ params }: { params: Promise<{ id: string }> }) {
+export default async function WeddingRoom({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ existing?: string }> }) {
   const viewer = await requireStaff(["owner", "sales", "event_manager", "accounts", "staff"]);
   const { id } = await params;
+  const { existing } = await searchParams;
   const supabase = await createClient();
   const { data: w } = await supabase.from("weddings").select("*, manager:profiles!weddings_event_manager_id_fkey(full_name)").eq("id", id).maybeSingle();
   if (!w) notFound();
-  const [stages, payments, functions, members, messages, tasks] = await Promise.all([
+  const [stages, payments, functions, members, messages, tasks, family, spaces] = await Promise.all([
     supabase.from("wedding_stages").select("*").eq("wedding_id", id).order("sort"),
     supabase.from("payments").select("*").eq("wedding_id", id).order("sort"),
     supabase.from("event_functions").select("*, space:spaces(name)").eq("wedding_id", id).order("date").order("start_time"),
     supabase.from("wedding_members").select("*").eq("wedding_id", id).order("created_at"),
     supabase.from("messages").select("*").eq("wedding_id", id).order("created_at", { ascending: false }).limit(20),
     supabase.from("tasks").select("id, title, due_at, status, priority, owner:profiles!tasks_owner_id_fkey(full_name)").eq("wedding_id", id).order("due_at"),
+    supabase.from("wedding_contacts").select("contact_id, relation, is_key_contact, contact:contacts(full_name, phone_e164, email)").eq("wedding_id", id),
+    supabase.from("spaces").select("id, name").eq("active", true).order("sort"),
   ]);
+  const canEdit = ["owner", "sales", "event_manager"].includes(viewer.profile.role);
   const m = (Array.isArray(w.manager) ? w.manager[0] : w.manager) as { full_name: string } | null;
   const paid = (payments.data ?? []).filter((p) => p.status === "paid").reduce((s, p) => s + Number(p.amount_paise), 0);
 
   return (
     <>
       <Link href="/team/weddings" className="text-sm text-sage-700 hover:underline">← Weddings</Link>
+      {existing ? <p className="mt-3 rounded-xl bg-gold-100 px-4 py-2 text-sm text-gold-700">This family was already booked (same phone number), so you're looking at their existing Wedding Room instead of a duplicate.</p> : null}
       <div className="mb-5 mt-3">
         <p className="text-xs font-medium uppercase tracking-[0.2em] text-gold-600">Wedding Room · {w.code as string}</p>
         <h1 className="font-serif text-4xl font-semibold">{w.title as string}</h1>
@@ -56,22 +62,12 @@ export default async function WeddingRoom({ params }: { params: Promise<{ id: st
           </Card>
 
           <Card>
-            <CardHeader title="Functions" />
-            <ul className="divide-y divide-line/70">
-              {(functions.data ?? []).length === 0 ? <li className="px-5 py-4 text-sm text-ink-soft">No functions yet. The brief stage fills these in.</li> : null}
-              {(functions.data ?? []).map((f) => {
+            <CardHeader title="Functions" subtitle="Added here or by the couple in their brief" />
+            <FunctionsEditor weddingId={id} canEdit={canEdit} defaultDate={w.event_start as string} spaces={(spaces.data ?? []).map((sp) => ({ id: sp.id as string, name: sp.name as string }))}
+              rows={(functions.data ?? []).map((f) => {
                 const sp = (Array.isArray(f.space) ? f.space[0] : f.space) as { name: string } | null;
-                return (
-                  <li key={f.id as string} className="flex items-center justify-between gap-3 px-4 py-3 sm:px-5">
-                    <div>
-                      <p className="text-sm font-medium">{f.name as string}</p>
-                      <p className="text-xs text-ink-soft">{formatDateIST(f.date as string, { weekday: "short", day: "numeric", month: "short" })}{f.start_time ? ` · ${String(f.start_time).slice(0, 5)}` : ""}{sp ? ` · ${sp.name}` : ""}</p>
-                    </div>
-                    <span className="text-sm text-ink-soft">{(f.guest_count as number | null) ?? "—"} guests</span>
-                  </li>
-                );
-              })}
-            </ul>
+                return { id: f.id as string, type: f.type as string, name: f.name as string, date: f.date as string, start: f.start_time ? String(f.start_time).slice(0, 5) : "", end: f.end_time ? String(f.end_time).slice(0, 5) : "", guests: f.guest_count ? String(f.guest_count) : "", spaceId: (f.space_id as string | null) ?? "", rituals: (f.rituals as string | null) ?? "", spaceName: sp?.name ?? null };
+              })} />
           </Card>
 
           <PlanningPanels supabase={supabase} weddingId={id} role={viewer.profile.role} />
@@ -112,7 +108,7 @@ export default async function WeddingRoom({ params }: { params: Promise<{ id: st
             </Card>
           ) : null}
           <Card>
-            <CardHeader title="Portal members" subtitle="Each has their own login" />
+            <CardHeader title="Family and portal" subtitle="Family contacts, and who has their own portal login" />
             <ul className="divide-y divide-line/70">
               {(members.data ?? []).map((mm) => (
                 <li key={mm.id as string} className="px-4 py-3">
@@ -128,6 +124,23 @@ export default async function WeddingRoom({ params }: { params: Promise<{ id: st
               ))}
             </ul>
           </Card>
+          {(family.data ?? []).length || canEdit ? (
+            <Card>
+              <CardHeader title="Family contacts" subtitle="Key contacts join the family WhatsApp group" />
+              <ul className="divide-y divide-line/70">
+                {(family.data ?? []).map((fc) => {
+                  const c = (Array.isArray(fc.contact) ? fc.contact[0] : fc.contact) as { full_name: string; phone_e164: string | null; email: string | null } | null;
+                  return (
+                    <li key={fc.contact_id as string} className="flex items-start justify-between gap-2 px-4 py-3">
+                      <div className="min-w-0"><p className="text-sm font-medium">{c?.full_name} <span className="text-xs font-normal text-ink-soft">· {(fc.relation as string | null) ?? "Family"}</span></p><p className="text-xs text-ink-soft">{[c?.phone_e164, c?.email].filter(Boolean).join(" · ")}</p></div>
+                      {fc.is_key_contact ? <Badge>key contact</Badge> : null}
+                    </li>
+                  );
+                })}
+              </ul>
+              {canEdit ? <div className="border-t border-line/70 px-4 py-3"><FamilyForm weddingId={id} /></div> : null}
+            </Card>
+          ) : null}
           <Card>
             <CardHeader title="Tasks" />
             <ul className="divide-y divide-line/70">

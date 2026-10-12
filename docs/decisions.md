@@ -133,3 +133,11 @@ Migration `20261003001100_pin_search_path.sql` clears Supabase advisor lint 0011
 - Click-to-call, WhatsApp and email buttons on the lead page.
 **Security fix:** the test pay and sign pages could mark a payment paid or a contract signed without any check, and they were reachable on the deployed app. They now exist only when `ALLOW_SANDBOX_LINKS=true` (demos), and without it agents send no test links at all.
 **Decided against:** a "Sign in with Claude" login and building Wiwaha OS as a Claude connector (Anthropic doesn't allow third-party apps to use Claude plan logins; see the conversation of 2026-10-06). Revisit a connector later if the team wants to chat with Wiwaha from Claude.
+
+## D33 — Staff add and edit records in the app (2026-10-12)
+**Decision:** Everything a person (not an agent) needs to create has a screen:
+- **New wedding** (`/team/weddings/new`, owner and sales): goes through the same `ingest_lead` → `mark_lead_booked` path as a booked enquiry, so the date hold, plan and agents start exactly as they would for a lead. A phone number that already has a booked wedding opens that wedding instead of making a duplicate.
+- **Wedding page:** add, edit and remove functions; add family contacts (optionally invited to the portal, with permissions by relation).
+- **Tasks:** "+ Add task" for any wedding or the estate, and an "Everyone" view.
+- **Lists** (`/team/settings/lists`): one spec-driven editor (`lib/catalogue.ts`) for vendors, inventory, maintenance, price book, spaces, rooms, dishes, plan steps and run-of-show steps. Rupees and percentages are converted to paise and basis points on save. Who may edit each list is enforced by RLS, not by the page.
+**Open:** complimentary rooms can be set when creating a wedding, but not yet edited afterwards or set from "Mark as booked" on a lead.
