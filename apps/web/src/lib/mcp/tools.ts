@@ -6,7 +6,7 @@ import { isPolicyKey, policySchemas } from "@wiwaha/policy";
 import { z } from "zod";
 import { DECOR_CATEGORIES, CONDITIONS } from "../decor";
 import { ingestLead, leadInputSchema, toIngestPayload } from "../leads";
-import { EFFECTS, totalPercent } from "../payment-parts";
+import { EFFECTS, shortPaymentError, totalPercent } from "../payment-parts";
 import type { McpUser } from "./oauth";
 
 export interface ToolContext {
@@ -315,7 +315,7 @@ export function registerTools(server: McpServer, ctx: ToolContext): void {
 
   server.registerTool("record_payment", {
     title: "Record a payment received",
-    description: "Mark a payment part paid (bank transfer, UPI, cheque, cash…). The receipt is issued and its unlocks (date held, contract signed, planning) follow automatically.",
+    description: "Mark a payment part paid in full (bank transfer, UPI, cheque, cash…). An amount below the part is refused: split the part with set_payment_parts first. The receipt is issued and its unlocks (date held, contract signed, planning) follow automatically.",
     inputSchema: { payment_id: uuid, method: z.enum(["upi", "bank_transfer", "cheque", "cash", "card", "netbanking", "other"]), rupees: z.number().positive().optional(), reference: z.string().max(120).optional() },
     annotations: WRITE,
   }, guard(async ({ payment_id, method, rupees: amount, reference }) => {
@@ -323,6 +323,8 @@ export function registerTools(server: McpServer, ctx: ToolContext): void {
     if (!p) return fail("Payment not found.");
     if (p.status === "paid") return fail("Already recorded as paid.");
     const paise = Math.round((amount ?? Number(p.amount_paise) / 100) * 100);
+    const short = shortPaymentError(paise, Number(p.amount_paise));
+    if (short) return fail(short);
     must(await db.from("payments").update({ status: "paid", paid_at: new Date().toISOString(), paid_amount_paise: paise, method, gateway: "manual", gateway_ref: reference?.trim() || null }).eq("id", payment_id));
     return ok(changed(`Recorded ${rupees(paise)} by ${method.replace("_", " ")}. The receipt is drafted for approval.`));
   }));

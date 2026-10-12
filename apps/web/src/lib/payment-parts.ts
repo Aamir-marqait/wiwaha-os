@@ -1,4 +1,13 @@
-import { addDays } from "@wiwaha/db";
+import { addDays, rupees } from "@wiwaha/db";
+
+/**
+ * A part only counts as paid in full: marking it paid fires its unlocks (date held, contract
+ * signed, planning opened). If less arrived, the part has to be split first.
+ */
+export function shortPaymentError(paidPaise: number, duePaise: number): string | null {
+  if (paidPaise >= duePaise) return null;
+  return `${rupees(paidPaise)} is less than this part (${rupees(duePaise)}). Marking it paid would count the whole part, and unlock what it unlocks. If they paid only some of it, split the part into two in the payment parts first, then record the one they paid.`;
+}
 
 /** What paying a part unlocks (payments.effect). */
 export const EFFECTS = ["books", "holds_date", "signs_contract", "final", "none"] as const;
