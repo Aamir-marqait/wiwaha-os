@@ -47,7 +47,7 @@ export default async function PaymentsPage() {
           </ul>
         </Card>
       ) : null}
-      <p className="text-xs text-ink-soft">10% holds your date; 40% within two weeks signs the contract and opens décor; the final 50% is due 30 days before your celebration. Receipts arrive on WhatsApp and here.</p>
+      <p className="text-xs text-ink-soft">Each payment is due on or before the date shown. Receipts arrive on WhatsApp and here.</p>
     </PortalShell>
   );
 }

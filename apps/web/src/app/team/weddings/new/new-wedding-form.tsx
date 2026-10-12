@@ -2,12 +2,14 @@
 import { buttonClass } from "@wiwaha/ui";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
+import { SplitPicker } from "@/components/split-picker";
+import type { RelativePart } from "@/lib/payment-parts";
 import { createWedding } from "../actions";
 
 const field = "mt-1 block h-10 w-full rounded-xl border border-line bg-white px-3 text-sm normal-case tracking-normal";
 const label = "block text-xs font-medium uppercase tracking-wide text-ink-soft";
 
-export function NewWeddingForm({ managers }: { managers: { id: string; name: string }[] }) {
+export function NewWeddingForm({ managers, standard, canChangeSplit }: { managers: { id: string; name: string }[]; standard: RelativePart[]; canChangeSplit: boolean }) {
   const router = useRouter();
   const [pending, start] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -18,9 +20,9 @@ export function NewWeddingForm({ managers }: { managers: { id: string; name: str
       const s = (k: string) => String(f.get(k) ?? "");
       setError(null);
       start(async () => {
-        const r = await createWedding({ title: s("title"), name: s("name"), phone: s("phone"), email: s("email"), role: s("role"), source: s("source"), start: s("start"), end: s("end"), guests: s("guests"), totalRupees: s("total"), managerId: s("manager"), rooms: s("rooms") });
+        const r = await createWedding({ title: s("title"), name: s("name"), phone: s("phone"), email: s("email"), role: s("role"), source: s("source"), start: s("start"), end: s("end"), guests: s("guests"), totalRupees: s("total"), managerId: s("manager"), rooms: s("rooms"), parts: s("parts") || undefined });
         if (r.error) setError(r.error);
-        else if (r.weddingId) router.push(`/team/weddings/${r.weddingId}${r.existing ? "?existing=1" : ""}`);
+        else if (r.weddingId) router.push(`/team/weddings/${r.weddingId}${r.existing ? "?existing=1" : r.note ? `?note=${encodeURIComponent(r.note)}` : ""}`);
       });
     }}>
       <fieldset className="grid gap-3 sm:grid-cols-2">
@@ -46,9 +48,10 @@ export function NewWeddingForm({ managers }: { managers: { id: string; name: str
         <label className={label}>Event manager
           <select name="manager" className={field} defaultValue={managers[0]?.id ?? ""}>{managers.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}</select>
         </label>
+        <div className="sm:col-span-2"><SplitPicker standard={standard} canChange={canChangeSplit} /></div>
       </fieldset>
       <button disabled={pending} className={buttonClass("primary", "lg")}>{pending ? "Creating…" : "Create wedding"}</button>
-      <p className="text-xs text-ink-soft">This creates the Wedding Room, the 10/40/50 payment schedule and the planning stages, and the Contract agent drafts the contract for Prashanth's approval. If this family is already a lead (same phone), their lead is booked instead of creating a duplicate.</p>
+      <p className="text-xs text-ink-soft">This creates the Wedding Room, the payment parts and the planning stages, and the Contract agent drafts the contract for Prashanth's approval. If this family is already a lead (same phone), their lead is booked instead of creating a duplicate.</p>
       {error ? <p role="alert" className="text-sm text-burgundy-700">{error}</p> : null}
     </form>
   );

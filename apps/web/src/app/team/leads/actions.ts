@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { after } from "next/server";
 import { redirect } from "next/navigation";
 import { runLeadDesk, runRouting } from "@/lib/agents";
+import { applySplit } from "@/lib/apply-split";
 import { requireStaff } from "@/lib/auth";
 import { friendlyError } from "@/lib/errors";
 import { ingestLead, leadInputSchema, toIngestPayload } from "@/lib/leads";
@@ -77,7 +78,7 @@ export async function releaseEntry(entryId: string, path: string): Promise<{ err
 }
 
 /** "Mark as booked": the database creates the wedding, payment schedule and stage cards, then the Contract agent drafts. */
-export async function markBooked(leadId: string, input: { start: string; end: string; totalRupees: number; managerId: string; title: string }): Promise<{ error?: string; weddingId?: string }> {
+export async function markBooked(leadId: string, input: { start: string; end: string; totalRupees: number; managerId: string; title: string; rooms?: string; parts?: string }): Promise<{ error?: string; weddingId?: string; note?: string }> {
   await requireStaff(["owner", "sales"]);
   if (!input.start || !input.end) return { error: "Choose the event dates." };
   if (!Number.isFinite(input.totalRupees) || input.totalRupees <= 0) return { error: "Enter the contract value in rupees." };
@@ -87,8 +88,12 @@ export async function markBooked(leadId: string, input: { start: string; end: st
     p_contract_total_paise: Math.round(input.totalRupees * 100), p_event_manager_id: input.managerId || null, p_title: input.title || null,
   });
   if (error) return { error: friendlyError(error) };
+  const weddingId = (data as { id: string }).id;
+  const rooms = input.rooms ? Number(input.rooms) : null;
+  if (rooms !== null && Number.isInteger(rooms) && rooms >= 0) await supabase.from("weddings").update({ complimentary_rooms: rooms }).eq("id", weddingId);
+  const note = await applySplit(supabase, weddingId, input.start, input.parts);
   revalidatePath(`/team/leads/${leadId}`);
   revalidatePath("/team/weddings");
   after(runRouting);
-  return { weddingId: (data as { id: string }).id };
+  return { weddingId, note: note ?? undefined };
 }

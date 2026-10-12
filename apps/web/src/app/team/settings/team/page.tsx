@@ -6,6 +6,7 @@ import { ActionButton } from "@/components/action-button";
 import { requireStaff, ROLE_LABELS } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { revokeInvite, setActive } from "./actions";
+import { AccessEditor } from "./access-editor";
 import { InviteForm } from "./invite-form";
 
 export const metadata = { title: "Team" };
@@ -14,13 +15,13 @@ export default async function TeamSettings() {
   const viewer = await requireStaff(["owner"]);
   const supabase = await createClient();
   const [people, invites] = await Promise.all([
-    supabase.from("profiles").select("id, full_name, email, role, title, active, created_at").neq("role", "client").order("role").order("full_name"),
+    supabase.from("profiles").select("id, full_name, email, role, title, active, sections, created_at").neq("role", "client").order("role").order("full_name"),
     supabase.from("staff_invites").select("*").is("accepted_at", null).is("revoked_at", null).order("created_at", { ascending: false }),
   ]);
   return (
     <>
       <Link href="/team/settings" className="text-sm text-sage-700 hover:underline">← Settings</Link>
-      <PageTitle title="Team & invites" subtitle="Staff sign in at /login. Couples and families get their own portal logins from their event manager." />
+      <PageTitle title="Team & access" subtitle="Choose what each person sees: Sales & Marketing, Venue, Weddings, Vendors, Accounts, Client. Staff sign in at /login; couples and families at /portal/login." />
       <div className="grid gap-5 lg:grid-cols-[1.5fr_1fr]">
         <Card>
           <CardHeader title="People" />
@@ -35,6 +36,7 @@ export default async function TeamSettings() {
                   <Badge tone="sage">{ROLE_LABELS[p.role as AppRole]}</Badge>
                   {p.id !== viewer.userId ? <ActionButton action={setActive.bind(null, p.id as string, !p.active)} variant="ghost" confirm={p.active ? "Deactivate this person? They lose access immediately." : undefined}>{p.active ? "Deactivate" : "Reactivate"}</ActionButton> : null}
                 </div>
+                <AccessEditor userId={p.id as string} role={p.role as AppRole} current={(p.sections as string[] | null) ?? null} />
               </li>
             ))}
           </ul>

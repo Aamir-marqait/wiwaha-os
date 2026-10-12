@@ -2,7 +2,7 @@ import { Badge, Card, CardHeader, PageTitle, buttonClass } from "@wiwaha/ui";
 import Link from "next/link";
 import { formatDateIST, formatDateTimeIST, rupees, todayIST } from "@wiwaha/db";
 import { ActionButton } from "@/components/action-button";
-import { requireStaff } from "@/lib/auth";
+import { requireSection } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { markPurchase } from "./actions";
 import { ReadingForm, StockForm } from "./forms";
@@ -10,7 +10,7 @@ import { ReadingForm, StockForm } from "./forms";
 export const metadata = { title: "Estate" };
 
 export default async function EstatePage() {
-  const viewer = await requireStaff(["owner", "staff", "event_manager"]);
+  const viewer = await requireSection("venue", ["owner", "staff", "event_manager"]);
   const supabase = await createClient();
   const today = todayIST();
   const canEdit = viewer.profile.role !== "event_manager";

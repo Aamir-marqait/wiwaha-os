@@ -5,6 +5,7 @@ import { z } from "zod";
 import { requireStaff } from "@/lib/auth";
 import { env } from "@/lib/env";
 import { friendlyError } from "@/lib/errors";
+import { isSection } from "@/lib/sections";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 
@@ -65,4 +66,14 @@ export async function revokeInvite(id: string): Promise<{ error?: string }> {
   const { error } = await supabase.from("staff_invites").update({ revoked_at: new Date().toISOString() }).eq("id", id);
   revalidatePath("/team/settings/team");
   return error ? { error: friendlyError(error) } : {};
+}
+
+/** Prashanth decides which headings each person sees. An empty choice resets to their role's defaults. */
+export async function setSections(userId: string, sections: string[] | null): Promise<{ error?: string; ok?: string }> {
+  await requireStaff(["owner"]);
+  const clean = sections ? [...new Set(sections.filter(isSection))] : null;
+  const supabase = await createClient("team");
+  const { error } = await supabase.from("profiles").update({ sections: clean }).eq("id", userId);
+  revalidatePath("/team/settings/team");
+  return error ? { error: friendlyError(error) } : { ok: clean ? "Access saved." : "Back to the defaults for their role." };
 }

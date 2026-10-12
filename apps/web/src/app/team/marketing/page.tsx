@@ -1,14 +1,14 @@
 import { Badge, Card, CardHeader, PageTitle } from "@wiwaha/ui";
 import { addDays, formatDateIST, rupees, todayIST } from "@wiwaha/db";
 import Link from "next/link";
-import { requireStaff } from "@/lib/auth";
+import { requireSection } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { SpendForm } from "./spend-form";
 
 export const metadata = { title: "Marketing" };
 
 export default async function MarketingPage() {
-  await requireStaff(["owner", "sales"]);
+  await requireSection("sales_marketing", ["owner", "sales"]);
   const supabase = await createClient();
   const today = todayIST();
   const [posts, spend, reports] = await Promise.all([

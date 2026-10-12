@@ -13,7 +13,7 @@ export const CONTRACT_PAYMENTS = "contract_payments";
 const POLICIES: readonly PolicyKey[] = ["payments.schedule", "contract.template", "contracts.process", "decor.providers", "planning.start", "audit.portal_edits", "discounts"];
 
 interface WeddingRow { id: string; code: string; title: string; primary_contact_id: string | null; event_start: string; event_end: string; guest_count: number | null; complimentary_rooms: number; contract_value_paise: number | null; stage: string }
-interface PaymentRow { id: string; wedding_id: string; milestone: string; label: string; amount_paise: number; due_on: string; status: string; link_url: string | null; link_id: string | null; receipt_number: string | null; paid_amount_paise: number | null; reminders_sent: { offset_days: number; at: string }[] | null; sort: number }
+interface PaymentRow { id: string; wedding_id: string; milestone: string; label: string; amount_paise: number; due_on: string; status: string; link_url: string | null; link_id: string | null; receipt_number: string | null; paid_amount_paise: number | null; reminders_sent: { offset_days: number; at: string }[] | null; sort: number; effect?: string | null; percent_bps?: number | null }
 
 async function loadWedding(db: Db, weddingId: string) {
   const [w] = await db.select<WeddingRow>("weddings", { where: { id: weddingId } });
@@ -21,6 +21,18 @@ async function loadWedding(db: Db, weddingId: string) {
   const [contact] = w.primary_contact_id ? await db.select<{ id: string; full_name: string; phone_e164: string | null; email: string | null }>("contacts", { where: { id: w.primary_contact_id } }) : [];
   const payments = await db.select<PaymentRow>("payments", { where: { wedding_id: weddingId }, order: [{ column: "sort" }] });
   return { w, contact: contact ?? null, payments };
+}
+
+/** What a part unlocks: its own effect (Prashanth may set a wedding's parts), else the policy's. */
+function effectOf(book: RunContext["book"], p: PaymentRow): string | null {
+  return p.effect ?? book.get("payments.schedule").milestones.find((m) => m.milestone === p.milestone)?.effect ?? null;
+}
+const advanceOf = (book: RunContext["book"], payments: PaymentRow[]) => payments.find((p) => effectOf(book, p) === "holds_date") ?? payments[0];
+
+/** True when Prashanth gave this wedding its own split, so the standard terms don't apply. */
+function isCustomSplit(book: RunContext["book"], payments: PaymentRow[]): boolean {
+  const std = book.get("payments.schedule").milestones.map((m) => m.percent_bps);
+  return payments.length !== std.length || payments.some((p, i) => p.percent_bps != null && p.percent_bps !== std[i]);
 }
 
 const firstName = (n: string | null | undefined) => n?.split(" ")[0] ?? "there";
@@ -40,12 +52,12 @@ export async function draftContract(deps: AgentDeps, weddingId: string): Promise
       weddingCode: w.code, couple: w.title, primaryContact: { name: contact?.full_name ?? w.title, phone: contact?.phone_e164 ?? null, email: contact?.email ?? null },
       eventStart: w.event_start, eventEnd: w.event_end, guestCount: w.guest_count, spaces: spaces.map((s) => s.name), complimentaryRooms: w.complimentary_rooms,
       totalPaise: w.contract_value_paise ?? payments.reduce((a, p) => a + p.amount_paise, 0),
-      payments: payments.map((p) => ({ label: p.label, amountPaise: p.amount_paise, dueOn: p.due_on })), version, preparedOn: istDate(ctx.now),
+      payments: payments.map((p) => ({ label: p.label, amountPaise: p.amount_paise, dueOn: p.due_on })), customParts: isCustomSplit(ctx.book, payments), version, preparedOn: istDate(ctx.now),
     });
     const [contract] = open?.status === "draft"
       ? await db.update<{ id: string }>("contracts", { id: open.id }, { body_md: body, status: "pending_approval" })
       : await db.insert<{ id: string }>("contracts", { wedding_id: weddingId, version, body_md: body, status: "pending_approval", template_key: ctx.book.get("contracts.process").template_version });
-    const deposit = payments.find((p) => p.milestone === "deposit");
+    const deposit = advanceOf(ctx.book, payments);
     const note = `Namaste ${firstName(contact?.full_name)}, congratulations, and thank you for choosing Wiwaha by Praman! Your contract is ready to sign online (link below), along with the link for the ${deposit ? `${deposit.label.toLowerCase()} of ${rupees(deposit.amount_paise)}` : "first payment"}. Your event manager will be in touch soon.\n\nWarmly,\nTeam Wiwaha`;
     const approvalId = await requestApproval(ctx, {
       kind: CONTRACT_GATE.contractApproval, weddingId, priority: 1,
@@ -79,7 +91,7 @@ export async function onContractDecided(deps: AgentDeps, approvalId: string, sta
     const sig = await channels.esign.requestSignature({ documentTitle: `Venue Agreement ${w.code} v${contract.version}`, documentHtml: contract.body_md, referenceId: contract.id, signers: [{ name: contact?.full_name ?? w.title, email: contact?.email ?? null, phone: contact?.phone_e164 ?? null }] });
     await db.update("contracts", { id: contract.id }, { status: "sent", sent_at: ctx.now.toISOString(), esign_provider: sig.provider, esign_ref: sig.requestId, esign_url: sig.signUrl });
     await db.insert("outbox", { kind: "esign", provider: sig.provider, to_address: contact?.email ?? contact?.phone_e164 ?? null, status: sig.status, provider_ref: sig.requestId, wedding_id: w.id, subject_table: "contracts", subject_id: contract.id, sent_at: ctx.now.toISOString() });
-    const deposit = payments.find((p) => p.milestone === "deposit");
+    const deposit = advanceOf(ctx.book, payments);
     const link = deposit ? await ensureLink(ctx, db, deposit, w, contact) : null;
     // The message was part of what Prashanth approved, so it goes now.
     const final = { ...a.payload, ...(a.edited_payload ?? {}) };
@@ -116,9 +128,9 @@ export async function onPaymentReceived(deps: AgentDeps, paymentId: string): Pro
     const [p] = await db.select<PaymentRow>("payments", { where: { id: paymentId } });
     if (!p || p.status !== "paid") return { receipt: null };
     const { w, contact, payments } = await loadWedding(db, p.wedding_id);
-    const effect = ctx.book.get("payments.schedule").milestones.find((m) => m.milestone === p.milestone)?.effect ?? null;
+    const effect = effectOf(ctx.book, p);
     const next = payments.filter((x) => x.sort > p.sort && x.status !== "paid")[0] ?? null;
-    const nextLink = next && next.milestone === "contract" ? await ensureLink(ctx, db, next, w, contact) : null;
+    const nextLink = next && effectOf(ctx.book, next) === "signs_contract" ? await ensureLink(ctx, db, next, w, contact) : null;
     const line = effect === "holds_date" ? "Your date is now held for you." : effect === "signs_contract" ? "Your contract is now signed." : "";
     const body = `Namaste ${firstName(contact?.full_name)}, thank you! We've received ${rupees(p.paid_amount_paise ?? p.amount_paise)} for "${p.label}" (receipt ${p.receipt_number ?? "to follow"}). ${line}${next ? ` The next payment, ${next.label.toLowerCase()} of ${rupees(next.amount_paise)}, is due on ${formatDateIST(next.due_on)}${nextLink ? `: ${nextLink}` : "."}` : " That completes your payments."}\n\nWarmly,\nTeam Wiwaha`;
     await proposeClientMessage(ctx, { channel: contact?.phone_e164 ? "whatsapp" : "email", to: contact?.phone_e164 ?? contact?.email ?? null, subject: `Receipt ${p.receipt_number ?? ""}`, body, weddingId: w.id, approvalKind: CONTRACT_GATE.messageApproval, title: `Receipt for ${w.title}: ${p.label}`, summary: rupees(p.paid_amount_paise ?? p.amount_paise) });
@@ -171,7 +183,8 @@ export async function onFinalPaymentStage(deps: AgentDeps, weddingId: string): P
   return runAgent(deps, CONTRACT_PAYMENTS, { action: "final_payment_stage", weddingId, input: { wedding_id: weddingId }, fallbackTitle: "Send the final payment link" }, async (ctx) => {
     const db = agentDb(ctx, CONTRACT_PAYMENTS_TOOLS);
     const { w, contact, payments } = await loadWedding(db, weddingId);
-    const final = payments.find((p) => p.milestone === "final" && p.status !== "paid");
+    const unpaid = payments.filter((p) => p.status !== "paid");
+    const final = unpaid.find((p) => effectOf(ctx.book, p) === "final") ?? unpaid[unpaid.length - 1];
     if (!final) return { link: null };
     const link = await ensureLink(ctx, db, final, w, contact);
     await proposeClientMessage(ctx, { channel: contact?.phone_e164 ? "whatsapp" : "email", to: contact?.phone_e164 ?? contact?.email ?? null, subject: "Your final payment", body: `Namaste ${firstName(contact?.full_name)}, here is the link for ${final.label.toLowerCase()} of ${rupees(final.amount_paise)}, due on ${formatDateIST(final.due_on)}: ${link ?? "(link to follow)"}\n\nWarmly,\nTeam Wiwaha`, weddingId, approvalKind: CONTRACT_GATE.messageApproval, title: `Final payment link for ${w.title}` });

@@ -1,12 +1,12 @@
 import { Card, PageTitle } from "@wiwaha/ui";
 import Link from "next/link";
-import { requireStaff } from "@/lib/auth";
+import { requireSection } from "@/lib/auth";
 import { ImportForm } from "./import-form";
 
 export const metadata = { title: "Import leads" };
 
 export default async function ImportLeadsPage() {
-  await requireStaff(["owner", "sales"]);
+  await requireSection("sales_marketing", ["owner", "sales"]);
   return (
     <>
       <Link href="/team/leads" className="text-sm text-sage-700 hover:underline">← Leads</Link>

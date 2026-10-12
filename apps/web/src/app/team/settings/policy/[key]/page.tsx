@@ -4,6 +4,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireStaff } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
+import { fromPolicy } from "@/lib/payment-parts";
+import { PaymentScheduleForm } from "./payment-schedule-form";
 import { PolicyForm } from "./policy-form";
 
 export const metadata = { title: "Edit rule" };
@@ -22,7 +24,10 @@ export default async function PolicyEditPage({ params }: { params: Promise<{ key
       <PageTitle title={p.title as string} subtitle={`${p.topic as string} · ${key} · version ${p.version as number}`} />
       <div className="grid gap-5 lg:grid-cols-[1.4fr_1fr]">
         <Card className="p-4 sm:p-6">
-          <PolicyForm policyKey={key} ruleText={p.rule_text as string} value={JSON.stringify(p.value, null, 2)} needsConfirmation={p.needs_confirmation as boolean} canEdit={viewer.profile.role === "owner"} />
+          {key === "payments.schedule" ? (() => {
+            const v = p.value as { milestones: { milestone: string; label: string; percent_bps: number; due: string; days?: number; effect: string }[]; reminder_offsets_days?: number[] };
+            return <PaymentScheduleForm initial={fromPolicy(v.milestones ?? [])} reminderOffsets={v.reminder_offsets_days ?? [7, 3, 0]} canEdit={viewer.profile.role === "owner"} />;
+          })() : <PolicyForm policyKey={key} ruleText={p.rule_text as string} value={JSON.stringify(p.value, null, 2)} needsConfirmation={p.needs_confirmation as boolean} canEdit={viewer.profile.role === "owner"} />}
         </Card>
         <Card>
           <CardHeader title="Version history" />

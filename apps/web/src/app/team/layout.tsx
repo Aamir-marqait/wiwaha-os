@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Wordmark } from "@/components/brand";
 import { BottomNav, SideNav } from "@/components/team-nav";
-import { requireStaff, ROLE_LABELS } from "@/lib/auth";
+import { requireStaff, ROLE_LABELS, viewerSections } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = { title: { default: "Team", template: "%s · Wiwaha OS" } };
@@ -15,12 +15,14 @@ export default async function TeamLayout({ children }: { children: React.ReactNo
   const { count: sendCount } = await supabase.from("messages").select("id", { count: "exact", head: true }).eq("status", "approved").eq("direction", "outbound").in("channel", ["whatsapp", "email"]);
   const toSend = sendCount ?? 0;
   const first = viewer.profile.full_name.split(" ")[0];
+  const sections = viewerSections(viewer);
+  const role = viewer.profile.role;
 
   return (
     <div className="lg:grid lg:min-h-dvh lg:grid-cols-[248px_1fr]">
       <aside className="ornament sticky top-0 hidden h-dvh flex-col bg-sage-800 px-4 py-6 lg:flex">
-        <Link href="/team" className="mb-8 px-2"><Wordmark subtitle="Wiwaha OS" light /></Link>
-        <SideNav approvals={approvals} toSend={toSend} />
+        <Link href="/team" className="mb-6 px-2"><Wordmark subtitle="Wiwaha OS" light /></Link>
+        <SideNav role={role} sections={sections} approvals={approvals} toSend={toSend} />
         <div className="mt-auto rounded-xl bg-sage-900/40 px-3 py-3 text-sm text-sage-100">
           <p className="font-medium text-white">{viewer.profile.full_name}</p>
           <p className="text-xs text-sage-300">{viewer.profile.title ?? ROLE_LABELS[viewer.profile.role]}</p>
@@ -34,7 +36,7 @@ export default async function TeamLayout({ children }: { children: React.ReactNo
         </header>
         <main className="mx-auto w-full max-w-6xl px-4 pb-28 pt-5 sm:px-6 lg:px-10 lg:pb-12 lg:pt-10">{children}</main>
       </div>
-      <BottomNav approvals={approvals} />
+      <BottomNav role={role} sections={sections} approvals={approvals} />
     </div>
   );
 }

@@ -38,7 +38,7 @@ export default async function TodayPage({ searchParams }: { searchParams: Promis
 
   return (
     <>
-      {denied ? <p className="mb-4 rounded-xl bg-burgundy-50 px-4 py-2 text-sm text-burgundy-700">That page is for another role.</p> : null}
+      {denied ? <p className="mb-4 rounded-xl bg-burgundy-50 px-4 py-2 text-sm text-burgundy-700">{denied === "1" ? "That page is for another role." : `You don’t have access to ${denied}. Ask Prashanth if you need it.`}</p> : null}
       <PageTitle title={`${greeting}, ${viewer.profile.full_name.split(" ")[0]}`} subtitle={formatDateIST(today, { weekday: "long", day: "numeric", month: "long", year: "numeric" })} />
 
       {isOwner ? <p className="mb-3 text-sm"><Link href="/team/owner" className="text-sage-700 underline">Your five numbers, bookings and profit →</Link></p> : null}

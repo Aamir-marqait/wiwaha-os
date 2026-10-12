@@ -1,13 +1,13 @@
 import { Card, EmptyState, PageTitle, Badge, buttonClass } from "@wiwaha/ui";
 import { daysBetween, formatDateIST, rupees, todayIST } from "@wiwaha/db";
 import Link from "next/link";
-import { requireStaff } from "@/lib/auth";
+import { requireSection } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 
 export const metadata = { title: "Weddings" };
 
 export default async function WeddingsPage() {
-  const viewer = await requireStaff(["owner", "sales", "event_manager", "accounts"]);
+  const viewer = await requireSection("weddings", ["owner", "sales", "event_manager", "accounts"]);
   const supabase = await createClient();
   const { data } = await supabase.from("weddings").select("id, code, title, event_start, event_end, guest_count, stage, status, contract_value_paise, manager:profiles!weddings_event_manager_id_fkey(full_name)").order("event_start");
   const today = todayIST();

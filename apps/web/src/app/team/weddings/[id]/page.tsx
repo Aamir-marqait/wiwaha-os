@@ -7,16 +7,18 @@ import { requireStaff } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { PlanningPanels } from "./panels";
 import { PaymentForm } from "./panel-forms";
+import { WeddingPartsForm } from "./parts-form";
+import { EFFECT_LABELS, isEffect } from "@/lib/payment-parts";
 import { OperationsPanels } from "./closeout";
 import { FamilyForm, FunctionsEditor } from "./family-forms";
 import { todayIST } from "@wiwaha/db";
 
 export const metadata = { title: "Wedding Room" };
 
-export default async function WeddingRoom({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ existing?: string }> }) {
+export default async function WeddingRoom({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ existing?: string; note?: string }> }) {
   const viewer = await requireStaff(["owner", "sales", "event_manager", "accounts", "staff"]);
   const { id } = await params;
-  const { existing } = await searchParams;
+  const { existing, note } = await searchParams;
   const supabase = await createClient();
   const { data: w } = await supabase.from("weddings").select("*, manager:profiles!weddings_event_manager_id_fkey(full_name)").eq("id", id).maybeSingle();
   if (!w) notFound();
@@ -38,6 +40,7 @@ export default async function WeddingRoom({ params, searchParams }: { params: Pr
     <>
       <Link href="/team/weddings" className="text-sm text-sage-700 hover:underline">← Weddings</Link>
       {existing ? <p className="mt-3 rounded-xl bg-gold-100 px-4 py-2 text-sm text-gold-700">This family was already booked (same phone number), so you're looking at their existing Wedding Room instead of a duplicate.</p> : null}
+      {note ? <p className="mt-3 rounded-xl bg-burgundy-50 px-4 py-2 text-sm text-burgundy-700">{note}</p> : null}
       <div className="mb-5 mt-3">
         <p className="text-xs font-medium uppercase tracking-[0.2em] text-gold-600">Wedding Room · {w.code as string}</p>
         <h1 className="font-serif text-4xl font-semibold">{w.title as string}</h1>
@@ -96,7 +99,7 @@ export default async function WeddingRoom({ params, searchParams }: { params: Pr
                   <li key={p.id as string} className="flex items-start justify-between gap-2 px-4 py-3">
                     <div>
                       <p className="text-sm font-medium">{p.label as string}</p>
-                      <p className="text-xs text-ink-soft">{rupees(Number(p.amount_paise))} · due {formatDateIST(p.due_on as string)}</p>
+                      <p className="text-xs text-ink-soft">{p.percent_bps != null ? `${Number(p.percent_bps) / 100}% · ` : ""}{rupees(Number(p.amount_paise))} · due {formatDateIST(p.due_on as string)}{(() => { const e: unknown = p.effect; return isEffect(e) && e !== "none" ? ` · ${EFFECT_LABELS[e].toLowerCase()}` : ""; })()}</p>
                     </div>
                     <span className="flex flex-col items-end gap-1">
                       <Badge tone={p.status === "paid" ? "solid" : p.status === "overdue" ? "burgundy" : "gold"}>{String(p.status).replace(/_/g, " ")}</Badge>
@@ -105,6 +108,12 @@ export default async function WeddingRoom({ params, searchParams }: { params: Pr
                   </li>
                 ))}
               </ul>
+              {viewer.profile.role === "owner" && w.contract_value_paise ? (
+                <div className="border-t border-line/70 px-4 py-3">
+                  <WeddingPartsForm weddingId={id} totalRupees={Number(w.contract_value_paise) / 100}
+                    initial={(payments.data ?? []).map((p) => ({ id: p.id as string, label: p.label as string, percent: Number(p.percent_bps ?? 0) / 100, dueOn: p.due_on as string, effect: (() => { const e: unknown = p.effect; return isEffect(e) ? e : "none" as const; })(), paid: p.status === "paid" }))} />
+                </div>
+              ) : null}
             </Card>
           ) : null}
           <Card>

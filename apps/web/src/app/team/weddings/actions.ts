@@ -3,11 +3,12 @@ import { normalisePhone } from "@wiwaha/db";
 import { revalidatePath } from "next/cache";
 import { after } from "next/server";
 import { runRouting } from "@/lib/agents";
+import { applySplit } from "@/lib/apply-split";
 import { requireStaff } from "@/lib/auth";
 import { friendlyError } from "@/lib/errors";
 import { createClient } from "@/lib/supabase/server";
 
-export interface NewWedding { title: string; name: string; phone: string; email: string; role: string; source: string; start: string; end: string; guests: string; totalRupees: string; managerId: string; rooms: string }
+export interface NewWedding { title: string; name: string; phone: string; email: string; role: string; source: string; start: string; end: string; guests: string; totalRupees: string; managerId: string; rooms: string; parts?: string }
 
 const ROLES = ["bride", "groom", "parent", "sibling", "relative", "planner", "friend", "corporate", "other"];
 const SOURCES = ["walk_in", "phone", "referral", "manual", "wedmegood", "website", "whatsapp", "instagram", "other"];
@@ -18,7 +19,7 @@ const SOURCES = ["walk_in", "phone", "referral", "manual", "wedmegood", "website
  * booking step, so the payment schedule, stage cards, calendar and contract
  * draft all happen exactly as for any other booking.
  */
-export async function createWedding(w: NewWedding): Promise<{ error?: string; weddingId?: string; existing?: boolean }> {
+export async function createWedding(w: NewWedding): Promise<{ error?: string; weddingId?: string; existing?: boolean; note?: string }> {
   await requireStaff(["owner", "sales"]);
   const phone = w.phone.trim() ? normalisePhone(w.phone) : null;
   if (w.name.trim().length < 2) return { error: "Add the main contact's name." };
@@ -53,8 +54,9 @@ export async function createWedding(w: NewWedding): Promise<{ error?: string; we
   if (e2) return { error: friendlyError(e2) };
   const rooms = w.rooms ? Number(w.rooms) : null;
   if (rooms !== null && Number.isInteger(rooms) && rooms >= 0) await supabase.from("weddings").update({ complimentary_rooms: rooms }).eq("id", (wedding as { id: string }).id);
+  const note = await applySplit(supabase, (wedding as { id: string }).id, w.start, w.parts);
   revalidatePath("/team/weddings");
   revalidatePath("/team/leads");
   after(runRouting);
-  return { weddingId: (wedding as { id: string }).id };
+  return { weddingId: (wedding as { id: string }).id, note: note ?? undefined };
 }

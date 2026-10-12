@@ -17,9 +17,9 @@ export function StageStatusBadge({ status }: { status: StageStatus }) {
 
 export const UNLOCK_TEXT: Record<string, string> = {
   none: "Open any time",
-  deposit_paid: "Unlocks after the 10% deposit",
+  deposit_paid: "Unlocks after the advance",
   brief_started: "Unlocks once your brief is started",
-  contract_paid: "Unlocks after the 40% contract payment",
+  contract_paid: "Unlocks after the contract payment",
   quote_approved: "Unlocks once your quote is approved",
   event_complete: "Unlocks after the wedding",
 };

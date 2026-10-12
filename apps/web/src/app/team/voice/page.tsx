@@ -1,11 +1,11 @@
 import { PageTitle } from "@wiwaha/ui";
-import { requireStaff } from "@/lib/auth";
+import { requireSection } from "@/lib/auth";
 import { Simulator } from "./simulator";
 
 export const metadata = { title: "Phone concierge" };
 
 export default async function VoicePage() {
-  await requireStaff(["owner", "sales"]);
+  await requireSection("sales_marketing", ["owner", "sales"]);
   const live = !!(process.env.TELEPHONY_PROVIDER === "plivo" && process.env.PLIVO_AUTH_ID);
   return (
     <>

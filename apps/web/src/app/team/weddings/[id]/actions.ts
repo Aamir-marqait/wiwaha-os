@@ -4,6 +4,7 @@ import { after } from "next/server";
 import { runRouting } from "@/lib/agents";
 import { requireStaff } from "@/lib/auth";
 import { friendlyError } from "@/lib/errors";
+import { type DatedPart, isEffect, toRpcParts, totalPercent } from "@/lib/payment-parts";
 import { createClient } from "@/lib/supabase/server";
 
 type Result = { error?: string };
@@ -168,4 +169,15 @@ export async function addFamilyMember(weddingId: string, p: FamilyInput): Promis
     });
   }
   return done(weddingId, null);
+}
+
+/** Prashanth gives this wedding its own payment parts. Paid parts stay as they are (enforced in the database). */
+export async function setWeddingParts(weddingId: string, parts: DatedPart[]): Promise<Result> {
+  await requireStaff(["owner"]);
+  if (totalPercent(parts) !== 100) return { error: `The parts add up to ${totalPercent(parts)}%; they must add up to 100%.` };
+  if (parts.some((p) => !p.label.trim() || !p.dueOn || !isEffect(p.effect))) return { error: "Each part needs a name, a due date and what it unlocks." };
+  const supabase = await createClient("team");
+  const { error } = await supabase.rpc("set_payment_parts", { p_wedding: weddingId, p_parts: toRpcParts(parts) });
+  if (!error) after(runRouting);
+  return done(weddingId, error);
 }

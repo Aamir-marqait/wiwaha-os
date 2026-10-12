@@ -4,7 +4,9 @@ import { PolicyBook, type PolicyRow } from "@wiwaha/policy";
 import Link from "next/link";
 import { ActionButton } from "@/components/action-button";
 import { relativeFromNow } from "@/components/time";
-import { requireStaff } from "@/lib/auth";
+import { CopyField } from "@/components/copy-field";
+import { requireSection } from "@/lib/auth";
+import { feedUrl } from "@/lib/calendar-feed";
 import { createClient } from "@/lib/supabase/server";
 import { releaseEntry } from "../leads/actions";
 import { confirmEntry } from "./actions";
@@ -35,7 +37,7 @@ function shiftMonth(month: string, delta: number): string {
 }
 
 export default async function CalendarPage({ searchParams }: { searchParams: Promise<{ month?: string; view?: string }> }) {
-  const viewer = await requireStaff();
+  const viewer = await requireSection("venue");
   const sp = await searchParams;
   const today = todayIST();
   const month = sp.month && /^\d{4}-\d{2}$/.test(sp.month) ? sp.month : today.slice(0, 7);
@@ -163,6 +165,16 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
           </Card>
         </div>
       </div>
+      {canHold ? (
+        <Card className="mt-5">
+          <CardHeader title="See bookings in Google Calendar or iCloud" subtitle="Subscribe once and bookings and holds appear on your phone, refreshed every hour. Google: Other calendars → + → From URL. iPhone: Settings → Calendar → Accounts → Add subscribed calendar." />
+          <div className="space-y-2 p-4">
+            <CopyField label="All spaces" value={feedUrl("all")} />
+            {(spaces.data ?? []).map((sp) => <CopyField key={sp.id as string} label={sp.name as string} value={feedUrl(sp.id as string)} />)}
+            <p className="pt-1 text-xs text-ink-soft">Treat these links like a password: anyone with one can see the bookings. Read-only; changes are made here.</p>
+          </div>
+        </Card>
+      ) : null}
     </>
   );
 }
