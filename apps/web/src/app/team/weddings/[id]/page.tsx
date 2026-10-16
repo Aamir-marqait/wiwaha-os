@@ -13,6 +13,9 @@ import { FamilyForm, FunctionsEditor } from "./family-forms";
 import { AiMoodboards } from "./ai-moodboards";
 import { CostingCard } from "./costing";
 import { DecorStockCard } from "./decor-stock";
+import { startPortalPreview } from "@/app/team/clients/preview-actions";
+import { googleCalendarLink } from "@/lib/calendar-links";
+import { env } from "@/lib/env";
 import { METHOD_LABELS } from "@/lib/finance/labels";
 import { GuestPanel } from "./guest-panel";
 import { Lifecycle } from "./lifecycle";
@@ -60,6 +63,10 @@ export default async function WeddingRoom({ params, searchParams }: { params: Pr
         <p className="text-xs font-medium uppercase tracking-[0.2em] text-gold-600">Wedding Room · {w.code as string}</p>
         <h1 className="font-serif text-4xl font-semibold">{w.title as string}</h1>
         <p className="mt-1 text-sm text-ink-soft">{formatDateIST(w.event_start as string, { weekday: "short", day: "numeric", month: "long", year: "numeric" })} – {formatDateIST(w.event_end as string)} · {(w.guest_count as number | null) ?? "?"} guests · {(w.complimentary_rooms as number)} complimentary rooms · Event manager: {m?.full_name ?? "unassigned"}</p>
+        <div className="mt-2 flex flex-wrap items-center gap-3">
+          {["owner", "sales", "event_manager"].includes(role) ? <ActionButton action={startPortalPreview.bind(null, id)} pendingLabel="Opening…">See the portal as the couple</ActionButton> : null}
+          <a href={googleCalendarLink({ title: `${w.title as string} (Wiwaha)`, start: w.event_start as string, end: w.event_end as string, allDay: true, details: `Wedding Room: ${env.appUrl()}/team/weddings/${id}` })} target="_blank" rel="noreferrer" className="text-sm text-sage-700 underline">Add to Google Calendar</a>
+        </div>
       </div>
 
       <nav aria-label="Wedding sections" className="-mx-4 mb-5 overflow-x-auto px-4 [scrollbar-width:none] sm:mx-0 sm:px-0">

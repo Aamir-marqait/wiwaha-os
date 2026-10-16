@@ -10,6 +10,8 @@ import { requireStaff } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { releaseEntry, rerunLeadDesk } from "../actions";
 import { HoldForm, StatusSelect } from "./lead-controls";
+import { googleCalendarLink } from "@/lib/calendar-links";
+import { env } from "@/lib/env";
 import { BookVisit, VisitCard, type SlotOption } from "./visit-panel";
 import { BookedForm } from "./booked-form";
 import { standardSplit } from "@/lib/standard-split";
@@ -188,6 +190,9 @@ export default async function LeadPage({ params, searchParams }: { params: Promi
                 }} />
               ))}
             </ul>
+            {(visits.data ?? []).filter((v) => v.status === "scheduled" && Date.parse(v.scheduled_at as string) > Date.now()).map((v) => (
+              <a key={`g${v.id as string}`} href={googleCalendarLink({ title: `Site visit: ${contact.full_name}`, start: v.scheduled_at as string, minutes: Number(v.duration_minutes ?? 60), details: [v.attendees ? `Coming: ${v.attendees as string}` : null, `Lead: ${env.appUrl()}/team/leads/${id}`].filter(Boolean).join("\n") })} target="_blank" rel="noreferrer" className="mt-2 inline-block text-sm text-sage-700 underline">Add visit #{v.visit_number as number} to Google Calendar</a>
+            ))}
             {canEdit ? <div className="mt-4 border-t border-line pt-4"><BookVisit leadId={id} slots={slots} /></div> : null}
           </Card>
 

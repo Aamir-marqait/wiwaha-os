@@ -2,11 +2,15 @@ import { daysBetween, formatDateIST, todayIST } from "@wiwaha/db";
 import Link from "next/link";
 import { Wordmark } from "@/components/brand";
 import { LANGS, type PortalDict } from "@/lib/i18n";
+import { cookies } from "next/headers";
+import { PREVIEW_COOKIE } from "@/lib/portal-preview";
+import { endPortalPreview } from "@/app/team/clients/preview-actions";
 import { setLanguage } from "../actions";
 import { PortalTabs } from "./tabs";
 
 /** Portal header, tabs (scrollable at 375 px) and language switcher. */
-export function PortalShell({ t, wedding, first, active, children }: { t: PortalDict; wedding: Record<string, unknown>; first: string; active: string; children: React.ReactNode }) {
+export async function PortalShell({ t, wedding, first, active, children }: { t: PortalDict; wedding: Record<string, unknown>; first: string; active: string; children: React.ReactNode }) {
+  const preview = (await cookies()).get(PREVIEW_COOKIE)?.value === wedding.id;
   const days = daysBetween(todayIST(), wedding.event_start as string);
   const tabs = [
     { href: "/portal", key: "home", label: t.home }, { href: "/portal/brief", key: "brief", label: t.brief }, { href: "/portal/menus", key: "menus", label: t.menus },
@@ -16,6 +20,12 @@ export function PortalShell({ t, wedding, first, active, children }: { t: Portal
   ];
   return (
     <div className="min-h-dvh bg-ivory-100" lang={t.lang}>
+      {preview ? (
+        <div className="sticky top-0 z-30 flex flex-wrap items-center justify-center gap-x-3 gap-y-1 bg-gold-500 px-4 py-2 text-center text-sm text-ink">
+          <span><strong>Preview:</strong> exactly what {first || "the couple"} sees. Read-only.</span>
+          <form action={endPortalPreview}><button className="rounded-full bg-ink px-3 py-1 text-xs text-white">Back to the Wedding Room</button></form>
+        </div>
+      ) : null}
       <header className="ornament bg-sage-800 px-4 pb-4 pt-6 text-ivory-50">
         <div className="mx-auto flex max-w-3xl items-center justify-between gap-2">
           <Link href="/portal"><Wordmark subtitle={t.your_portal} light /></Link>
@@ -26,7 +36,7 @@ export function PortalShell({ t, wedding, first, active, children }: { t: Portal
               </select>
               <button className="ml-1 rounded-full bg-white/10 px-2 text-xs">✓</button>
             </form>
-            <form action="/auth/signout?to=portal" method="post"><button className="rounded-full bg-white/10 px-3 py-1 text-xs">{t.sign_out}</button></form>
+            {preview ? null : <form action="/auth/signout?to=portal" method="post"><button className="rounded-full bg-white/10 px-3 py-1 text-xs">{t.sign_out}</button></form>}
           </div>
         </div>
         <div className="mx-auto mt-6 max-w-3xl">
