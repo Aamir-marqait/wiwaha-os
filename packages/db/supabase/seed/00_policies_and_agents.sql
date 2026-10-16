@@ -45,26 +45,26 @@ insert into public.policies (key, topic, title, rule_text, value, client_visible
   ('studio.content', 'Marketing', 'Content Studio rules', 'The venue is only ever shown with Wiwaha''s own photos and footage; AI imagery is for details, objects and ideas, never the estate. Every post carries one warm call to action: call or WhatsApp +91 9169935666. Festival greetings close with a warm sign-off instead. Never engagement bait (tag, save, comment, link in bio). Reels never speak the phone number; it is shown on screen. Each script is approved once before anything is rendered; 40 renders a month, with a warning when 20% is left; three free edits per slide; at most two AI-animated clips per reel.', '{"contact_number":"+91 9169935666","venue_real_photos_only":true,"no_engagement_bait":true,"festival_signoff_instead_of_cta":true,"monthly_generations":40,"warn_at_pct":20,"slide_edits_per_slide":3,"max_ai_clips_per_reel":2,"reel_seconds":[15,30,45,60],"words_per_second":2.3}'::jsonb, false, false, 142)
 on conflict (key) do nothing;
 
-insert into public.agents (key, name, vertical, job, human_gate, phase, implemented, enabled, autonomy, model) values
-  ('chief_of_staff', 'Chief of Staff', 'all', 'Routes work between agents, writes Prashanth''s daily brief, watches SLAs', 'Prashanth sets priorities', 1, true, true, 'draft', 'claude-opus-5-5'),
-  ('voice_concierge', 'Voice Concierge', 'sales_marketing', 'Answers and makes calls, books visits, one follow-up call', 'Live handover on request', 2, true, true, 'draft', 'claude-sonnet-5-5'),
-  ('lead_desk', 'Lead Desk', 'sales_marketing', 'Unifies inbound channels, de-dupes, scores, replies', 'Hot leads to sales exec', 1, true, true, 'draft', 'claude-haiku-4-5'),
-  ('visit_host', 'Visit Host', 'sales_marketing', 'Pre-visit brief, visit checklist, post-visit recap', 'Executive runs the visit', 2, true, true, 'draft', 'claude-sonnet-5-5'),
-  ('content_studio', 'Content Studio', 'sales_marketing', 'Drafts posts, reels scripts, captions per weekly rhythm', 'Approve before posting', 4, true, true, 'draft', 'claude-sonnet-5-5'),
-  ('ads_analyst', 'Ads Analyst', 'sales_marketing', 'Tracks spend, cost per enquiry and per booking; proposes shifts', 'Budget changes approved', 4, true, true, 'draft', 'claude-sonnet-5-5'),
-  ('reputation', 'Reputation', 'sales_marketing', 'Review forms, Google/WedMeGood replies, testimonial capture', 'Low scores to Prashanth', 2, true, true, 'draft', 'claude-sonnet-5-5'),
-  ('wedding_room', 'Wedding Room', 'event_crm', 'Lives in each WhatsApp group and portal; logs decisions, answers routine questions', 'Escalates anything off-policy', 3, true, true, 'draft', 'claude-sonnet-5-5'),
-  ('onboarding', 'Onboarding', 'event_crm', 'Welcome letter, logins, portal walkthrough', 'None', 3, true, true, 'draft', 'claude-sonnet-5-5'),
-  ('contract_payments', 'Contract & Payments', 'event_crm', 'Contract generation, 10/40/50 schedule, reminders, receipts', 'Prashanth signs contracts', 3, true, true, 'draft', 'claude-sonnet-5-5'),
-  ('brief', 'Brief', 'event_crm', 'Guides the couple through ceremonies, guests, rituals', 'Event manager reviews', 3, true, true, 'draft', 'claude-sonnet-5-5'),
-  ('design', 'Design', 'event_crm', '~5 moodboards per function, refines on feedback', 'Décor lead finalises; Prashanth for custom', 3, true, true, 'draft', 'claude-opus-5-5'),
-  ('menu', 'Menu', 'event_crm', 'Menu options by cuisine, tasting booking, plate counts', 'Chef confirms', 3, true, true, 'draft', 'claude-sonnet-5-5'),
-  ('quote', 'Quote', 'event_crm', 'Prices brief + décor + menu from price book', 'Off-book items to Prashanth', 3, true, true, 'draft', 'claude-opus-5-5'),
-  ('vendor_coordinator', 'Vendor Coordinator', 'event_crm', 'Locks vendor dates, sends briefs, tracks confirmations, scores vendors', 'Vendor payments approved', 3, true, true, 'draft', 'claude-sonnet-5-5'),
-  ('planner', 'Planner', 'operations', 'Builds T-minus plan and run-of-show from templates', 'Event manager signs off', 4, true, true, 'draft', 'claude-sonnet-5-5'),
-  ('standup', 'Stand-up', 'operations', '8:30 am and 7 pm briefs, chases overdue tasks', 'Escalates to manager', 4, true, true, 'draft', 'claude-sonnet-5-5'),
-  ('rooms_guests', 'Rooms & Guests', 'operations', 'Room allocation, rooming lists, pickups, housekeeping schedule', 'Front desk confirms', 4, true, true, 'draft', 'claude-sonnet-5-5'),
-  ('estate', 'Estate', 'operations', 'Maintenance schedule, inventory, utility readings', 'Purchases over limit approved', 4, true, true, 'draft', 'claude-sonnet-5-5'),
-  ('finance', 'Finance', 'operations', 'Final invoices, GST, reconciliation, per-wedding profit', 'Accounts reviews', 4, true, true, 'draft', 'claude-sonnet-5-5'),
-  ('offboarding', 'Offboarding', 'operations', 'Thank-you, gift order, newsletter, referral ask, anniversaries', 'Gift budget approved once', 4, true, true, 'draft', 'claude-sonnet-5-5')
+insert into public.agents (key, name, vertical, job, human_gate, phase, implemented, enabled, autonomy, model, config) values
+  ('chief_of_staff', 'Chief of Staff', 'all', 'Routes work between agents, writes Prashanth''s daily brief, watches SLAs', 'Prashanth sets priorities', 1, true, true, 'draft', 'claude-opus-5-5', '{}'::jsonb),
+  ('voice_concierge', 'Voice Concierge', 'sales_marketing', 'Answers and makes calls, books visits, one follow-up call', 'Live handover on request', 2, true, true, 'draft', 'claude-sonnet-5-5', '{}'::jsonb),
+  ('lead_desk', 'Lead Desk', 'sales_marketing', 'Unifies inbound channels, de-dupes, scores, replies', 'Hot leads to sales exec', 1, true, true, 'draft', 'claude-haiku-4-5', '{}'::jsonb),
+  ('visit_host', 'Visit Host', 'sales_marketing', 'Pre-visit brief, visit checklist, post-visit recap', 'Executive runs the visit', 2, true, true, 'draft', 'claude-sonnet-5-5', '{}'::jsonb),
+  ('content_studio', 'Content Studio', 'sales_marketing', 'Plans the content calendar, writes scripts, renders carousels, posts, stories and reels from the estate''s own photos', 'Approve each script before it renders', 4, true, true, 'draft', 'claude-sonnet-5-5', '{"media_models":{"image":"fal-ai/nano-banana-pro","image_edit":"fal-ai/nano-banana-pro/edit","tts":"fal-ai/elevenlabs/tts/eleven-v3","voice":"Aria","music":"fal-ai/elevenlabs/music","image_to_video":"minimax/h3-max/image-to-video"}}'::jsonb),
+  ('ads_analyst', 'Ads Analyst', 'sales_marketing', 'Tracks spend, cost per enquiry and per booking; proposes shifts', 'Budget changes approved', 4, true, true, 'draft', 'claude-sonnet-5-5', '{}'::jsonb),
+  ('reputation', 'Reputation', 'sales_marketing', 'Review forms, Google/WedMeGood replies, testimonial capture', 'Low scores to Prashanth', 2, true, true, 'draft', 'claude-sonnet-5-5', '{}'::jsonb),
+  ('wedding_room', 'Wedding Room', 'event_crm', 'Lives in each WhatsApp group and portal; logs decisions, answers routine questions', 'Escalates anything off-policy', 3, true, true, 'draft', 'claude-sonnet-5-5', '{}'::jsonb),
+  ('onboarding', 'Onboarding', 'event_crm', 'Welcome letter, logins, portal walkthrough', 'None', 3, true, true, 'draft', 'claude-sonnet-5-5', '{}'::jsonb),
+  ('contract_payments', 'Contract & Payments', 'event_crm', 'Contract generation, 10/40/50 schedule, reminders, receipts', 'Prashanth signs contracts', 3, true, true, 'draft', 'claude-sonnet-5-5', '{}'::jsonb),
+  ('brief', 'Brief', 'event_crm', 'Guides the couple through ceremonies, guests, rituals', 'Event manager reviews', 3, true, true, 'draft', 'claude-sonnet-5-5', '{}'::jsonb),
+  ('design', 'Design', 'event_crm', 'Décor questionnaire, then a moodboard per function from plain photos of each area; refines on feedback', 'Décor team shares; décor lead finalises; Prashanth for custom', 3, true, true, 'draft', 'claude-opus-5-5', '{"media_models":{"image_edit":"fal-ai/nano-banana-pro/edit"}}'::jsonb),
+  ('menu', 'Menu', 'event_crm', 'Menu options by cuisine, tasting booking, plate counts', 'Chef confirms', 3, true, true, 'draft', 'claude-sonnet-5-5', '{}'::jsonb),
+  ('quote', 'Quote', 'event_crm', 'Prices brief + décor + menu from price book', 'Off-book items to Prashanth', 3, true, true, 'draft', 'claude-opus-5-5', '{}'::jsonb),
+  ('vendor_coordinator', 'Vendor Coordinator', 'event_crm', 'Locks vendor dates, sends briefs, tracks confirmations, scores vendors', 'Vendor payments approved', 3, true, true, 'draft', 'claude-sonnet-5-5', '{}'::jsonb),
+  ('planner', 'Planner', 'operations', 'Builds T-minus plan and run-of-show from templates', 'Event manager signs off', 4, true, true, 'draft', 'claude-sonnet-5-5', '{}'::jsonb),
+  ('standup', 'Stand-up', 'operations', '8:30 am and 7 pm briefs, chases overdue tasks', 'Escalates to manager', 4, true, true, 'draft', 'claude-sonnet-5-5', '{}'::jsonb),
+  ('rooms_guests', 'Rooms & Guests', 'operations', 'Room allocation, rooming lists, pickups, housekeeping schedule', 'Front desk confirms', 4, true, true, 'draft', 'claude-sonnet-5-5', '{}'::jsonb),
+  ('estate', 'Estate', 'operations', 'Maintenance schedule, inventory, utility readings', 'Purchases over limit approved', 4, true, true, 'draft', 'claude-sonnet-5-5', '{}'::jsonb),
+  ('finance', 'Finance', 'operations', 'Final invoices, GST, reconciliation, per-wedding profit', 'Accounts reviews', 4, true, true, 'draft', 'claude-sonnet-5-5', '{}'::jsonb),
+  ('offboarding', 'Offboarding', 'operations', 'Thank-you, gift order, newsletter, referral ask, anniversaries', 'Gift budget approved once', 4, true, true, 'draft', 'claude-sonnet-5-5', '{}'::jsonb)
 on conflict (key) do nothing;

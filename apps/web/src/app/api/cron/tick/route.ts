@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { runScheduledTick } from "@/lib/agents";
 import { isAuthorisedCron } from "@/lib/cron";
+import { runMediaWork } from "@/lib/media/worker";
 
 export const maxDuration = 300;
 
@@ -11,6 +12,9 @@ export const maxDuration = 300;
  */
 export async function GET(req: NextRequest) {
   if (!isAuthorisedCron(req)) return NextResponse.json({ error: "unauthorised" }, { status: 401 });
-  return NextResponse.json(await runScheduledTick());
+  const tick = await runScheduledTick();
+  // Moodboard pictures and studio renders: finish anything a webhook missed.
+  const media = await runMediaWork(90_000).catch((e: unknown) => ({ error: e instanceof Error ? e.message : String(e) }));
+  return NextResponse.json({ ...tick, media });
 }
 export const POST = GET;

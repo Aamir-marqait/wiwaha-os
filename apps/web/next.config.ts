@@ -3,6 +3,14 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   transpilePackages: ["@wiwaha/agents", "@wiwaha/db", "@wiwaha/policy", "@wiwaha/ui"],
   poweredByHeader: false,
+  // Media work (D41): sharp and ffmpeg run natively; the brand fonts and the
+  // ffmpeg binary must ship with the functions that render.
+  serverExternalPackages: ["ffmpeg-static", "sharp"],
+  outputFileTracingIncludes: {
+    "/**": ["./assets/fonts/**/*"],
+    "/api/media/work": ["./node_modules/ffmpeg-static/ffmpeg", "../../node_modules/.pnpm/ffmpeg-static@*/node_modules/ffmpeg-static/ffmpeg"],
+    "/api/cron/tick": ["./node_modules/ffmpeg-static/ffmpeg", "../../node_modules/.pnpm/ffmpeg-static@*/node_modules/ffmpeg-static/ffmpeg"],
+  },
   async headers() {
     return [
       {

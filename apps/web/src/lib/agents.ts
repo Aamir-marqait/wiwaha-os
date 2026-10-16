@@ -41,7 +41,10 @@ export async function runMorningBrief(date?: string) {
 
 export async function runRouting() {
   const deps = agentDeps();
-  return routeTasks(deps, createDispatcher(deps));
+  const out = await routeTasks(deps, createDispatcher(deps));
+  // Routed work may have queued pictures (moodboards) or renders: start the media worker.
+  await import("./media/kick").then((m) => m.kickIfMediaWork()).catch(() => undefined);
+  return out;
 }
 
 export async function runScheduledTick() {

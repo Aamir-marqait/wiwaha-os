@@ -181,3 +181,18 @@ begin
           false, false, 142)
   on conflict (key) do nothing;
 end $m$;
+
+-- ---------------------------------------------------------------------------
+-- The fal endpoints live with the agents (like their Claude model), so the
+-- owner can change them in Settings without a deploy.
+-- ---------------------------------------------------------------------------
+update public.agents
+   set config = config || '{"media_models":{"image":"fal-ai/nano-banana-pro","image_edit":"fal-ai/nano-banana-pro/edit","tts":"fal-ai/elevenlabs/tts/eleven-v3","voice":"Aria","music":"fal-ai/elevenlabs/music","image_to_video":"minimax/h3-max/image-to-video"}}'::jsonb,
+       job = 'Plans the content calendar, writes scripts, renders carousels, posts, stories and reels from the estate''s own photos',
+       human_gate = 'Approve each script before it renders'
+ where key = 'content_studio';
+update public.agents
+   set config = config || '{"media_models":{"image_edit":"fal-ai/nano-banana-pro/edit"}}'::jsonb,
+       job = 'Décor questionnaire, then a moodboard per function from plain photos of each area; refines on feedback',
+       human_gate = 'Décor team shares; décor lead finalises; Prashanth for custom'
+ where key = 'design';
