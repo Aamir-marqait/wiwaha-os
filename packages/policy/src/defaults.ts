@@ -419,6 +419,14 @@ export const DEFAULT_POLICIES = [
     { contact_number: "+91 9169935666", venue_real_photos_only: true, no_engagement_bait: true, festival_signoff_instead_of_cta: true, monthly_generations: 40, warn_at_pct: 20, slide_edits_per_slide: 3, max_ai_clips_per_reel: 2, reel_seconds: [15, 30, 45, 60], words_per_second: 2.3 },
     { sort: 142 },
   ),
+  def(
+    "media.budget",
+    "Marketing",
+    "AI credits budget",
+    "AI pictures, voiceovers, music and clips are paid from the fal account. The monthly budget is USD 50; the dashboard warns when 80% is used. Costs are converted at ₹88 to the dollar for the wedding costing and marketing spend.",
+    { monthly_usd: 50, warn_at_pct: 80, inr_per_usd: 88 },
+    { needs_confirmation: true, sort: 143 },
+  ),
 ] as const satisfies readonly Def<PolicyKey>[];
 
 export const NON_NEGOTIABLE_KEYS: readonly PolicyKey[] = [

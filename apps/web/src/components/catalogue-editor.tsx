@@ -16,6 +16,7 @@ function display(f: FieldSpec, v: string | boolean): string {
   if (f.kind === "percent") return `${v}% GST`;
   if (f.kind === "select") return pretty(String(v));
   if (f.kind === "image") return "photo";
+  if (f.kind === "tags") return String(v);
   if (f.kind === "images") { const n = String(v).split(/\s+/).filter(Boolean).length; return n ? `${n} photo${n === 1 ? "" : "s"}` : ""; }
   return String(v);
 }

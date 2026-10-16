@@ -14,11 +14,12 @@ const one = <T,>(v: T | T[] | null): T | null => (Array.isArray(v) ? v[0] ?? nul
 const TONE: Record<string, "sage" | "gold" | "burgundy" | "neutral"> = { confirmed: "sage", requested: "gold", declined: "burgundy", cancelled: "neutral", completed: "neutral" };
 
 /** Vendor management: who we work with, and what each is booked for. */
-export default async function VendorsPage() {
+export default async function VendorsPage({ searchParams }: { searchParams: Promise<{ q?: string; cat?: string }> }) {
   const viewer = await requireSection("vendors");
+  const { q, cat } = await searchParams;
   const supabase = await createClient();
   const [vendors, bookings, drafts] = await Promise.all([
-    supabase.from("vendors").select("id, name, category, contact_name, phone_e164, email, preferred, designated_planner, active").order("category").order("name"),
+    supabase.from("vendors").select("id, name, category, contact_name, phone_e164, email, preferred, designated_planner, active, specialities, service_area, rating").order("category").order("name"),
     supabase.from("vendor_bookings").select("id, status, vendor_id, wedding:weddings(id, title, event_start)").in("status", ["requested", "confirmed"]).not("work_order_approved_at", "is", null),
     supabase.from("vendor_bookings").select("id, amount_paise, work_order, vendor:vendors(name, category, email), wedding:weddings(id, title, event_start)").eq("status", "requested").is("work_order_approved_at", null).order("requested_at"),
   ]);
@@ -29,8 +30,11 @@ export default async function VendorsPage() {
     if (!w || w.event_start < today) continue;
     upcoming.set(b.vendor_id, [...(upcoming.get(b.vendor_id) ?? []), { id: b.id, status: b.status, wedding: w }]);
   }
+  const term = (q ?? "").trim().toLowerCase();
+  const categories = [...new Set((vendors.data ?? []).map((v) => v.category as string))];
+  const shown = (vendors.data ?? []).filter((v) => (!cat || v.category === cat) && (!term || [v.name, v.contact_name, v.service_area, ...((v.specialities ?? []) as string[])].filter(Boolean).join(" ").toLowerCase().includes(term)));
   const byCategory = new Map<string, NonNullable<typeof vendors.data>>();
-  for (const v of vendors.data ?? []) byCategory.set(v.category as string, [...(byCategory.get(v.category as string) ?? []), v]);
+  for (const v of shown) byCategory.set(v.category as string, [...(byCategory.get(v.category as string) ?? []), v]);
   const canEdit = ["owner", "event_manager"].includes(viewer.profile.role);
 
   return (
@@ -68,7 +72,14 @@ export default async function VendorsPage() {
           </ul>
         </Card>
       ) : null}
-      {byCategory.size === 0 ? <Card className="p-5 text-sm text-ink-soft">No vendors yet.</Card> : null}
+      <div className="mb-4 space-y-2">
+        <form className="flex gap-2">{cat ? <input type="hidden" name="cat" value={cat} /> : null}<input name="q" defaultValue={q} placeholder="Search name, speciality or area" className="h-10 min-w-0 flex-1 rounded-xl border border-line bg-white px-3 text-sm" /><button className={buttonClass("secondary", "sm")}>Search</button></form>
+        <div className="flex flex-wrap gap-1.5">
+          <Link href={`/team/vendors${q ? `?q=${encodeURIComponent(q)}` : ""}`} className={`rounded-full px-3 py-1 text-sm ring-1 ${!cat ? "bg-ink text-white ring-ink" : "bg-white ring-line"}`}>All</Link>
+          {categories.map((c) => <Link key={c} href={`/team/vendors?cat=${encodeURIComponent(c)}${q ? `&q=${encodeURIComponent(q)}` : ""}`} className={`rounded-full px-3 py-1 text-sm capitalize ring-1 ${cat === c ? "bg-ink text-white ring-ink" : "bg-white ring-line"}`}>{c}</Link>)}
+        </div>
+      </div>
+      {byCategory.size === 0 ? <Card className="p-5 text-sm text-ink-soft">{(vendors.data ?? []).length ? "No vendor matches that." : "No vendors yet."}</Card> : null}
       <div className="grid gap-5 lg:grid-cols-2">
         {[...byCategory.entries()].map(([category, list]) => (
           <Card key={category}>
@@ -85,6 +96,13 @@ export default async function VendorsPage() {
                       {!v.active ? <Badge tone="neutral">Inactive</Badge> : null}
                     </div>
                     <p className="text-xs text-ink-soft">{[v.contact_name, v.phone_e164, v.email].filter(Boolean).join(" · ") || "No contact details"}</p>
+                    {((v.specialities ?? []) as string[]).length || v.service_area || v.rating ? (
+                      <p className="mt-1 flex flex-wrap items-center gap-1">
+                        {((v.specialities ?? []) as string[]).map((t) => <span key={t} className="rounded-full bg-ivory-100 px-2 py-0.5 text-xs">{t}</span>)}
+                        {v.service_area ? <span className="text-xs text-ink-soft">· {v.service_area as string}</span> : null}
+                        {v.rating ? <span className="text-xs text-ink-soft">· {Number(v.rating).toFixed(1)}★</span> : null}
+                      </p>
+                    ) : null}
                     {jobs.length ? (
                       <ul className="mt-2 space-y-1">
                         {jobs.map((j) => (

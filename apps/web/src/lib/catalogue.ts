@@ -6,7 +6,7 @@ import type { AppRole } from "@wiwaha/db";
  * (`components/catalogue-editor.tsx`) renders each from this spec; the
  * database's row-level security decides who may write.
  */
-export type FieldKind = "text" | "textarea" | "number" | "rupees" | "percent" | "date" | "select" | "checkbox" | "image" | "images" | "ref";
+export type FieldKind = "text" | "textarea" | "number" | "rupees" | "percent" | "date" | "select" | "checkbox" | "image" | "images" | "ref" | "tags";
 export interface FieldSpec {
   key: string;
   label: string;
@@ -109,6 +109,8 @@ export const CATALOGUES: Record<string, CatalogueSpec> = {
     fields: [
       { key: "name", label: "Name", kind: "text", required: true, primary: true },
       { key: "category", label: "Category", kind: "select", options: VENDOR_CATEGORIES, required: true, initial: "photography" },
+      { key: "specialities", label: "Specialities (comma separated)", kind: "tags", placeholder: "e.g. South Indian weddings, candid, drone" },
+      { key: "service_area", label: "Works in", kind: "text", placeholder: "e.g. Bengaluru, Devanahalli" },
       { key: "contact_name", label: "Contact person", kind: "text" },
       { key: "phone_e164", label: "Phone", kind: "text", placeholder: "+91…" },
       { key: "email", label: "Email", kind: "text" },
@@ -259,7 +261,7 @@ export function toRow(spec: CatalogueSpec, values: CatalogueValues): { row: Reco
     const s = typeof raw === "string" ? raw.trim() : "";
     if (!s) {
       if (f.required) return { error: `${f.label} is required.` };
-      row[f.key] = f.kind === "images" ? [] : null;
+      row[f.key] = f.kind === "images" || f.kind === "tags" ? [] : null;
       continue;
     }
     switch (f.kind) {
@@ -291,6 +293,9 @@ export function toRow(spec: CatalogueSpec, values: CatalogueValues): { row: Reco
         row[f.key] = urls.slice(0, 24).map((url) => ({ url }));
         break;
       }
+      case "tags":
+        row[f.key] = [...new Set(s.split(/[,\n]/).map((t) => t.trim()).filter(Boolean))].slice(0, 20).map((t) => t.slice(0, 40));
+        break;
       case "date":
         if (!/^\d{4}-\d{2}-\d{2}$/.test(s)) return { error: `${f.label} must be a date.` };
         row[f.key] = s;
@@ -318,6 +323,7 @@ export function toValues(spec: CatalogueSpec, row: Record<string, unknown> | nul
     if (f.kind === "checkbox") v[f.key] = row ? x === true : f.initial === true;
     else if (x === null || x === undefined) v[f.key] = "";
     else if (f.kind === "images") v[f.key] = Array.isArray(x) ? x.map((i: unknown) => (i && typeof i === "object" && "url" in i ? String((i as { url: unknown }).url) : "")).filter(Boolean).join("\n") : "";
+    else if (f.kind === "tags") v[f.key] = Array.isArray(x) ? x.map(String).join(", ") : "";
     else if (row && f.kind === "rupees") v[f.key] = String(Number(x) / 100);
     else if (row && f.kind === "percent") v[f.key] = String(Number(x) / 100);
     else v[f.key] = String(x);

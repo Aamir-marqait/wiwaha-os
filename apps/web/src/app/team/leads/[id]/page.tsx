@@ -146,7 +146,7 @@ export default async function LeadPage({ params, searchParams }: { params: Promi
             ) : null}
             <p className="text-sm">{contact.email ?? "No email"}</p>
             <p className="mt-2 text-xs text-ink-soft">WhatsApp {contact.consent_whatsapp ? "✓ consented" : "✗ no consent"} · Email {contact.consent_email ? "✓" : "✗"}</p>
-            {canEdit ? <div className="mt-4"><StatusSelect leadId={id} status={lead.status as LeadStatus} /></div> : null}
+            {canEdit ? <div className="mt-4"><StatusSelect leadId={id} status={lead.status as LeadStatus} lostReason={(lead.lost_reason as string | null) ?? null} /></div> : null}
           </Card>
 
           {breakdown ? (

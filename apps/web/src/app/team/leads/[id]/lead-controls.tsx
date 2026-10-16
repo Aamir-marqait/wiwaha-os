@@ -10,28 +10,51 @@ const STATUSES: { value: LeadStatus; label: string }[] = [
   { value: "won", label: "Booked" }, { value: "lost", label: "Lost" }, { value: "no_response", label: "No response" },
 ];
 
-export function StatusSelect({ leadId, status }: { leadId: string; status: LeadStatus }) {
+export const LOST_REASONS = [
+  "Budget", "Date not available", "Chose another venue", "Location or distance", "Guest count or capacity",
+  "Family decided otherwise", "Postponed or cancelled", "Stopped responding", "Other",
+] as const;
+
+export function StatusSelect({ leadId, status, lostReason }: { leadId: string; status: LeadStatus; lostReason?: string | null }) {
   const [pending, start] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const [value, setValue] = useState<LeadStatus>(status);
+  const [reason, setReason] = useState(lostReason ?? "");
+  const closing = value === "lost" || value === "no_response";
+  const save = (v: LeadStatus, r: string) => start(async () => { const res = await setLeadStatus(leadId, v, r); setError(res.error ?? null); });
   return (
-    <label className="block">
-      <span className="text-xs font-medium uppercase tracking-wide text-ink-soft">Status</span>
-      <select
-        defaultValue={status}
-        disabled={pending}
-        onChange={(e) => {
-          const v = e.target.value as LeadStatus;
-          start(async () => {
-            const r = await setLeadStatus(leadId, v);
-            setError(r.error ?? null);
-          });
-        }}
-        className="mt-1 block h-10 w-full rounded-xl border border-line bg-white px-3 text-sm"
-      >
-        {STATUSES.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
-      </select>
+    <div className="space-y-2">
+      <label className="block">
+        <span className="text-xs font-medium uppercase tracking-wide text-ink-soft">Status</span>
+        <select
+          value={value}
+          disabled={pending}
+          onChange={(e) => {
+            const v = e.target.value as LeadStatus;
+            setValue(v);
+            // Lost and no-response wait for a reason; everything else saves at once.
+            if (v !== "lost" && v !== "no_response") save(v, "");
+            else if (v === "no_response" && !reason) setReason("Stopped responding");
+          }}
+          className="mt-1 block h-10 w-full rounded-xl border border-line bg-white px-3 text-sm"
+        >
+          {STATUSES.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
+        </select>
+      </label>
+      {closing ? (
+        <div className="space-y-2 rounded-xl border border-line bg-ivory-50 p-3">
+          <label className="block text-xs font-medium uppercase tracking-wide text-ink-soft">Why didn't they book?
+            <select value={LOST_REASONS.includes(reason as (typeof LOST_REASONS)[number]) ? reason : reason ? "Other" : ""} onChange={(e) => setReason(e.target.value === "Other" ? "Other: " : e.target.value)} className="mt-1 block h-10 w-full rounded-xl border border-line bg-white px-3 text-sm normal-case tracking-normal">
+              <option value="" disabled>Choose a reason</option>
+              {LOST_REASONS.map((r) => <option key={r} value={r}>{r}</option>)}
+            </select>
+          </label>
+          {reason.startsWith("Other") ? <input value={reason.replace(/^Other:\s*/, "")} onChange={(e) => setReason(`Other: ${e.target.value}`)} placeholder="In a few words" className="block h-10 w-full rounded-xl border border-line bg-white px-3 text-sm" /> : null}
+          <button type="button" disabled={pending || !reason.trim()} onClick={() => save(value, reason)} className={buttonClass("primary", "sm")}>{pending ? "Saving…" : `Mark as ${value === "lost" ? "lost" : "no response"}`}</button>
+        </div>
+      ) : null}
       {error ? <span className="text-xs text-burgundy-700">{error}</span> : null}
-    </label>
+    </div>
   );
 }
 

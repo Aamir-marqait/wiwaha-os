@@ -406,7 +406,7 @@ export async function finishCall(deps: AgentDeps, callId: string, opts: { durati
     // A follow-up call nobody answered: the policy says stop calling.
     if (call.purpose === "follow_up" && opts.status === "no_answer" && call.visit_id) {
       await db.update("visits", { id: call.visit_id, follow_up_outcome: "pending" }, { follow_up_outcome: "no_response", follow_up_done_at: ctx.now.toISOString() });
-      if (call.lead_id) await db.update("leads", { id: call.lead_id }, { status: "no_response" });
+      if (call.lead_id) await db.update("leads", { id: call.lead_id }, { status: "no_response", lost_reason: "No answer to the follow-up call" });
     }
     await ctx.log({ action: "call_finish", status: "ok", leadId: call.lead_id, input: { call_id: callId, status: opts.status ?? null }, output: { summary: summary?.body ?? template, outcome }, model: summary?.model ?? null, inputTokens: summary?.inputTokens ?? null, outputTokens: summary?.outputTokens ?? null, costUsdMicros: summary?.costUsdMicros ?? null });
     return { summary: summary?.body ?? template };

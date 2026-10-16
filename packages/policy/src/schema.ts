@@ -289,6 +289,11 @@ export const policySchemas = {
     reel_seconds: z.array(z.number().int().min(10).max(90)).min(1),
     words_per_second: z.number().positive(),
   }),
+  "media.budget": z.object({
+    monthly_usd: z.number().nonnegative(),
+    warn_at_pct: z.number().int().min(0).max(100),
+    inr_per_usd: z.number().positive(),
+  }),
 } as const;
 
 export type PolicyKey = keyof typeof policySchemas;

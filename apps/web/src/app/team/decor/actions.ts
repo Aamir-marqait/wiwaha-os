@@ -12,7 +12,15 @@ const done = (error: { message?: string; code?: string } | null): Result => {
   return error ? { error: friendlyError(error) } : {};
 };
 
-export interface DecorInput { name: string; category: string; photos: string; quantity: string; condition: string; location: string; notes: string; active: boolean }
+export interface DecorInput { name: string; category: string; photos: string; quantity: string; condition: string; location: string; notes: string; active: boolean; unitCost?: string; useCost?: string }
+
+/** "₹4,500" or "4500" → paise; blank → null. */
+function paise(v: string | undefined): number | null | "bad" {
+  const t = (v ?? "").replace(/[₹,\s]/g, "");
+  if (!t) return null;
+  const n = Number(t);
+  return Number.isFinite(n) && n >= 0 ? Math.round(n * 100) : "bad";
+}
 
 /** Add or edit a piece of décor stock (photos are uploaded first, then saved as links). */
 export async function saveDecorItem(id: string | null, d: DecorInput): Promise<Result> {
@@ -22,10 +30,13 @@ export async function saveDecorItem(id: string | null, d: DecorInput): Promise<R
   if (name.length < 2) return { error: "Give it a name." };
   if (!Number.isInteger(qty) || qty < 0) return { error: "Quantity must be a whole number." };
   if (!isCondition(d.condition)) return { error: "Choose its condition." };
+  const unit = paise(d.unitCost), use = paise(d.useCost);
+  if (unit === "bad" || use === "bad") return { error: "Costs are amounts in rupees." };
   const urls = d.photos.split(/\s+/).filter((u) => /^https:\/\/\S+$/.test(u)).slice(0, 12);
   const row = {
     name, category: (DECOR_CATEGORIES as readonly string[]).includes(d.category) ? d.category : "other", photos: urls.map((url) => ({ url })),
     quantity: qty, condition: d.condition, location: d.location.trim() || null, notes: d.notes.trim() || null, active: d.active,
+    ...(d.unitCost !== undefined ? { unit_cost_paise: unit } : {}), ...(d.useCost !== undefined ? { use_cost_paise: use } : {}),
   };
   const supabase = await createClient("team");
   const { error } = id ? await supabase.from("decor_items").update(row).eq("id", id) : await supabase.from("decor_items").insert(row);

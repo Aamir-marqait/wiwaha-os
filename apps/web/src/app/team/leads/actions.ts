@@ -51,10 +51,13 @@ export async function rerunLeadDesk(leadId: string): Promise<{ error?: string }>
   return {};
 }
 
-export async function setLeadStatus(leadId: string, status: LeadStatus): Promise<{ error?: string }> {
+export async function setLeadStatus(leadId: string, status: LeadStatus, reason = ""): Promise<{ error?: string }> {
   await requireStaff(["owner", "sales"]);
+  const closing = status === "lost" || status === "no_response";
+  const why = reason.trim().slice(0, 200);
+  if (closing && (!why || why === "Other:")) return { error: "Choose a reason first." };
   const supabase = await createClient("team");
-  const { error } = await supabase.from("leads").update({ status }).eq("id", leadId);
+  const { error } = await supabase.from("leads").update({ status, lost_reason: closing ? why : null }).eq("id", leadId);
   revalidatePath(`/team/leads/${leadId}`);
   return error ? { error: friendlyError(error) } : {};
 }

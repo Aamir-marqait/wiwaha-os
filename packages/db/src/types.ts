@@ -440,6 +440,32 @@ export interface MediaJobRow {
   attempts: number;
   submitted_at: string | null;
   created_at: string;
+  /** What fal should charge for it, from agents.config.media_prices (D42). */
+  cost_usd: number | null;
+  wedding_id: string | null;
+  item_id: string | null;
+  cost_entry_id: string | null;
+}
+
+/** Something rented or bought for one event (D42). Purchases join decor_items when they arrive. */
+export interface EventDecorExtraRow {
+  id: string;
+  wedding_id: string;
+  function_id: string | null;
+  area: string | null;
+  name: string;
+  kind: "rented" | "purchased";
+  supplier: string | null;
+  vendor_id: string | null;
+  quantity: number;
+  unit_cost_paise: number;
+  total_paise: number;
+  status: "planned" | "received" | "returned" | "cancelled";
+  return_by: string | null;
+  decor_item_id: string | null;
+  cost_entry_id: string | null;
+  notes: string | null;
+  created_at: string;
 }
 
 export type StudioContentType = "reel" | "carousel" | "single_post" | "story";
