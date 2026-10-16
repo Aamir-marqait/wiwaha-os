@@ -13,6 +13,7 @@ import { FamilyForm, FunctionsEditor } from "./family-forms";
 import { AiMoodboards } from "./ai-moodboards";
 import { CostingCard } from "./costing";
 import { DecorStockCard } from "./decor-stock";
+import { METHOD_LABELS } from "@/lib/finance/labels";
 import { GuestPanel } from "./guest-panel";
 import { Lifecycle } from "./lifecycle";
 import { PaymentForm } from "./panel-forms";
@@ -193,6 +194,7 @@ async function Payments({ supabase, w, id, role, eventEnded }: { supabase: Supa;
                 <div>
                   <p className="text-sm font-medium">{p.label as string}</p>
                   <p className="text-xs text-ink-soft">{p.percent_bps != null ? `${Number(p.percent_bps) / 100}% · ` : ""}{rupees(Number(p.amount_paise))} · due {formatDateIST(p.due_on as string)}{effectText(p.effect)}</p>
+                  {p.status === "paid" ? <p className="text-xs text-ink-soft">Received {p.paid_at ? formatDateIST(p.paid_at as string) : ""}{p.method ? ` by ${METHOD_LABELS[p.method as string] ?? String(p.method)}` : ""}{p.gateway_ref ? ` · ref ${p.gateway_ref as string}` : ""}{p.receipt_number ? <> · <a href={`/api/finance/receipt/${p.id as string}`} target="_blank" rel="noreferrer" className="text-sage-700 underline">Receipt {p.receipt_number as string}</a></> : null}</p> : null}
                 </div>
                 <span className="flex flex-col items-end gap-1">
                   <Badge tone={p.status === "paid" ? "solid" : p.status === "overdue" ? "burgundy" : "gold"}>{String(p.status).replace(/_/g, " ")}</Badge>

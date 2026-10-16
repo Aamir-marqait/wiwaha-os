@@ -30,7 +30,7 @@ export default async function PaymentsPage() {
               <li key={p.id as string} className="flex items-center justify-between gap-3 px-4 py-3">
                 <div className="min-w-0">
                   <p className="text-sm font-medium">{p.label as string}</p>
-                  <p className="text-xs text-ink-soft">{rupees(Number(p.amount_paise))} · {t.due} {formatDateIST(p.due_on as string)}{p.receipt_number ? ` · receipt ${p.receipt_number as string}` : ""}</p>
+                  <p className="text-xs text-ink-soft">{rupees(Number(p.amount_paise))} · {t.due} {formatDateIST(p.due_on as string)}{p.receipt_number ? <> · <a href={`/api/finance/receipt/${p.id as string}`} target="_blank" rel="noreferrer" className="underline">receipt {p.receipt_number as string}</a></> : null}</p>
                 </div>
                 {p.status === "paid" ? <span className="rounded-full bg-sage-700 px-2.5 py-0.5 text-xs text-white">{t.paid}</span>
                   : p.link_url ? <a href={p.link_url as string} className={buttonClass("gold", "sm")}>{t.pay_now}</a>
@@ -43,7 +43,7 @@ export default async function PaymentsPage() {
       {(invoices ?? []).length ? (
         <Card>
           <ul className="divide-y divide-line/70">
-            {(invoices ?? []).map((i) => <li key={i.id as string} className="flex justify-between gap-2 px-4 py-3 text-sm"><span>{i.kind === "gst" ? "GST invoice" : "Final invoice"} {i.number as string}</span><span>{rupees(Number(i.total_paise))}{Number(i.balance_paise) > 0 ? ` · ${rupees(Number(i.balance_paise))} due` : ""}</span></li>)}
+            {(invoices ?? []).map((i) => <li key={i.id as string} className="flex flex-wrap justify-between gap-2 px-4 py-3 text-sm"><a href={`/api/finance/invoice/${i.id as string}`} target="_blank" rel="noreferrer" className="underline">{i.kind === "gst" ? "GST invoice" : "Final invoice"} {i.number as string}</a><span>{rupees(Number(i.total_paise))}{Number(i.balance_paise) > 0 ? ` · ${rupees(Number(i.balance_paise))} due` : ""}</span></li>)}
           </ul>
         </Card>
       ) : null}

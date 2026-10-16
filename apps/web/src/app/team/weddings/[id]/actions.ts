@@ -1,7 +1,8 @@
 "use server";
 import { revalidatePath } from "next/cache";
 import { after } from "next/server";
-import { runRouting } from "@/lib/agents";
+import { closeOutWedding } from "@wiwaha/agents";
+import { agentDeps, runRouting } from "@/lib/agents";
 import { requireStaff } from "@/lib/auth";
 import { friendlyError } from "@/lib/errors";
 import { type DatedPart, isEffect, shortPaymentError, toRpcParts, totalPercent } from "@/lib/payment-parts";
@@ -271,4 +272,14 @@ export async function openStageNow(weddingId: string, stageId: string): Promise<
   const { error } = await supabase.rpc("start_stage", { p_stage_id: stageId });
   if (!error) after(runRouting);
   return done(weddingId, error);
+}
+
+/** The final and GST invoices now, instead of after the event (they still wait for Prashanth's approval). */
+export async function prepareInvoicesNow(weddingId: string): Promise<{ error?: string }> {
+  await requireStaff(["owner", "accounts"]);
+  const out = await closeOutWedding(agentDeps(), weddingId);
+  revalidatePath(`/team/weddings/${weddingId}`);
+  if (out.status === "error") return { error: out.error };
+  if (out.status === "disabled") return { error: "The Finance agent is switched off; the request went to Needs a person." };
+  return {};
 }

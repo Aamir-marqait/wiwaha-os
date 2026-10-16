@@ -252,6 +252,9 @@ export const policySchemas = {
     invoice_prefix: z.string(),
     state_code: z.string(),
     export_format: z.enum(["tally_csv", "zoho_csv"]),
+    /** Printed on invoices and receipts (D42); blank until Prashanth fills them in. */
+    legal_name: z.string().optional(),
+    address: z.string().optional(),
   }),
   "closeout.inspection": z.object({
     photo_required: z.boolean(),
