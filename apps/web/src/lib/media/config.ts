@@ -2,6 +2,7 @@ import "server-only";
 import { createFal, type FalAdapter } from "@wiwaha/integrations";
 import { env } from "../env";
 import { createAdminClient } from "../supabase/admin";
+import { type MediaPrices, parsePrices } from "./costs";
 
 /**
  * The media worker's settings (D41): one FAL_KEY for pictures, voice, music and
@@ -24,6 +25,12 @@ export interface MediaModels {
 let falCache: FalAdapter | null = null;
 export function fal(): FalAdapter {
   return (falCache ??= createFal({ FAL_KEY: process.env.FAL_KEY }));
+}
+
+/** What each endpoint costs, kept next to the models (D42). */
+export async function mediaPrices(agentKey: "design" | "content_studio"): Promise<MediaPrices> {
+  const { data } = await createAdminClient("agent").from("agents").select("config").eq("key", agentKey).maybeSingle();
+  return parsePrices((data?.config as { media_prices?: unknown } | null)?.media_prices);
 }
 
 export async function mediaModels(agentKey: "design" | "content_studio"): Promise<Partial<MediaModels>> {

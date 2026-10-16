@@ -6,12 +6,14 @@ import {
   contactCueStart, directStudioVoice, groupWords, planStudioDeck, planStudioReel, spokenText, timeWordsEvenly, voiceDuration,
   type Shot, type SlideSpec, type Word,
 } from "@wiwaha/agents";
+import { todayIST } from "@wiwaha/db";
 import { falAudioUrl, falImageUrl, falVideoUrl, falWords, type FalAdapter } from "@wiwaha/integrations";
 import { PolicyBook } from "@wiwaha/policy";
+import { estimateCostUsd, usdToPaise } from "./costs";
 import sharp from "sharp";
 import { agentDeps } from "../agents";
 import { createAdminClient } from "../supabase/admin";
-import { fal, falWebhookUrl, mediaModels, requireModel, type MediaModels } from "./config";
+import { fal, falWebhookUrl, mediaModels, mediaPrices, requireModel, type MediaModels } from "./config";
 import { assembleArgs, buildAss, clipShotArgs, photoShotArgs, posterArgs, run, silentAudioArgs } from "./reel";
 import { fontDir, renderSlide, renderWordmarkPng, type Aspect, type Layout, type Scheme } from "./slide";
 import { fetchMedia, mediaPath, putMedia } from "./storage";
@@ -45,12 +47,43 @@ async function claim(table: string, id: string, from: string, to: string, extra:
 
 async function submitJob(f: FalAdapter, a: { purpose: string; subjectTable: string; subjectId: string; endpoint: string; input: Record<string, unknown> }): Promise<void> {
   const s = await f.submit(a.endpoint, a.input, falWebhookUrl());
-  const { error } = await db().from("media_jobs").insert({
+  // What it was for, so its cost lands on the wedding (moodboards) or on marketing (studio).
+  let weddingId: string | null = null, itemId: string | null = null;
+  if (a.subjectTable === "moodboard_slides") weddingId = ((await db().from("moodboard_slides").select("wedding_id").eq("id", a.subjectId).maybeSingle()).data?.wedding_id as string | undefined) ?? null;
+  if (a.subjectTable === "studio_renders") itemId = ((await db().from("studio_renders").select("item_id").eq("id", a.subjectId).maybeSingle()).data?.item_id as string | undefined) ?? null;
+  const cost = estimateCostUsd(a.endpoint, a.input, await mediaPrices(weddingId ? "design" : "content_studio"));
+  const { data: job, error } = await db().from("media_jobs").insert({
     purpose: a.purpose, subject_table: a.subjectTable, subject_id: a.subjectId, endpoint: a.endpoint,
     request_id: s.requestId, status_url: s.statusUrl, response_url: s.responseUrl, status: "submitted", input: a.input, submitted_at: new Date().toISOString(),
-  });
+    cost_usd: cost, wedding_id: weddingId, item_id: itemId,
+  }).select("id").single();
   if (error) throw new Error(`Couldn't record the fal job: ${error.message}`);
+  if (cost) await recordSpend(job.id as string, cost, weddingId);
 }
+
+/**
+ * The job's cost in rupees, added to one running line per wedding ("AI
+ * moodboard pictures") or per month for the studio ("AI content"), so the
+ * costs list stays readable.
+ */
+async function recordSpend(jobId: string, usd: number, weddingId: string | null): Promise<void> {
+  try {
+    const rate = (await policyBook()).get("media.budget").inr_per_usd;
+    const paise = usdToPaise(usd, rate);
+    const month = todayIST().slice(0, 7);
+    const label = weddingId ? "AI moodboard pictures (fal)" : `AI content for marketing (fal), ${month}`;
+    let q = db().from("cost_entries").select("id, amount_paise").eq("description", label).eq("category", weddingId ? "decor" : "marketing").limit(1);
+    q = weddingId ? q.eq("wedding_id", weddingId) : q.is("wedding_id", null);
+    const { data: line } = await q.maybeSingle();
+    let id = line?.id as string | undefined;
+    if (line) await db().from("cost_entries").update({ amount_paise: Number(line.amount_paise) + paise }).eq("id", line.id);
+    else id = ((await db().from("cost_entries").insert({ wedding_id: weddingId, category: weddingId ? "decor" : "marketing", amount_paise: paise, description: label }).select("id").single()).data?.id as string | undefined);
+    if (id) await db().from("media_jobs").update({ cost_entry_id: id }).eq("id", jobId);
+  } catch {
+    // Spend tracking never blocks a render.
+  }
+}
+
 
 async function toJpeg(buf: Buffer, maxEdge = 2048): Promise<Buffer> {
   return sharp(buf).rotate().resize({ width: maxEdge, height: maxEdge, fit: "inside", withoutEnlargement: true }).jpeg({ quality: 88 }).toBuffer();

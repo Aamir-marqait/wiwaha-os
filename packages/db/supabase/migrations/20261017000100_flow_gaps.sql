@@ -139,3 +139,12 @@ update public.agents
      "fal-ai/kling-video/v2.5-turbo/pro/image-to-video": {"per": "second", "usd": 0.07}
    }'::jsonb)
  where key in ('content_studio', 'design');
+
+-- ---------------------------------------------------------------------------
+-- Notifications show on Today; anyone in the role can clear a role-wide one
+-- (e.g. a guest request on a wedding without an event manager yet).
+-- ---------------------------------------------------------------------------
+drop policy notifications_mark_read on public.notifications;
+create policy notifications_mark_read on public.notifications for update
+  using (user_id = auth.uid() or (user_id is null and role = app.my_role()))
+  with check (user_id = auth.uid() or (user_id is null and role = app.my_role()));
