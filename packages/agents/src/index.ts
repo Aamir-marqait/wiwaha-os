@@ -19,7 +19,10 @@ export { draftContract, onContractDecided, onPaymentReceived, sendPaymentReminde
 export { onboardWedding } from "./agents/onboarding/agent";
 export { onBriefStarted, onBriefSubmitted, missingFromBrief } from "./agents/brief/agent";
 export { proposeMenus, onMenuApproved, lockPlateCounts } from "./agents/menu/agent";
-export { generateMoodboards, onShortlisted, onFinalised } from "./agents/design/agent";
+export { generateMoodboards, onShortlisted, onFinalised, onDecorStageStarted } from "./agents/design/agent";
+export { openDecorQuestionnaire, prepareAiMoodboards, onMoodboardRendered, onShareDecided, onSlideFeedback, templatesForArea } from "./agents/design/ai-moodboards";
+export * from "./domain/decor-brief";
+export { askJson, extractJson } from "./framework/kit";
 export { prepareQuote, buildLines, totals } from "./agents/quote/agent";
 export { lockVendors, onVendorReplied, chaseVendors } from "./agents/vendor_coordinator/agent";
 export { onFamilyMessage, nudgeStages, classify as classifyFamilyMessage } from "./agents/wedding_room/agent";

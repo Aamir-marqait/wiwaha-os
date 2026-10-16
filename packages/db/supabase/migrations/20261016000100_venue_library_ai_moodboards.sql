@@ -48,6 +48,10 @@ insert into public.venue_areas (name, kind, description, suits, sort) values
   ('Courtyard', 'courtyard', 'The paved courtyard and tree-lined steps in front of the guest-room block.', '{haldi,mehendi,cocktail}', 80)
 on conflict (name) do nothing;
 
+-- Area-wise décor templates can name the physical area they were made for;
+-- the Design assistant uses their photos as style references for that area.
+alter table public.decor_templates add column venue_area_id uuid references public.venue_areas(id) on delete set null;
+
 -- ---------------------------------------------------------------------------
 -- The media library: the estate's own photos and clips. Used for the décor
 -- base photos (look = 'plain') and by the content studio for posts and reels.

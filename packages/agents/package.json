@@ -19,7 +19,8 @@
     "@supabase/supabase-js": "^2.117.2",
     "@wiwaha/db": "workspace:*",
     "@wiwaha/policy": "workspace:*",
-    "@wiwaha/integrations": "workspace:*"
+    "@wiwaha/integrations": "workspace:*",
+    "zod": "^4.1.12"
   },
   "devDependencies": {
     "@types/node": "^22.10.0",

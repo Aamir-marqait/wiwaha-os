@@ -85,6 +85,67 @@ export async function writeText(ctx: RunContext, input: WriteTextInput): Promise
 }
 
 // ---------------------------------------------------------------------------
+// Structured output: the model answers in JSON checked against a schema; a
+// deterministic fallback stands in when there is no model or it answers badly.
+// ---------------------------------------------------------------------------
+export interface AskJsonInput<T> {
+  policies: readonly PolicyKey[];
+  facts: Record<string, unknown>;
+  task: string;
+  /** Validates (and may coerce) the parsed JSON; throw to reject. */
+  parse: (value: unknown) => T;
+  fallback: () => T;
+  /** Extra instructions placed after the agent's prompt.md (e.g. a crew persona). */
+  persona?: string;
+  images?: string[];
+  maxTokens?: number;
+  effort?: "low" | "medium" | "high";
+}
+
+export interface AskedJson<T> {
+  value: T;
+  source: "llm" | "template";
+  error: string | null;
+  model: string | null;
+  inputTokens: number | null;
+  outputTokens: number | null;
+  costUsdMicros: number | null;
+}
+
+/** The first JSON object or array in a reply, ignoring prose and code fences. */
+export function extractJson(text: string): unknown {
+  const fenced = /```(?:json)?\s*([\s\S]*?)```/i.exec(text);
+  const body = (fenced ? fenced[1]! : text).trim();
+  try { return JSON.parse(body); } catch { /* fall through */ }
+  const starts = [body.indexOf("{"), body.indexOf("[")].filter((i) => i >= 0);
+  if (starts.length === 0) throw new Error("No JSON in the reply");
+  const start = Math.min(...starts);
+  const close = body[start] === "{" ? "}" : "]";
+  const end = body.lastIndexOf(close);
+  if (end <= start) throw new Error("No JSON in the reply");
+  return JSON.parse(body.slice(start, end + 1));
+}
+
+export async function askJson<T>(ctx: RunContext, input: AskJsonInput<T>): Promise<AskedJson<T>> {
+  const llm = ctx.deps.llm;
+  const fromTemplate = (error: string | null): AskedJson<T> => ({ value: input.fallback(), source: "template", error, model: null, inputTokens: null, outputTokens: null, costUsdMicros: null });
+  if (!llm.available) return fromTemplate(null);
+  const system = [PROMPTS[ctx.agent.key] ?? "", input.persona ?? "", `## POLICY BOOK\n${ctx.book.digest(input.policies)}`, "Answer with JSON only: no prose, no code fences."].filter(Boolean).join("\n\n");
+  const prompt = ["FACTS (the only facts you may use):", JSON.stringify(input.facts, null, 2), "", input.task].join("\n");
+  try {
+    const res = await llm.complete({ model: ctx.agent.model, system, prompt, images: input.images, maxTokens: input.maxTokens ?? 3000, effort: input.effort ?? "low" });
+    try {
+      const value = input.parse(extractJson(res.text));
+      return { value, source: "llm", error: null, model: res.model, inputTokens: res.inputTokens, outputTokens: res.outputTokens, costUsdMicros: res.costUsdMicros };
+    } catch (e) {
+      return { ...fromTemplate(e instanceof Error ? e.message : String(e)), model: res.model, inputTokens: res.inputTokens, outputTokens: res.outputTokens, costUsdMicros: res.costUsdMicros };
+    }
+  } catch (e) {
+    return fromTemplate(e instanceof Error ? e.message : String(e));
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Client-facing messages: the approval queue in draft mode.
 // ---------------------------------------------------------------------------
 export interface ProposedMessage {

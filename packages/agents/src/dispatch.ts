@@ -5,7 +5,8 @@ import { onExternalReview, onReplyDecided, onReviewSubmitted } from "./agents/re
 import { onVisitBooked, recapVisit } from "./agents/visit_host/agent";
 import { onBriefDecided, onBriefStarted, onBriefSubmitted } from "./agents/brief/agent";
 import { draftContract, onContractDecided, onFinalPaymentStage, onPaymentReceived } from "./agents/contract_payments/agent";
-import { generateMoodboards, onCustomDecided, onFinalised, onShortlisted } from "./agents/design/agent";
+import { onDecorStageStarted, onDesignDecided, onFinalised, onShortlisted } from "./agents/design/agent";
+import { onMoodboardRendered, onSlideFeedback, prepareAiMoodboards } from "./agents/design/ai-moodboards";
 import { onMenuApproved, proposeMenus } from "./agents/menu/agent";
 import { onboardWedding } from "./agents/onboarding/agent";
 import { onQuoteDecided, onSelectionFinalised, prepareQuote } from "./agents/quote/agent";
@@ -65,10 +66,13 @@ const HANDLERS: Record<string, Record<string, Handler>> = {
     menu_approved: (d, _t, p) => (str(p.menu_id) ? onMenuApproved(d, str(p.menu_id)!) : null),
   },
   design: {
-    stage_started: onWedding(generateMoodboards),
+    stage_started: onWedding(onDecorStageStarted),
+    decor_brief_submitted: onWedding(prepareAiMoodboards),
+    moodboard_rendered: (d, _t, p) => (str(p.moodboard_id) ? onMoodboardRendered(d, str(p.moodboard_id)!) : null),
+    moodboard_feedback: (d, _t, p) => (str(p.slide_id) ? onSlideFeedback(d, str(p.slide_id)!) : null),
     moodboard_shortlisted: (d, _t, p) => (str(p.moodboard_id) ? onShortlisted(d, str(p.moodboard_id)!) : null),
     moodboard_finalised: (d, _t, p) => (str(p.moodboard_id) ? onFinalised(d, str(p.moodboard_id)!) : null),
-    approval_decided: decided(onCustomDecided),
+    approval_decided: (d, _t, p) => (str(p.approval_id) ? onDesignDecided(d, str(p.approval_id)!, str(p.status) ?? "approved", str(p.kind)) : null),
   },
   quote: {
     quote_requested: onWedding(prepareQuote),
