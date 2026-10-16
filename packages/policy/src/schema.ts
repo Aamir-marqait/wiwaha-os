@@ -66,6 +66,17 @@ export const policySchemas = {
     label_standard_vs_custom: z.boolean(),
     custom_needs_owner_approval: z.boolean(),
   }),
+  "decor.ai_moodboards": z.object({
+    enabled: z.boolean(),
+    /** One slide per area the function uses, at most this many (keep it at or under moodboards.per_function). */
+    areas_per_function_max: z.number().int().min(1).max(12),
+    /** Times the couple can ask for one slide to be redone. */
+    redos_per_slide: z.number().int().nonnegative(),
+    /** Only areas with a plain (undecorated) photo get an AI slide; others use our template photos. */
+    plain_photo_required: z.boolean(),
+    /** Show "AI preview" on generated pictures. */
+    label_ai_images: z.boolean(),
+  }),
   "planning.start": z.object({
     recommended_days_before: z.number().int().positive(),
     allow_early_start: z.boolean(),
@@ -265,6 +276,18 @@ export const policySchemas = {
     report_day: z.enum(["mon", "tue", "wed", "thu", "fri", "sat", "sun"]),
     budget_changes_need_owner: z.literal(true),
     platforms: z.array(z.enum(["meta", "google"])),
+  }),
+  "studio.content": z.object({
+    contact_number: z.string().min(6),
+    venue_real_photos_only: z.literal(true),
+    no_engagement_bait: z.literal(true),
+    festival_signoff_instead_of_cta: z.boolean(),
+    monthly_generations: z.number().int().nonnegative(),
+    warn_at_pct: z.number().int().min(0).max(100),
+    slide_edits_per_slide: z.number().int().nonnegative(),
+    max_ai_clips_per_reel: z.number().int().min(0).max(6),
+    reel_seconds: z.array(z.number().int().min(10).max(90)).min(1),
+    words_per_second: z.number().positive(),
   }),
 } as const;
 

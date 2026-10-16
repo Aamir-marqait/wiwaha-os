@@ -108,6 +108,14 @@ export const DEFAULT_POLICIES = [
     { client_visible: true, sort: 70 },
   ),
   def(
+    "decor.ai_moodboards",
+    "Planning",
+    "AI moodboards",
+    "When the décor stage opens, the couple fills in a short décor questionnaire. For each function we then make one moodboard: every area the function uses is shown as it is, from our own plain photo, next to a dressed version made with AI, at most five areas per function. AI pictures are a guide to the mood, not a promise of exact pieces. The couple can ask for changes to any slide, up to three times each; the décor team can upload an edited version at any time.",
+    { enabled: true, areas_per_function_max: 5, redos_per_slide: 3, plain_photo_required: true, label_ai_images: true },
+    { client_visible: true, sort: 72 },
+  ),
+  def(
     "planning.start",
     "Planning",
     "Planning start",
@@ -402,6 +410,14 @@ export const DEFAULT_POLICIES = [
     "Every Monday the ads report shows spend, cost per enquiry and cost per booking by source. Budget changes are recommendations only, and Prashanth decides.",
     { report_day: "mon", budget_changes_need_owner: true, platforms: ["meta", "google"] },
     { sort: 141 },
+  ),
+  def(
+    "studio.content",
+    "Marketing",
+    "Content Studio rules",
+    "The venue is only ever shown with Wiwaha's own photos and footage; AI imagery is for details, objects and ideas, never the estate. Every post carries one warm call to action: call or WhatsApp +91 9169935666. Festival greetings close with a warm sign-off instead. Never engagement bait (tag, save, comment, link in bio). Reels never speak the phone number; it is shown on screen. Each script is approved once before anything is rendered; 40 renders a month, with a warning when 20% is left; three free edits per slide; at most two AI-animated clips per reel.",
+    { contact_number: "+91 9169935666", venue_real_photos_only: true, no_engagement_bait: true, festival_signoff_instead_of_cta: true, monthly_generations: 40, warn_at_pct: 20, slide_edits_per_slide: 3, max_ai_clips_per_reel: 2, reel_seconds: [15, 30, 45, 60], words_per_second: 2.3 },
+    { sort: 142 },
   ),
 ] as const satisfies readonly Def<PolicyKey>[];
 
