@@ -18,6 +18,7 @@ import { onPurchaseDecided } from "./agents/estate/agent";
 import { closeOutWedding, onDepositDecided, onInspectionDone, onInvoicesDecided } from "./agents/finance/agent";
 import { scheduleOffboarding } from "./agents/offboarding/agent";
 import { onPostsDecided } from "./agents/content_studio/agent";
+import { planStudioCalendar, writeStudioScript } from "./agents/content_studio/studio";
 import type { RunOutcome } from "./framework/runner";
 import type { AgentDeps, AgentTaskRow } from "./framework/types";
 
@@ -109,7 +110,11 @@ const HANDLERS: Record<string, Record<string, Handler>> = {
     offboarding_due: onWedding(scheduleOffboarding),
     stage_started: onWedding(scheduleOffboarding),
   },
-  content_studio: { approval_decided: decided(onPostsDecided) },
+  content_studio: {
+    approval_decided: decided(onPostsDecided),
+    studio_plan: (d, _t, p) => (str(p.plan_id) ? planStudioCalendar(d, str(p.plan_id)!) : null),
+    studio_script: (d, _t, p) => (str(p.item_id) ? writeStudioScript(d, str(p.item_id)!, str(p.note)) : null),
+  },
 };
 
 export function registerHandlers(agent: string, handlers: Record<string, Handler>): void {

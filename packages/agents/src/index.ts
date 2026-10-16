@@ -34,6 +34,8 @@ export { estateSweep } from "./agents/estate/agent";
 export { startCloseOuts, closeOutWedding, onInspectionDone, reconcilePayments } from "./agents/finance/agent";
 export { scheduleOffboarding, sendOffboardingSteps, anniversaryWishes } from "./agents/offboarding/agent";
 export { draftWeek } from "./agents/content_studio/agent";
+export { writeStudioScript, planStudioCalendar, studioWeek, planStudioDeck, directStudioVoice, planStudioReel, describeMediaAsset, templateScript, fallbackDeck, CONTENT_STUDIO, type SlideSpec, type ReelPlan } from "./agents/content_studio/studio";
+export * from "./domain/studio";
 export { weeklyAdsReport, analyse as analyseAds, recommend as recommendAds } from "./agents/ads_analyst/agent";
 export { exportInvoices, invoiceTotals, priceLine } from "./domain/finance";
 export { istClock, istWeekday, claimRun } from "./framework/kit";

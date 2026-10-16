@@ -161,6 +161,8 @@ const ROUTES: Record<string, string> = {
   work_order_approved: "vendor_coordinator",
   family_message: "wedding_room",
   // Phase 4
+  studio_plan: "content_studio",
+  studio_script: "content_studio",
   plan_requested: "planner",
   brief_reviewed: "planner",
   rooming_list_submitted: "rooms_guests",
