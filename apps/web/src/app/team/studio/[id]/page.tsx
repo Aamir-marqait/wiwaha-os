@@ -44,7 +44,7 @@ export default async function StudioItemPage({ params }: { params: Promise<{ id:
       {status === "generating" ? <div className="mb-3 flex flex-wrap items-center gap-2 text-sm text-ink-soft">Rendering. This page updates by itself. <ActionButton action={checkRenders} pendingLabel="Checking…">Check now</ActionButton></div> : null}
       <PageTitle title={item.title as string} subtitle={<span className="flex flex-wrap items-center gap-1.5"><Badge tone={st.tone}>{st.label}</Badge><Badge>{FORMAT_LABELS[format]}</Badge>{item.scheduled_for ? <span>Post on {formatDateIST(item.scheduled_for as string, { weekday: "short", day: "numeric", month: "short" })}</span> : null}{item.pillar ? <span>· {item.pillar as string}</span> : null}</span>} />
       <StudioTabs active="scripts" />
-      <div className="grid gap-5 lg:grid-cols-[1fr_1.1fr]">
+      <div className="grid gap-5 *:min-w-0 lg:grid-cols-[1fr_1.1fr]">
         <Card className="p-4 sm:p-5">
           {item.brief ? <p className="mb-3 text-sm text-ink-soft">Brief: {item.brief as string}</p> : null}
           <ScriptEditor id={id} status={status} format={format} wordsHint={budget ? `about ${budget.words} for ${options.seconds ?? 30} seconds` : null}

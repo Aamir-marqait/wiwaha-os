@@ -51,7 +51,7 @@ export function inr(paise: number): string {
   const [r, p] = (Math.abs(paise) / 100).toFixed(2).split(".") as [string, string];
   const last3 = r.slice(-3), rest = r.slice(0, -3);
   const grouped = rest ? `${rest.replace(/\B(?=(\d{2})+(?!\d))/g, ",")},${last3}` : last3;
-  return `${neg ? "−" : ""}₹${grouped}.${p}`;
+  return `${neg ? "-" : ""}₹${grouped}.${p}`;
 }
 
 interface Kit { doc: PDFDocument; serif: PDFFont; sans: PDFFont; bold: PDFFont; logo: PDFImage | null }
@@ -194,6 +194,6 @@ export async function buildInvoicePdf(v: InvoiceInput): Promise<Uint8Array> {
       y -= 14;
     }
   }
-  footer(p, k, `${v.seller.gstin ? "" : "GSTIN to be added in the policy book (Finance → GST and invoices). "}Thank you for celebrating with us.`);
+  footer(p, k, `${v.seller.gstin ? "" : "GSTIN to be added in Settings, Policy book, GST and invoices. "}Thank you for celebrating with us.`);
   return k.doc.save();
 }

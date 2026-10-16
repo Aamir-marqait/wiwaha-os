@@ -22,7 +22,7 @@ export default async function FinancePage() {
   return (
     <>
       <PageTitle title="Finance" subtitle="Final and GST invoices are prepared by the Finance agent after each event; you approve them." action={<a href={`/api/finance/export?month=${month}&format=${format}`} className={buttonClass("secondary", "sm")}>Export {month} ({format === "tally_csv" ? "Tally" : "Zoho"})</a>} />
-      <div className="grid gap-5 lg:grid-cols-2">
+      <div className="grid gap-5 *:min-w-0 lg:grid-cols-2">
         <Card>
           <CardHeader title="Invoices" />
           <ul className="divide-y divide-line/70">

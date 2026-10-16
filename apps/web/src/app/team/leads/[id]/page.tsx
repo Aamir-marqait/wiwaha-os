@@ -83,7 +83,7 @@ export default async function LeadPage({ params, searchParams }: { params: Promi
         {canEdit ? <ActionButton action={rerunLeadDesk.bind(null, id)} pendingLabel="Lead Desk is working…">Re-run Lead Desk</ActionButton> : null}
       </div>
 
-      <div className="grid gap-5 lg:grid-cols-[1fr_340px]">
+      <div className="grid gap-5 *:min-w-0 lg:grid-cols-[1fr_340px]">
         <div className="space-y-5">
           <Card>
             <CardHeader title="Enquiry" />

@@ -30,7 +30,7 @@ export default async function MarketingPage() {
         <p className="text-sm">The Content studio plans next week every week and turns the estate's own photos into posts, carousels and reels.</p>
         <Link href="/team/studio" className="text-sm font-medium text-sage-700 underline">Open the Content studio</Link>
       </Card>
-      <div className="grid gap-5 lg:grid-cols-[1.5fr_1fr]">
+      <div className="grid gap-5 *:min-w-0 lg:grid-cols-[1.5fr_1fr]">
         <Card>
           <CardHeader title="Earlier post drafts" subtitle="Caption-only drafts from before the studio. New work lives in the Content studio calendar." action={<Link href="/team/studio/calendar" className="text-sm text-sage-700 underline">Calendar</Link>} />
           <ul className="divide-y divide-line/70">

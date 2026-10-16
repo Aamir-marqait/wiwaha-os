@@ -25,7 +25,7 @@ export default async function ClaudeConnectorPage() {
     <>
       <Link href="/team/settings" className="text-sm text-sage-700 hover:underline">← Settings</Link>
       <PageTitle title="Claude connector" subtitle="Ask Claude about Wiwaha and let it act for you: today's priorities, approvals, costing, payments, décor, tasks and more. It acts as you, with your permissions, and every change is logged." />
-      <div className="grid gap-5 lg:grid-cols-2">
+      <div className="grid gap-5 *:min-w-0 lg:grid-cols-2">
         <Card>
           <CardHeader title="Connect" subtitle={canUse ? "Works on Claude Pro, Max, Team and Enterprise." : `Switched on for ${roles.map((r) => ROLE_LABELS[r]).join(", ")} accounts for now.`} />
           <div className="space-y-3 p-4 text-sm">

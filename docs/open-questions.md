@@ -28,6 +28,10 @@ Things Fable/Claude flagged while building Phase 1. Each needs a decision from P
 | Real décor catalogue and photos | `domain/decor-themes.ts` (5 themes per function) | Moodboards show palettes and image prompts, not photos |
 | Drive templates (checklists, run-of-show) | `task_templates`, `run_of_show_templates` | Starter templates loaded |
 | Tally or Zoho Books | Policy `finance.gst.export_format` | Tally CSV |
+| Legal name and address for invoices and receipts | Policy `finance.gst.legal_name`, `finance.gst.address` | Documents show the brand name only |
+| Are contract prices GST-inclusive? | Finance agent close-out (`agents/finance/agent.ts`) | GST is added on top of the quote, so a ₹45L contract invoices at ₹53.1L |
+| AI credits budget and exchange rate | Policy `media.budget` | USD 50 a month, warn at 80%, ₹88 to the dollar |
+| Guest services (airport pickup, laundry, tea to the room…) | Lists → Extras, "Guests can book" | None yet, so the guest page lists no services |
 
 ## Contradictions or gaps spotted in the PRD
 1. **Phase scope.** PRD §13 puts lead scoring and the approval queue in Phase 2; the build handoff puts them in Phase 1. I followed the handoff.

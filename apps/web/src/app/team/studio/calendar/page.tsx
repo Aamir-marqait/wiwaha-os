@@ -26,7 +26,7 @@ export default async function StudioCalendar() {
     <>
       <PageTitle title="Calendar" subtitle="Plan a week or four. The strategist gives every slot a pillar, an angle and a hook; the scriptwriter writes each one for you to approve. Next week is planned automatically every week." />
       <StudioTabs active="calendar" />
-      <div className="grid gap-5 lg:grid-cols-[1fr_1.2fr]">
+      <div className="grid gap-5 *:min-w-0 lg:grid-cols-[1fr_1.2fr]">
         <Card className="p-4 sm:p-5"><h2 className="mb-3 font-serif text-xl font-semibold">Plan posts</h2><PlanForm pillars={pillars} nextMonday={nextMonday} /></Card>
         <div className="space-y-5">
           {(plans ?? []).map((p) => (

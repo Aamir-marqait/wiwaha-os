@@ -93,7 +93,7 @@ export default async function WeddingRoom({ params, searchParams }: { params: Pr
       ) : null}
       {tab === "entertainment" ? <SelectionsPanel supabase={supabase} weddingId={id} vertical="entertainment" canEdit={canVertical} /> : null}
       {tab === "extras" ? (
-        <div className="grid gap-5 lg:grid-cols-2">
+        <div className="grid gap-5 *:min-w-0 lg:grid-cols-2">
           <SelectionsPanel supabase={supabase} weddingId={id} vertical="extras" canEdit={canVertical} />
           <GuestPanel supabase={supabase} w={{ id, title: w.title as string, guest_token: w.guest_token as string, guest_welcome: (w.guest_welcome as string | null) ?? null }} canEdit={canEdit} />
         </div>
@@ -119,7 +119,7 @@ async function Overview({ supabase, w, id, role, canEdit }: { supabase: Supa; w:
     supabase.from("spaces").select("id, name").eq("active", true).order("sort"),
   ]);
   return (
-    <div className="grid gap-5 lg:grid-cols-[1.4fr_1fr]">
+    <div className="grid gap-5 *:min-w-0 lg:grid-cols-[1.4fr_1fr]">
       <div className="space-y-5">
         <Lifecycle supabase={supabase} w={{ id, lead_id: (w.lead_id as string | null) ?? null, event_start: w.event_start as string, event_end: w.event_end as string, whatsapp_group_url: (w.whatsapp_group_url as string | null) ?? null }} />
         <Card>
@@ -190,7 +190,7 @@ async function Payments({ supabase, w, id, role, eventEnded }: { supabase: Supa;
   const paid = (payments ?? []).filter((p) => p.status === "paid").reduce((s, p) => s + Number(p.amount_paise), 0);
   const effectText = (e: unknown) => (isEffect(e) && e !== "none" ? ` · ${EFFECT_LABELS[e].toLowerCase()}` : "");
   return (
-    <div className="grid gap-5 lg:grid-cols-[1fr_1.2fr]">
+    <div className="grid gap-5 *:min-w-0 lg:grid-cols-[1fr_1.2fr]">
       <div className="space-y-5">
         <Card>
           <CardHeader title="Payment parts" subtitle={`${rupees(paid)} of ${rupees(w.contract_value_paise as number | null)} received`} />
@@ -232,7 +232,7 @@ async function Family({ supabase, id, canEdit }: { supabase: Supa; id: string; c
     supabase.from("wedding_contacts").select("contact_id, relation, is_key_contact, contact:contacts(full_name, phone_e164, email)").eq("wedding_id", id),
   ]);
   return (
-    <div className="grid gap-5 lg:grid-cols-2">
+    <div className="grid gap-5 *:min-w-0 lg:grid-cols-2">
       <Card>
         <CardHeader title="Family contacts" subtitle="Key contacts join the family WhatsApp group" />
         <ul className="divide-y divide-line/70">

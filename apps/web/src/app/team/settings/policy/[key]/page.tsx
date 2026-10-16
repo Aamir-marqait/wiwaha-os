@@ -22,7 +22,7 @@ export default async function PolicyEditPage({ params }: { params: Promise<{ key
     <>
       <Link href="/team/settings/policy" className="text-sm text-sage-700 hover:underline">← Policy book</Link>
       <PageTitle title={p.title as string} subtitle={`${p.topic as string} · ${key} · version ${p.version as number}`} />
-      <div className="grid gap-5 lg:grid-cols-[1.4fr_1fr]">
+      <div className="grid gap-5 *:min-w-0 lg:grid-cols-[1.4fr_1fr]">
         <Card className="p-4 sm:p-6">
           {key === "payments.schedule" ? (() => {
             const v = p.value as { milestones: { milestone: string; label: string; percent_bps: number; due: string; days?: number; effect: string }[]; reminder_offsets_days?: number[] };

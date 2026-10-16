@@ -7,7 +7,18 @@ Both run on two keys: `ANTHROPIC_API_KEY` (already set) for writing, and `FAL_KE
 2. Vercel → wiwaha-os → Settings → Environment Variables: add `FAL_KEY` (Production and Preview). Redeploy.
 3. Check: the Content studio page shows "AI pictures, voice and music: on" (it says "Offline mode" without the key). Until then everything runs in sandbox: moodboards show the plain photo with the décor described, reels are assembled silently from photos.
 
-Model names live in `agents.config.media_models` (Content studio and Design agents), not in code; change them there.
+Model names live in `agents.config.media_models` (Content studio and Design agents), not in code; change them there. Their prices sit beside them in `agents.config.media_prices`, so every job records what it cost (D42).
+
+## What it costs (fal list prices, October 2026)
+| Work | Model | Price | Typical |
+| --- | --- | --- | --- |
+| Moodboard picture | Nano Banana Pro edit | $0.15 each | ~20 a wedding ≈ $3 (₹260), plus redos |
+| Post detail picture (not the venue) | Nano Banana | $0.039 each | a few cents a post |
+| Reel voiceover | ElevenLabs v3 | $0.10 per 1,000 characters | ≈ $0.04 a reel |
+| Reel music | ElevenLabs music | $0.60 per started minute | $0.60 a reel |
+| Reel clip from a photo | MiniMax 768p | ≈ $0.08 a second | ≤ 2 clips ≈ $0.80 |
+
+A reel costs about $1.50 (₹130) with music and two clips; carousels and posts from real photos cost nothing in AI. Today → AI credits shows the month's spend against the budget (policy `media.budget`) and, with a fal key that can read billing, the live balance. Top up at fal.ai → Billing. To save on reels, turn down `studio.content.max_ai_clips_per_reel`; to save on moodboards, switch `image_edit` to `fal-ai/bytedance/seedream/v4/edit` ($0.03) and compare.
 
 ## Before the first moodboard
 1. Décor → Venue areas: for each area upload plain photos (empty space, daylight, a few angles) and star the best one as primary. Add decorated or real-event photos too; they guide the look.

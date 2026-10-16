@@ -40,7 +40,7 @@ export default async function OwnerPage() {
         <Stat label="Dues (next 30 days)" value={n ? rupees(Number(n.dues_paise), { compact: true }) : "—"} tone={n && Number(n.overdue_paise) > 0 ? "burgundy" : "sage"} hint={n && Number(n.overdue_paise) > 0 ? `${rupees(Number(n.overdue_paise), { compact: true })} overdue` : "Nothing overdue"} />
       </div>
 
-      <div className="mt-6 grid gap-5 lg:grid-cols-2">
+      <div className="mt-6 grid gap-5 *:min-w-0 lg:grid-cols-2">
         <Card>
           <CardHeader title="Waiting for you" subtitle={`${approvals.count ?? 0} approvals`} action={<Link href="/team/approvals" className="text-sm text-sage-700 underline">Open queue</Link>} />
           <ul className="flex flex-wrap gap-2 px-4 py-3 sm:px-5">

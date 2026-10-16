@@ -20,7 +20,7 @@ export default async function AvailabilityPage() {
     <>
       <Link href="/team/settings" className="text-sm text-sage-700 hover:underline">← Settings</Link>
       <PageTitle title="Site-visit hours" subtitle="When each sales executive can host a visit. Visits are only offered inside these hours and the estate's visiting hours (policy book). Executives with no hours set are treated as available all visiting hours." />
-      <div className="grid gap-5 lg:grid-cols-[1fr_320px]">
+      <div className="grid gap-5 *:min-w-0 lg:grid-cols-[1fr_320px]">
         <div className="space-y-4">
           {(people ?? []).map((p) => {
             const mine = (windows ?? []).filter((w) => w.profile_id === p.id);

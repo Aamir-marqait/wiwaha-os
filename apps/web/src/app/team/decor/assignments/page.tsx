@@ -35,7 +35,7 @@ export default async function DecorAssignmentsPage() {
       <PageTitle title="Décor" subtitle="What's going to each event and where, then setting it up and bringing it back." />
       <DecorTabs active="assignments" />
       {weddings.length === 0 ? <Card className="p-5 text-sm text-ink-soft">Nothing assigned yet. Use “Assign to event” on any piece in Stock.</Card> : null}
-      <div className="grid gap-5 lg:grid-cols-2">
+      <div className="grid gap-5 *:min-w-0 lg:grid-cols-2">
         {weddings.map(({ w, areas }) => (
           <Card key={w.id}>
             <CardHeader title={<Link href={`/team/weddings/${w.id}?tab=decor`} className="hover:underline">{w.title}</Link>} subtitle={`${formatDateIST(w.event_start)}${w.event_end !== w.event_start ? ` – ${formatDateIST(w.event_end)}` : ""}`} />

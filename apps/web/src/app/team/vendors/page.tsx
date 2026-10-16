@@ -80,7 +80,7 @@ export default async function VendorsPage({ searchParams }: { searchParams: Prom
         </div>
       </div>
       {byCategory.size === 0 ? <Card className="p-5 text-sm text-ink-soft">{(vendors.data ?? []).length ? "No vendor matches that." : "No vendors yet."}</Card> : null}
-      <div className="grid gap-5 lg:grid-cols-2">
+      <div className="grid gap-5 *:min-w-0 lg:grid-cols-2">
         {[...byCategory.entries()].map(([category, list]) => (
           <Card key={category}>
             <CardHeader title={category.charAt(0).toUpperCase() + category.slice(1)} subtitle={`${list.length} vendor${list.length === 1 ? "" : "s"}`} />

@@ -63,7 +63,7 @@ export default async function TodayPage({ searchParams }: { searchParams: Promis
         {seesGuests ? <Stat label="New guest requests" value={(guestAsks.data ?? []).length} tone={(guestAsks.data ?? []).length ? "gold" : "sage"} /> : null}
       </div>
 
-      <div className="grid gap-5 lg:grid-cols-[1.6fr_1fr]">
+      <div className="grid gap-5 *:min-w-0 lg:grid-cols-[1.6fr_1fr]">
         <Card>
           <CardHeader
             title={b ? b.title : "Morning brief"}

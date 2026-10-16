@@ -46,3 +46,12 @@ Sign in at **/portal/login** as Ananya ("Use a password instead"). Her stage car
 2. **Library**: the estate's own photos and clips, described automatically.
 3. **New**: "A reel about arriving at Wiwaha from the airport". Read and edit the script, then **Approve and render**. Slides or the reel appear on the same page; **Download** gives a zip with the caption. Without `FAL_KEY`, reels are assembled without a voice.
 4. **Calendar**: next week's plan, made automatically.
+
+## 9. The money and the day-to-day (3 min, D42)
+1. **Today**: follow-up calls due (one call after each visit), guest requests, alerts, and AI credits.
+2. A lead → Status → Lost: it asks why. **Sales numbers** shows why leads didn't book.
+3. Wedding Room → **Décor**: add a rented chandelier and a bought uruli; mark the uruli arrived: it joins the stock, and both costs land in **Finance**.
+4. **Payments** tab: the receipt for the advance (method, schedule, balance); **Prepare invoices now** drafts the final and GST invoices for approval.
+5. **See the portal as the couple**, then Back to the Wedding Room.
+6. Open the guest page (Links), request an airport pickup: it shows on Arjun's Today.
+

@@ -31,7 +31,7 @@ export default async function AreaPage({ params }: { params: Promise<{ id: strin
     <>
       <PageTitle title={a.name as string} subtitle={<Link href="/team/decor/areas" className="underline">← Venue areas</Link>} />
       <DecorTabs active="areas" />
-      <div className="grid gap-5 lg:grid-cols-[1fr_22rem]">
+      <div className="grid gap-5 *:min-w-0 lg:grid-cols-[1fr_22rem]">
         <div className="space-y-5">
           <Card className="space-y-3 p-4">
             <div>

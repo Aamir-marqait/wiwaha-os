@@ -11,7 +11,7 @@ export default async function ImportLeadsPage() {
     <>
       <Link href="/team/leads" className="text-sm text-sage-700 hover:underline">← Leads</Link>
       <PageTitle title="Import leads" subtitle="Until Meta and Google are connected directly, export your leads and upload the file here." />
-      <div className="grid gap-5 lg:grid-cols-[1.2fr_1fr]">
+      <div className="grid gap-5 *:min-w-0 lg:grid-cols-[1.2fr_1fr]">
         <Card className="p-4 sm:p-5"><ImportForm /></Card>
         <Card className="p-4 text-sm sm:p-5">
           <h2 className="font-serif text-xl font-semibold">Where to get the file</h2>
