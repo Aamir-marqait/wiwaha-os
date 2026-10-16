@@ -11,6 +11,10 @@ const nextConfig: NextConfig = {
     "/api/media/work": ["./node_modules/ffmpeg-static/ffmpeg", "../../node_modules/.pnpm/ffmpeg-static@*/node_modules/ffmpeg-static/ffmpeg"],
     "/api/cron/tick": ["./node_modules/ffmpeg-static/ffmpeg", "../../node_modules/.pnpm/ffmpeg-static@*/node_modules/ffmpeg-static/ffmpeg"],
   },
+  // Vercel runs glibc Linux: leave out sharp's musl (Alpine) build.
+  outputFileTracingExcludes: {
+    "/**": ["../../node_modules/.pnpm/@img+sharp-libvips-linuxmusl-*/**", "../../node_modules/.pnpm/@img+sharp-linuxmusl-*/**"],
+  },
   async headers() {
     return [
       {
