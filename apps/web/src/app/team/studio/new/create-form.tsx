@@ -23,7 +23,7 @@ export function CreateForm({ pillars, photos }: { pillars: string[]; photos: { i
           </button>
         ))}
       </div>
-      <label className={label}>What's it about? *<textarea required rows={3} value={v.brief} onChange={(e) => set("brief", e.target.value)} placeholder="e.g. Why families flying in love being 15 minutes from the airport" className={field} /></label>
+      <label className={label}>What's it about? *<textarea required rows={3} value={v.brief} onChange={(e) => set("brief", e.target.value)} placeholder="e.g. Why families flying in love that we're 15 minutes from the airport" className={field} /></label>
       <div className="grid gap-3 sm:grid-cols-3">
         <label className={label}>Pillar<select value={v.pillar} onChange={(e) => set("pillar", e.target.value)} className={field}><option value="">Any</option>{pillars.map((p) => <option key={p} value={p}>{p}</option>)}</select></label>
         {v.type === "carousel" ? <label className={label}>Slides<select value={v.slides} onChange={(e) => set("slides", e.target.value)} className={field}>{[4, 5, 6, 7, 8].map((n) => <option key={n} value={n}>{n}</option>)}</select></label> : null}
