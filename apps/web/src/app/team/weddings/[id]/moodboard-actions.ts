@@ -20,7 +20,7 @@ export async function sendDecorQuestionnaire(weddingId: string): Promise<Result>
   await requireStaff(DECOR);
   const out = await openDecorQuestionnaire(agentDeps(), weddingId);
   if (out.status === "error") return { error: out.error };
-  if (out.status === "done" && !out.result.opened) return { error: "The couple has already sent their questionnaire. Use \"Start over\" to let them change it." };
+  if (out.status === "done" && !out.result.opened) return { error: "Not sent: either décor hasn't opened yet (90 days before, once the advance is paid), or the couple has already sent it. Use \"Start over\" to let them change it." };
   return done(weddingId);
 }
 

@@ -34,6 +34,7 @@ describe("Design: AI moodboards", () => {
   it("décor opening sends the questionnaire, not boards", async () => {
     const w = world();
     w.db.rows("decor_briefs").length = 0;
+    w.db.rows("wedding_stages").find((s) => s.key === "decor")!.started_at = "2026-11-14T04:00:00Z";
     const out = await onDecorStageStarted(w.deps, "wd1");
     expect(out.status).toBe("done");
     expect(w.db.rows("moodboards")).toHaveLength(0);
@@ -133,6 +134,15 @@ describe("Design: AI moodboards", () => {
     door.redo_count = 3;
     const r2 = await onSlideFeedback(w.deps, String(door.id));
     expect(r2.status === "done" && r2.result.requeued).toBe(false);
+  });
+
+  it("never sends the questionnaire before décor opens", async () => {
+    const w = world();
+    w.db.rows("decor_briefs").length = 0;
+    const out = await openDecorQuestionnaire(w.deps, "wd1");
+    expect(out.status === "done" && out.result.opened).toBe(false);
+    expect(w.db.rows("decor_briefs")).toHaveLength(0);
+    expect(w.store.messages).toHaveLength(0);
   });
 
   it("re-opening the questionnaire after submission does nothing", async () => {

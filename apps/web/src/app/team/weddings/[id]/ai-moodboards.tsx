@@ -38,7 +38,7 @@ export async function AiMoodboards({ supabase, weddingId, canEdit }: { supabase:
           !brief.data ? (stage.data?.started_at ? "Décor is open; the questionnaire hasn't been sent yet." : "Opens with the décor stage (90 days before, once the advance is paid).")
             : status === "open" ? `Sent ${brief.data.sent_at ? formatDateTimeIST(brief.data.sent_at as string) : ""}. Waiting for the couple.`
               : `Sent back ${brief.data.submitted_at ? formatDateTimeIST(brief.data.submitted_at as string) : ""}${status === "generating" ? " · moodboards being made" : status === "ready" ? " · moodboards made" : ""}`
-        } action={canEdit ? (
+        } action={canEdit && stage.data?.started_at ? (
           <span className="flex flex-wrap justify-end gap-1.5">
             {!brief.data || status === "open" ? <ActionButton action={sendDecorQuestionnaire.bind(null, weddingId)}>{brief.data ? "Send reminder" : "Send questionnaire"}</ActionButton> : null}
             {status !== "generating" && !(boards.data ?? []).length ? <ActionButton action={makeMoodboardsNow.bind(null, weddingId)} variant="primary" pendingLabel="Starting…" confirm={summary.length ? undefined : "The couple hasn't answered yet. Make moodboards from the defaults?"}>Make moodboards now</ActionButton> : null}

@@ -184,3 +184,26 @@ Founders' follow-up the same day.
 - **Who:** `MCP_ALLOWED_ROLES`, owner only to start (tested with a dummy owner account, admin@wiwaha.example, on staging).
 - **Tools:** about 30, reading and changing what the app does (see `docs/runbooks/claude-connector.md`). Writes reuse the same RPCs and checks as the app (approvals, payment parts, work-order approval, décor double-booking, policy schemas). After a change, agent routing and approved messages run as in the app.
 - **Disconnect:** Settings → Claude connector, or remove it in Claude.
+
+## D39 — Venue areas and the media library (2026-10-16)
+**Decision:** the estate's photos and clips live in one library (`media_assets`, public `media` bucket) with folders up to four deep (`media_folders`). Each photo has a *look* (plain, decorated, event, detail, people, aerial), an optional angle, and optionally a **venue area** (`venue_areas`: Main entrance, Lobby pathway, Lawn entrance, Lawn, Indoor hall, Pool deck, Amphitheatre, Courtyard; editable in Décor → Venue areas). One plain photo per area is its *primary* (unique index), used as the base for AI moodboards; several angles are welcome.
+- Every upload is described automatically (Claude with the image) so the studio and moodboards can pick shots by meaning; staff can overwrite the description.
+- Décor templates gained `venue_area_id`, so "Templates by area" and AI moodboards share the same areas.
+- Owner, sales, event managers and staff can upload; clients see only what reaches a shared moodboard.
+
+## D40 — Décor questionnaire and AI moodboards per area (2026-10-16)
+**Decision:** when the Décor stage opens (90 days out, D35), the Design agent opens an Indian décor questionnaire in the portal (`decor_briefs`), never before the stage opens: traditions, look and fullness, up to three colour stories, flowers, traditional touches (toran, kolam/rangoli, banana-leaf entrance, name board, urli, …), mandap style, and per function the spaces, mood, seating, lighting and must-haves. The team can send a reminder or make boards from partial answers in the Wedding Room.
+- On submit (`save_decor_brief(..., true)`), the agent makes one AI board per function: for each chosen area (or the usual ones for that function) it dresses the area's primary plain photo with fal image edit, guided by the answers and the area's décor templates. The original photo is always shown next to the result ("as it is" / "could look"), and AI pictures are labelled as previews.
+- **Visibility:** AI boards are hidden from the couple (`shared_at` null; RLS) until Prashanth approves them (approval kind `moodboard`) or the Design agent's dial allows sharing. Standard vs Custom is still labelled.
+- **Changes:** the couple can ask for a change on any picture (up to `decor.ai_moodboards.redos_per_slide`, then the décor team edits by hand). The team can redo a slide, upload their own edited image, start over, or upload an edited PDF deck.
+- **Download:** `/api/moodboards/<id>/pdf` builds the deck in the shape of the team's own decks (cover with names and palette, a title page per function, then each space as it is next to the décor). Couple and team both can download it.
+- Policy `decor.ai_moodboards` holds the limits and labels; no business rule is in prompts.
+
+## D41 — Content studio inside Wiwaha OS, on fal and Claude only (2026-10-16)
+**Decision:** wiwaha-studio is ported into the app (Sales & Marketing → Content studio) rather than run as a second service. Text is Claude (existing `ANTHROPIC_API_KEY`); every image, voice, music and video model runs on fal with one `FAL_KEY`.
+- **Flow:** calendar (strategist: pillars, angle and hook per slot; next week planned every week, replacing the caption-only drafts) → script (scriptwriter; team edits or approves) → render. Formats: single post, carousel, reel. Approving a script counts against `studio.content.monthly_generations` (warning at `warn_at_pct`).
+- **Real photos only:** venue imagery always comes from the library; AI clips (image-to-video from a real photo) are capped per reel (`max_ai_clips_per_reel`) and slides never alter a photo. The house renderer (`next/og`: Cormorant Garamond + Poppins, gold accent only, no boxes behind text, typographic CTA) draws the type.
+- **Reels:** ffmpeg on Vercel (`ffmpeg-static`, traced into `/api/media/work` and `/api/cron/tick`): Ken Burns shots, cuts and crossfades, word-timed captions, the logo, voiceover (fal TTS) over ducked music (fal music), loudness-normalised.
+- **Worker:** `media_jobs` rows are claimed by status; fal calls back to `/api/webhooks/fal` (signature or `?k=WEBHOOK_SECRET`), and `/api/media/work` (self-kicking) plus the 15-minute tick finish the rest. Without `FAL_KEY` everything runs in sandbox.
+- **Download:** each finished item downloads as a zip (slides or reel plus `caption.txt`). Posting to Instagram stays manual until the Meta keys are approved.
+

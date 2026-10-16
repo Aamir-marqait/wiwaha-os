@@ -112,6 +112,9 @@ async function planBoard(ctx: RunContext, fn: Fn, areas: AreaInfo[], answers: De
 export async function openDecorQuestionnaire(deps: AgentDeps, weddingId: string): Promise<RunOutcome<{ opened: boolean }>> {
   return runAgent(deps, DESIGN, { action: "open_decor_questionnaire", weddingId, input: {}, fallbackTitle: "Send the couple the décor questionnaire" }, async (ctx) => {
     const db = agentDb(ctx, DESIGN_TOOLS);
+    // Planning never starts early: the questionnaire waits for the décor stage to open.
+    const [stage] = await db.select<{ started_at: string | null }>("wedding_stages", { where: { wedding_id: weddingId, key: "decor" } });
+    if (!stage?.started_at) return { opened: false };
     const [existing] = await db.select<{ wedding_id: string; status: string }>("decor_briefs", { where: { wedding_id: weddingId } });
     if (existing && existing.status !== "open") return { opened: false };
     if (!existing) await db.insert("decor_briefs", { wedding_id: weddingId, status: "open", answers: {}, sent_at: ctx.now.toISOString() });

@@ -30,6 +30,7 @@ These live as **data** in the policy book (`policies` table, typed by `packages/
 - Claude API (`@anthropic-ai/sdk`) for agents. Model names live in the `agents` table, never in code.
 - Scheduling: `pg_cron` calls `/api/cron/tick` every 15 minutes through `pg_net` (URL and `CRON_SECRET` in Supabase Vault, see D23); Vercel Cron runs the daily brief and sweep. `pg_cron` also releases expired holds.
 - Claude connector: remote MCP server at `/api/mcp` with its own OAuth (`/oauth/*`), acting as the signed-in person under RLS (D38, `docs/runbooks/claude-connector.md`).
+- Media (D39–D41): fal for AI images, voice, music and clips (`FAL_KEY`, models in `agents.config.media_models`); the media worker (`apps/web/src/lib/media/`) renders slides with `next/og`, reels with ffmpeg and moodboard PDFs with pdf-lib. Runbook: `docs/runbooks/studio-and-moodboards.md`.
 - Channels (`packages/integrations`): Gupshup WhatsApp, Resend email, Instagram/Meta, Plivo calls, Razorpay. Each runs in **sandbox** (outbox rows, `sbx_…` refs, `/pay/sandbox` and `/sign/sandbox` pages) until its keys are set (D24). E-sign (Digio or Leegality) has no live adapter yet.
 
 ```

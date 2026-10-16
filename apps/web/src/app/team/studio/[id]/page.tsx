@@ -4,10 +4,12 @@ import { PolicyBook } from "@wiwaha/policy";
 import { Badge, Card, CardHeader, PageTitle, buttonClass } from "@wiwaha/ui";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { ActionButton } from "@/components/action-button";
 import { CopyField } from "@/components/copy-field";
 import { agentDeps } from "@/lib/agents";
 import { requireSection } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
+import { checkRenders } from "../actions";
 import { FORMAT_LABELS, STATUS_LABELS, StudioTabs } from "../tabs";
 import { AutoRefresh, ScriptEditor, SlideEdit } from "./item-forms";
 
@@ -39,6 +41,7 @@ export default async function StudioItemPage({ params }: { params: Promise<{ id:
   return (
     <>
       {busy ? <AutoRefresh /> : null}
+      {status === "generating" ? <div className="mb-3 flex flex-wrap items-center gap-2 text-sm text-ink-soft">Rendering. This page updates by itself. <ActionButton action={checkRenders} pendingLabel="Checking…">Check now</ActionButton></div> : null}
       <PageTitle title={item.title as string} subtitle={<span className="flex flex-wrap items-center gap-1.5"><Badge tone={st.tone}>{st.label}</Badge><Badge>{FORMAT_LABELS[format]}</Badge>{item.scheduled_for ? <span>Post on {formatDateIST(item.scheduled_for as string, { weekday: "short", day: "numeric", month: "short" })}</span> : null}{item.pillar ? <span>· {item.pillar as string}</span> : null}</span>} />
       <StudioTabs active="scripts" />
       <div className="grid gap-5 lg:grid-cols-[1fr_1.1fr]">
