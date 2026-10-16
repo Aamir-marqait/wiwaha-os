@@ -103,8 +103,8 @@ export function buildAss(cues: readonly Cue[], contact: { text: string; start: n
     "[Script Info]", "ScriptType: v4.00+", `PlayResX: ${W}`, `PlayResY: ${H}`, "WrapStyle: 0", "ScaledBorderAndShadow: yes", "",
     "[V4+ Styles]",
     "Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding",
-    "Style: Cap,Cormorant Garamond SemiBold,80,&H00F0F5F7,&H00F0F5F7,&H89222C26,&H89222C26,0,0,0,0,100,100,0,0,3,20,0,2,90,90,560,1",
-    "Style: Num,Poppins Medium,64,&H00F0F5F7,&H00F0F5F7,&H89222C26,&H89222C26,0,0,0,0,100,100,1,0,3,18,0,2,90,90,330,1",
+    "Style: Cap,Cormorant Garamond SemiBold,84,&H00F0F5F7,&H00F0F5F7,&H60222C26,&H70000000,0,0,0,0,100,100,0,0,1,2.5,3,2,90,90,560,1",
+    "Style: Num,Poppins Medium,64,&H00F0F5F7,&H00F0F5F7,&H60222C26,&H70000000,0,0,0,0,100,100,1,0,1,2.5,3,2,90,90,330,1",
     "", "[Events]", "Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text",
   ];
   const lines = cues.filter((c) => c.text.trim()).map((c) => `Dialogue: 0,${assTime(c.start)},${assTime(Math.min(c.end, total))},Cap,,0,0,0,,${assText(c.text)}`);

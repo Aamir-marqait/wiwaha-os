@@ -17,7 +17,7 @@ export default async function AreaPage({ params }: { params: Promise<{ id: strin
   const supabase = await createClient();
   const [{ data: a }, photos, spaces, areas, templates] = await Promise.all([
     supabase.from("venue_areas").select("*").eq("id", id).maybeSingle(),
-    supabase.from("media_assets").select("id, kind, url, thumb_url, title, description, tags, look, angle, is_primary, venue_area_id, folder_id, duration_ms, status, status_error, described_by").eq("venue_area_id", id).order("is_primary", { ascending: false }).order("created_at", { ascending: false }),
+    supabase.from("media_assets").select("id, kind, url, thumb_url, title, description, tags, look, angle, is_primary, venue_area_id, folder_id, duration_ms, status, status_error, described_by, created_at").eq("venue_area_id", id).order("is_primary", { ascending: false }).order("created_at", { ascending: false }),
     supabase.from("spaces").select("id, name").eq("active", true).order("sort"),
     supabase.from("venue_areas").select("id, name").order("sort"),
     supabase.from("decor_templates").select("id, title, area").eq("venue_area_id", id),

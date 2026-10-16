@@ -92,6 +92,7 @@ export async function shareMoodboards(weddingId: string): Promise<Result> {
   if (!boards?.length) return { error: "Nothing waiting to be shared." };
   const { data: slides } = await supabase.from("moodboard_slides").select("status").in("moodboard_id", boards.map((b) => b.id as string));
   if ((slides ?? []).some((s) => s.status === "queued" || s.status === "rendering")) return { error: "Some pictures are still being made. Share once they're ready." };
+  if (!(slides ?? []).some((s) => s.status === "ready")) return { error: "No picture is ready yet. Add plain photos to the areas, or upload your own edit, then redo." };
   const approvalId = boards.find((b) => b.approval_id)?.approval_id as string | undefined;
   if (approvalId) {
     const { data: a } = await supabase.from("approvals").select("status").eq("id", approvalId).maybeSingle();

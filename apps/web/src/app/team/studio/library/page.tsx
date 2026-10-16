@@ -20,7 +20,7 @@ export default async function LibraryPage({ searchParams }: { searchParams: Prom
     supabase.from("media_folders").select("id, name, parent_id").order("sort").order("name"),
     supabase.from("venue_areas").select("id, name").order("sort"),
   ]);
-  let query = supabase.from("media_assets").select("id, kind, url, thumb_url, title, description, tags, look, angle, is_primary, venue_area_id, folder_id, duration_ms, status, status_error, described_by").order("created_at", { ascending: false }).limit(200);
+  let query = supabase.from("media_assets").select("id, kind, url, thumb_url, title, description, tags, look, angle, is_primary, venue_area_id, folder_id, duration_ms, status, status_error, described_by, created_at").order("created_at", { ascending: false }).limit(200);
   if (folder) query = query.eq("folder_id", folder);
   if (look) query = query.eq("look", look);
   const { data } = await query;

@@ -6,7 +6,7 @@ import { deleteMedia, setPrimaryMedia, updateMedia } from "@/app/team/media/acti
 
 export interface MediaCardData {
   id: string; kind: "image" | "video"; url: string; thumb_url: string | null; title: string | null; description: string | null; tags: string[];
-  look: string; angle: string | null; is_primary: boolean; venue_area_id: string | null; folder_id: string | null; duration_ms: number | null; status: string; status_error: string | null; described_by: string | null;
+  look: string; angle: string | null; is_primary: boolean; venue_area_id: string | null; folder_id: string | null; duration_ms: number | null; status: string; status_error: string | null; described_by: string | null; created_at: string;
 }
 
 export const LOOK_LABELS: Record<string, string> = { plain: "Plain (no décor)", decorated: "Decorated", event: "Real event", detail: "Detail", people: "People", aerial: "Aerial", other: "Other" };
@@ -34,7 +34,7 @@ export function MediaCard({ m, areas, folders, canDelete, showPrimary }: { m: Me
       </div>
       <div className="space-y-1.5 p-3">
         <p className="line-clamp-1 text-sm font-medium">{m.title || "Untitled"}</p>
-        <p className="line-clamp-2 text-xs text-ink-soft">{m.status_error ?? (m.description || (m.described_by ? "" : "Describing…"))}</p>
+        <p className="line-clamp-2 text-xs text-ink-soft">{m.status_error ?? (m.description || (m.described_by ? "" : Date.parse(m.created_at) > Date.now() - 5 * 60_000 ? "Describing…" : "No description yet. Edit to add one."))}</p>
         <p className="flex flex-wrap gap-1 text-[11px] text-ink-soft"><span>{LOOK_LABELS[m.look] ?? m.look}</span>{m.angle ? <span>· {m.angle}</span> : null}</p>
         {!open ? (
           <div className="flex flex-wrap gap-1.5 pt-1">

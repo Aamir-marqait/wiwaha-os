@@ -21,8 +21,10 @@ const ALLOWED_HOSTS = [/\.supabase\.co$/, /\.fal\.media$/, /^fal\.media$/, /\.fa
 /** Download a file we stored or fal produced. Other hosts are refused (no SSRF through the worker). */
 export async function fetchMedia(url: string, maxBytes = 200 * 1024 * 1024): Promise<Buffer> {
   const u = new URL(url);
-  const supabaseHost = process.env.NEXT_PUBLIC_SUPABASE_URL ? new URL(process.env.NEXT_PUBLIC_SUPABASE_URL).hostname : null;
-  const ok = u.protocol === "https:" && (u.hostname === supabaseHost || ALLOWED_HOSTS.some((r) => r.test(u.hostname)));
+  const supabase = process.env.NEXT_PUBLIC_SUPABASE_URL ? new URL(process.env.NEXT_PUBLIC_SUPABASE_URL) : null;
+  // Our own storage may be plain http only in local development (its URL says so).
+  const ours = !!supabase && u.host === supabase.host && u.protocol === supabase.protocol;
+  const ok = ours || (u.protocol === "https:" && ALLOWED_HOSTS.some((r) => r.test(u.hostname)));
   if (!ok) throw new Error(`Refusing to fetch media from ${u.hostname}`);
   const res = await fetch(url, { redirect: "follow" });
   if (!res.ok) throw new Error(`Couldn't fetch media (${res.status})`);

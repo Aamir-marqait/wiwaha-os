@@ -105,6 +105,22 @@ describe("Design: AI moodboards", () => {
     expect(w.store.messages.at(-1)?.body).toMatch(/moodboards are ready in the portal/);
   });
 
+  it("a board whose pictures all failed is never shared", async () => {
+    const w = world();
+    await prepareAiMoodboards(w.deps, "wd1");
+    const [first, second] = w.db.rows("moodboards");
+    for (const s of w.db.rows("moodboard_slides")) {
+      if (s.moodboard_id === first!.id) { s.status = "ready"; s.result_url = "https://media.test/x.png"; } else { s.status = "failed"; }
+    }
+    const r = await onMoodboardRendered(w.deps, String(first!.id));
+    if (r.status !== "done" || !r.result.approvalId) throw new Error("expected an approval");
+    decide(w, r.result.approvalId);
+    const s = await onShareDecided(w.deps, r.result.approvalId, "approved");
+    expect(s.status === "done" && s.result.shared).toBe(1);
+    expect(first!.shared_at).not.toBeNull();
+    expect(second!.shared_at).toBeNull();
+  });
+
   it("with the dial up, boards are shared as soon as they're ready", async () => {
     const w = world();
     w.store.setAgent("design", { autonomy: "act_and_notify" });

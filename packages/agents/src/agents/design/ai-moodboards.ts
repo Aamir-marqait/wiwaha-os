@@ -250,7 +250,11 @@ export async function onMoodboardRendered(deps: AgentDeps, moodboardId: string):
 
 async function shareBoards(ctx: RunContext, weddingId: string, ids: string[]): Promise<number> {
   const db = agentDb(ctx, DESIGN_TOOLS);
-  const boards = await db.update<{ id: string }>("moodboards", { id: where.in(ids), shared_at: where.isNull() }, { shared_at: ctx.now.toISOString() });
+  // A board with no finished picture stays with the team.
+  const ready = await db.select<{ moodboard_id: string }>("moodboard_slides", { where: { moodboard_id: where.in(ids), status: "ready" } });
+  const withPictures = ids.filter((id) => ready.some((s) => s.moodboard_id === id));
+  if (withPictures.length === 0) return 0;
+  const boards = await db.update<{ id: string }>("moodboards", { id: where.in(withPictures), shared_at: where.isNull() }, { shared_at: ctx.now.toISOString() });
   if (boards.length === 0) return 0;
   await db.update("wedding_stages", { wedding_id: weddingId, key: "decor" }, { status: "awaiting_client", owner_label: "You: shortlist what feels like you" });
   const [w] = await db.select<{ title: string; primary_contact_id: string | null }>("weddings", { where: { id: weddingId } });

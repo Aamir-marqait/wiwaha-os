@@ -29,7 +29,7 @@ const db = (): Admin => createAdminClient("agent");
 
 export interface WorkReport { submitted: number; finished: number; rendered: number; failed: number; more: boolean; notes: string[] }
 
-interface Slide { id: string; moodboard_id: string; wedding_id: string; base_url: string | null; reference_urls: string[]; prompt: string | null; engine: string; status: string; redo_count: number }
+interface Slide { id: string; moodboard_id: string; wedding_id: string; venue_area_id: string | null; base_url: string | null; reference_urls: string[]; prompt: string | null; engine: string; status: string; redo_count: number }
 interface Item { id: string; content_type: "reel" | "carousel" | "single_post" | "story"; status: string; title: string; script: string | null; caption: string | null; hashtags: string[]; options: Record<string, unknown>; outputs: Record<string, unknown> }
 interface Render { id: string; item_id: string; kind: "slide" | "shot" | "voice" | "music" | "reel"; idx: number; spec: Record<string, unknown>; status: string; source_url: string | null; result_url: string | null; edits: number }
 interface Job { id: string; purpose: string; subject_table: string; subject_id: string; endpoint: string | null; request_id: string | null; status_url: string | null; response_url: string | null; status: string; input: Record<string, unknown>; attempts: number }
@@ -67,7 +67,7 @@ async function boardDone(moodboardId: string): Promise<void> {
 }
 
 async function workSlides(report: WorkReport, deadline: number): Promise<void> {
-  const { data } = await db().from("moodboard_slides").select("id, moodboard_id, wedding_id, base_url, reference_urls, prompt, engine, status, redo_count").eq("status", "queued").order("created_at").limit(10);
+  const { data } = await db().from("moodboard_slides").select("id, moodboard_id, wedding_id, venue_area_id, base_url, reference_urls, prompt, engine, status, redo_count").eq("status", "queued").order("created_at").limit(10);
   const slides = (data ?? []) as Slide[];
   if (!slides.length) return;
   const f = fal();
@@ -89,11 +89,19 @@ async function workSlides(report: WorkReport, deadline: number): Promise<void> {
       }
       continue;
     }
-    // No AI available for this slide: our own template photo stands in, clearly labelled.
-    const ref = (s.reference_urls ?? [])[0] ?? null;
+    // No AI available for this slide: our own template photo stands in, or a
+    // real decorated photo of the same area, clearly labelled.
+    let ref = (s.reference_urls ?? [])[0] ?? null;
+    let from = "our template photo for this area";
+    if (!ref && s.venue_area_id) {
+      const { data: past } = await db().from("media_assets").select("url").eq("venue_area_id", s.venue_area_id).eq("kind", "image").in("look", ["decorated", "event"]).eq("status", "ready").order("created_at", { ascending: false }).limit(1);
+      ref = (past?.[0]?.url as string | undefined) ?? null;
+      from = "a past event in this space";
+    }
+    const off = !f.live ? "AI pictures are off until FAL_KEY is set" : "No plain photo of this area to dress";
     const patch = ref
-      ? { status: "ready", engine: "reference", result_url: ref, error: s.engine === "ai" ? "AI pictures are off until FAL_KEY is set: showing our template photo for this area." : null }
-      : { status: "failed", error: s.engine === "ai" ? "AI pictures are off until FAL_KEY is set, and there's no template photo for this area yet." : "No plain photo or template photo for this area yet." };
+      ? { status: "ready", engine: "reference", result_url: ref, error: s.engine === "ai" ? `${off}: showing ${from}.` : null }
+      : { status: "failed", error: s.engine === "ai" ? `${off}, and there's no template or past-event photo for this area yet.` : "No plain photo or template photo for this area yet." };
     if (await claim("moodboard_slides", s.id, "queued", patch.status, patch)) {
       if (patch.status === "ready") report.rendered++; else report.failed++;
       await boardDone(s.moodboard_id);

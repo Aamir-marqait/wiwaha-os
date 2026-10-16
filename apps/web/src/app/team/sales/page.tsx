@@ -40,7 +40,7 @@ export default async function SalesPage() {
         <Stat label="Calls answered" value={c.length ? pct(answered, c.length) : "—"} hint={`${c.length} inbound, 30 days`} />
       </div>
 
-      <div className="mt-5 grid gap-5 lg:grid-cols-[1fr_360px]">
+      <div className="mt-5 grid gap-5 *:min-w-0 lg:grid-cols-[1fr_360px]">
         <div className="space-y-5">
           <Card>
             <CardHeader title="Funnel by source" subtitle={replyTimes.length ? `Median first reply ${Math.round(Math.min(...replyTimes))}–${Math.round(Math.max(...replyTimes))} min across sources` : "Reply times appear once replies are sent"} />
