@@ -21,11 +21,16 @@ export default async function CataloguePage({ params }: { params: Promise<{ key:
   if (spec.fixed) q = q.match(spec.fixed);
   for (const o of spec.order) q = q.order(o.column, { ascending: o.ascending !== false });
   const { data } = await q.limit(1000);
+  const refs: Record<string, { id: string; label: string }[]> = {};
+  for (const f of spec.fields.filter((x) => x.kind === "ref" && x.ref)) {
+    const { data: opts } = await supabase.from(f.ref!.table).select(`id, ${f.ref!.label}`).order(f.ref!.label).limit(500);
+    refs[f.key] = ((opts ?? []) as unknown as Record<string, unknown>[]).map((o) => ({ id: String(o.id), label: String(o[f.ref!.label] ?? "") }));
+  }
   return (
     <>
       <Link href="/team/settings/lists" className="text-sm text-sage-700 hover:underline">← All lists</Link>
       <PageTitle title={spec.title} subtitle={spec.description} />
-      <CatalogueEditor spec={spec} rows={(data ?? []) as Record<string, unknown>[]} canEdit={spec.editRoles.includes(viewer.profile.role)} />
+      <CatalogueEditor spec={spec} rows={(data ?? []) as Record<string, unknown>[]} canEdit={spec.editRoles.includes(viewer.profile.role)} refs={refs} />
     </>
   );
 }

@@ -17,6 +17,7 @@ const en = {
   shortlist: "Shortlist", not_for_us: "Not for us", standard: "Standard", custom: "Custom", pay_now: "Pay now", paid: "Paid, thank you", upcoming: "Upcoming", due: "due",
   send: "Send", chat_help: "Ask anything, or tell us a decision. Your event manager and the Wedding Room assistant reply here.", add_guest: "Add guest", submit_rooming: "Send rooming list",
   nothing_yet: "Nothing here yet.", stage_not_started: "This opens when you press Start on the stage in Home.",
+  decor_q_title: "Your décor questionnaire", decor_q_help: "Tell us about your traditions, colours and the touches you love. We'll make a moodboard for every function, showing each space at Wiwaha dressed your way.", decor_q_send: "Send to our décor team", decor_q_sending: "Sending…", decor_preparing: "Thank you! Our team is preparing your moodboards. We'll message you when they're ready.", as_it_is: "The space as it is", could_look: "How it could look", ai_preview: "AI preview: a guide to the mood, not exact pieces", ask_change: "Ask for a change", change_sent: "Thank you, we're on it.", download_pdf: "Download PDF",
 };
 type Dict = typeof en;
 const kn: Dict = {
@@ -31,6 +32,7 @@ const kn: Dict = {
   shortlist: "ಆಯ್ಕೆ ಮಾಡಿ", not_for_us: "ನಮಗಲ್ಲ", standard: "ಸಾಮಾನ್ಯ", custom: "ವಿಶೇಷ", pay_now: "ಈಗ ಪಾವತಿಸಿ", paid: "ಪಾವತಿಸಲಾಗಿದೆ, ಧನ್ಯವಾದಗಳು", upcoming: "ಮುಂಬರುವ", due: "ಅಂತಿಮ ದಿನಾಂಕ",
   send: "ಕಳುಹಿಸಿ", chat_help: "ಏನಾದರೂ ಕೇಳಿ ಅಥವಾ ನಿಮ್ಮ ನಿರ್ಧಾರ ತಿಳಿಸಿ. ನಿಮ್ಮ ಈವೆಂಟ್ ಮ್ಯಾನೇಜರ್ ಇಲ್ಲಿ ಉತ್ತರಿಸುತ್ತಾರೆ.", add_guest: "ಅತಿಥಿ ಸೇರಿಸಿ", submit_rooming: "ಕೊಠಡಿ ಪಟ್ಟಿ ಕಳುಹಿಸಿ",
   nothing_yet: "ಇನ್ನೂ ಏನೂ ಇಲ್ಲ.", stage_not_started: "ಮುಖಪುಟದಲ್ಲಿ ಈ ಹಂತವನ್ನು ಪ್ರಾರಂಭಿಸಿದಾಗ ಇದು ತೆರೆಯುತ್ತದೆ.",
+  decor_q_title: "ನಿಮ್ಮ ಅಲಂಕಾರ ಪ್ರಶ್ನಾವಳಿ", decor_q_help: "ನಿಮ್ಮ ಸಂಪ್ರದಾಯಗಳು, ಬಣ್ಣಗಳು ಮತ್ತು ನಿಮಗೆ ಇಷ್ಟವಾದ ಅಲಂಕಾರಗಳ ಬಗ್ಗೆ ತಿಳಿಸಿ. ಪ್ರತಿ ಕಾರ್ಯಕ್ರಮಕ್ಕೂ Wiwaha ದ ಪ್ರತಿಯೊಂದು ಸ್ಥಳವನ್ನು ನಿಮ್ಮ ಇಷ್ಟದಂತೆ ತೋರಿಸುವ ಮೂಡ್‌ಬೋರ್ಡ್ ಸಿದ್ಧಪಡಿಸುತ್ತೇವೆ.", decor_q_send: "ನಮ್ಮ ಅಲಂಕಾರ ತಂಡಕ್ಕೆ ಕಳುಹಿಸಿ", decor_q_sending: "ಕಳುಹಿಸಲಾಗುತ್ತಿದೆ…", decor_preparing: "ಧನ್ಯವಾದಗಳು! ನಮ್ಮ ತಂಡ ನಿಮ್ಮ ಮೂಡ್‌ಬೋರ್ಡ್‌ಗಳನ್ನು ಸಿದ್ಧಪಡಿಸುತ್ತಿದೆ. ಸಿದ್ಧವಾದಾಗ ನಿಮಗೆ ತಿಳಿಸುತ್ತೇವೆ.", as_it_is: "ಈಗಿರುವ ಸ್ಥಳ", could_look: "ಹೀಗೆ ಕಾಣಬಹುದು", ai_preview: "AI ಮುನ್ನೋಟ: ಮನೋಭಾವದ ಮಾರ್ಗದರ್ಶಿ, ನಿಖರ ವಸ್ತುಗಳಲ್ಲ", ask_change: "ಬದಲಾವಣೆ ಕೇಳಿ", change_sent: "ಧನ್ಯವಾದಗಳು, ನಾವು ನೋಡಿಕೊಳ್ಳುತ್ತೇವೆ.", download_pdf: "PDF ಡೌನ್‌ಲೋಡ್",
 };
 const hi: Dict = {
   home: "होम", brief: "ब्रीफ़", menus: "मेन्यू", decor: "सजावट", quote: "कोटेशन", payments: "भुगतान", guests: "मेहमान और कमरे", family: "परिवार", chat: "चैट",
@@ -44,6 +46,7 @@ const hi: Dict = {
   shortlist: "पसंद करें", not_for_us: "हमारे लिए नहीं", standard: "मानक", custom: "कस्टम", pay_now: "अभी भुगतान करें", paid: "भुगतान हो गया, धन्यवाद", upcoming: "आगामी", due: "देय",
   send: "भेजें", chat_help: "कुछ भी पूछें या अपना फ़ैसला बताएँ। आपके इवेंट मैनेजर यहीं जवाब देंगे।", add_guest: "मेहमान जोड़ें", submit_rooming: "कमरों की सूची भेजें",
   nothing_yet: "अभी यहाँ कुछ नहीं है।", stage_not_started: "होम पर यह चरण शुरू करने के बाद यह खुलेगा।",
+  decor_q_title: "आपकी सजावट प्रश्नावली", decor_q_help: "अपनी परंपराओं, रंगों और पसंदीदा सजावट के बारे में बताइए। हम हर समारोह के लिए मूडबोर्ड बनाएँगे, जिसमें Wiwaha की हर जगह आपकी पसंद से सजी दिखेगी।", decor_q_send: "हमारी सजावट टीम को भेजें", decor_q_sending: "भेजा जा रहा है…", decor_preparing: "धन्यवाद! हमारी टीम आपके मूडबोर्ड तैयार कर रही है। तैयार होते ही हम आपको बताएँगे।", as_it_is: "जगह अभी जैसी है", could_look: "ऐसी दिख सकती है", ai_preview: "AI पूर्वावलोकन: माहौल की झलक, सटीक सामान नहीं", ask_change: "बदलाव बताएँ", change_sent: "धन्यवाद, हम इस पर काम कर रहे हैं।", download_pdf: "PDF डाउनलोड करें",
 };
 const DICTS: Record<Lang, Dict> = { en, kn, hi };
 

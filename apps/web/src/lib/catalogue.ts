@@ -6,7 +6,7 @@ import type { AppRole } from "@wiwaha/db";
  * (`components/catalogue-editor.tsx`) renders each from this spec; the
  * database's row-level security decides who may write.
  */
-export type FieldKind = "text" | "textarea" | "number" | "rupees" | "percent" | "date" | "select" | "checkbox" | "image" | "images";
+export type FieldKind = "text" | "textarea" | "number" | "rupees" | "percent" | "date" | "select" | "checkbox" | "image" | "images" | "ref";
 export interface FieldSpec {
   key: string;
   label: string;
@@ -18,6 +18,8 @@ export interface FieldSpec {
   placeholder?: string;
   /** Default for a new row. */
   initial?: string | number | boolean;
+  /** kind "ref": a row of another table, chosen from a list the page loads (id + its label column). */
+  ref?: { table: string; label: string };
 }
 export interface CatalogueSpec {
   key: string;
@@ -89,6 +91,7 @@ export const CATALOGUES: Record<string, CatalogueSpec> = {
     fields: [
       { key: "title", label: "Title", kind: "text", required: true, primary: true, placeholder: "e.g. Marigold arch" },
       { key: "area", label: "Area", kind: "select", options: DECOR_AREAS, required: true, initial: "Main door entry" },
+      { key: "venue_area_id", label: "Venue area (guides AI moodboards)", kind: "ref", ref: { table: "venue_areas", label: "name" } },
       { key: "function_type", label: "Function (optional)", kind: "select", options: ["", ...FUNCTION_TYPES], initial: "" },
       { key: "design_kind", label: "Standard or custom", kind: "select", options: ["standard", "custom"], required: true, initial: "standard" },
       { key: "reference_image_url", label: "The area as it is", kind: "image" },
@@ -294,6 +297,10 @@ export function toRow(spec: CatalogueSpec, values: CatalogueValues): { row: Reco
         break;
       case "select":
         if (!f.options?.includes(s)) return { error: `Choose a ${f.label.toLowerCase()}.` };
+        row[f.key] = s;
+        break;
+      case "ref":
+        if (!/^[0-9a-f-]{36}$/i.test(s)) return { error: `Choose a ${f.label.toLowerCase()}.` };
         row[f.key] = s;
         break;
       default:

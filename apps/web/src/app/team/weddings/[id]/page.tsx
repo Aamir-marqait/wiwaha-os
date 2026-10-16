@@ -10,6 +10,7 @@ import { EFFECT_LABELS, isEffect } from "@/lib/payment-parts";
 import { createClient } from "@/lib/supabase/server";
 import { OperationsPanels } from "./closeout";
 import { FamilyForm, FunctionsEditor } from "./family-forms";
+import { AiMoodboards } from "./ai-moodboards";
 import { CostingCard } from "./costing";
 import { DecorStockCard } from "./decor-stock";
 import { GuestPanel } from "./guest-panel";
@@ -76,9 +77,10 @@ export default async function WeddingRoom({ params, searchParams }: { params: Pr
       {tab === "overview" ? <Overview supabase={supabase} w={w} id={id} role={role} canEdit={canEdit} /> : null}
       {tab === "decor" ? (
         <div className="space-y-5">
+          <AiMoodboards supabase={supabase} weddingId={id} canEdit={role === "owner" || (role === "event_manager" && w.event_manager_id === viewer.userId)} />
           <PlanningPanels supabase={supabase} weddingId={id} role={role} show={["decor"]} />
           <DecorStockCard supabase={supabase} weddingId={id} />
-          <p className="text-sm text-ink-soft">Moodboards start from the <Link href="/team/decor/templates" className="text-sage-700 underline">décor templates by area</Link>.</p>
+          <p className="text-sm text-ink-soft">AI moodboards dress the plain photos in <Link href="/team/decor/areas" className="text-sage-700 underline">venue areas</Link>, guided by the <Link href="/team/decor/templates" className="text-sage-700 underline">décor templates by area</Link>.</p>
         </div>
       ) : null}
       {tab === "entertainment" ? <SelectionsPanel supabase={supabase} weddingId={id} vertical="entertainment" canEdit={canVertical} /> : null}

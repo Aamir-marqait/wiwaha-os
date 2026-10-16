@@ -198,3 +198,23 @@ export async function chooseOption(selectionId: string, choice: "chosen" | "decl
   const { error } = await supabase.rpc("client_choose_selection", { p_id: selectionId, p_choice: choice });
   return result([`/portal/options/${vertical}`], error);
 }
+
+/** The décor questionnaire: save as you go, then send it to the team (who make the moodboards). */
+export async function saveDecorBrief(weddingId: string, answers: Record<string, unknown>, submit: boolean): Promise<Result> {
+  await requireClient();
+  const supabase = await createClient("portal");
+  const { error } = await supabase.rpc("save_decor_brief", { p_wedding: weddingId, p_answers: answers, p_submit: submit });
+  if (submit) route(error);
+  const r = result(["/portal/decor"], error);
+  return r.error ? r : { ok: submit ? "Thank you! Your moodboards are on their way." : "Saved." };
+}
+
+/** Ask for a change on one moodboard picture. */
+export async function noteMoodboardSlide(slideId: string, note: string): Promise<Result> {
+  await requireClient();
+  const supabase = await createClient("portal");
+  const { error } = await supabase.rpc("client_note_moodboard_slide", { p_id: slideId, p_note: note });
+  route(error);
+  const r = result(["/portal/decor"], error);
+  return r.error ? r : { ok: "Thank you, we're on it." };
+}

@@ -32,6 +32,7 @@ const GROUPS: NavGroup[] = [
     { href: "/team/weddings/new", label: "New wedding", icon: Plus, roles: ["owner", "sales"] },
   ] },
   { section: "decor", title: SECTION_LABELS.decor, items: [
+    { href: "/team/decor/areas", label: "Venue areas", icon: MapPin },
     { href: "/team/decor", label: "Décor stock", icon: Flower2, exact: true },
     { href: "/team/decor/templates", label: "Templates by area", icon: LayoutTemplate },
     { href: "/team/decor/assignments", label: "Assigned to events", icon: Sparkles },
