@@ -47,8 +47,14 @@ export async function onboardWedding(deps: AgentDeps, weddingId: string): Promis
     const pace = planning.allow_early_start
       ? "Your planning portal is where it all comes together: each stage has a suggested start date, but you choose when to begin."
       : `Active planning opens on ${opens}. Until then, share any ideas you love in your portal or the family WhatsApp group; we'll note every one and pick them up when planning begins.`;
-    const template = `Dear ${first},\n\nCongratulations, and welcome to the Wiwaha family! We're honoured that you've chosen our estate for ${formatDateIST(w.event_start, { day: "numeric", month: "long", year: "numeric" })}.\n\n${em ? `${em.full_name.split(" ")[0]} will be your event manager and your first point of contact. ` : ""}${pace} Your login details are on their way by email.\n\nWe've got this handled, so you can simply enjoy the journey.\n\nWarmly,\nTeam Wiwaha`;
-    const letter = await writeText(ctx, { policies: POLICIES, facts: { first_name: first, couple: w.title, event_date: formatDateIST(w.event_start, { day: "numeric", month: "long", year: "numeric" }), event_manager: em?.full_name ?? null, planning_opens: opens, early_start_allowed: planning.allow_early_start }, task: "Write the welcome letter.", template, clientFacing: true });
+    // The portal and how to sign in, so the letter works on WhatsApp too (no passwords: a one-tap link by email).
+    const portalUrl = deps.channels ? `${deps.channels.appUrl.replace(/\/$/, "")}/portal/login` : null;
+    const signIn = primary?.email ?? null;
+    const access = portalUrl
+      ? `Your wedding portal: ${portalUrl}\nSign in with ${signIn ?? "the email you gave us"}; we'll send a one-tap link to that inbox, no password needed.${contacts.filter((c) => c.email && c.id !== primary?.id).length ? " Your family members can sign in the same way with their own emails." : ""}`
+      : "Your login details are on their way by email.";
+    const template = `Dear ${first},\n\nCongratulations, and welcome to the Wiwaha family! We're honoured that you've chosen our estate for ${formatDateIST(w.event_start, { day: "numeric", month: "long", year: "numeric" })}.\n\n${em ? `${em.full_name.split(" ")[0]} will be your event manager and your first point of contact. ` : ""}${pace}\n\n${access}\n\nWe've got this handled, so you can simply enjoy the journey.\n\nWarmly,\nTeam Wiwaha`;
+    const letter = await writeText(ctx, { policies: POLICIES, facts: { first_name: first, couple: w.title, portal_url: portalUrl, sign_in_email: signIn, event_date: formatDateIST(w.event_start, { day: "numeric", month: "long", year: "numeric" }), event_manager: em?.full_name ?? null, planning_opens: opens, early_start_allowed: planning.allow_early_start }, task: "Write the welcome letter.", template, clientFacing: true });
     let letters = 0;
     for (const ch of rules.channels) {
       const to = ch === "whatsapp" ? primary?.phone_e164 : primary?.email;

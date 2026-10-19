@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "1.32.1",
+    "@pdf-lib/fontkit": "1.1.1",
     "@supabase/ssr": "^0.12.7",
     "@supabase/supabase-js": "^2.117.2",
     "@wiwaha/agents": "workspace:*",
@@ -19,11 +20,15 @@
     "@wiwaha/integrations": "workspace:*",
     "@wiwaha/policy": "workspace:*",
     "@wiwaha/ui": "workspace:*",
+    "fflate": "0.8.2",
+    "ffmpeg-static": "5.2.0",
     "lucide-react": "^1.51.0",
     "next": "16.3.8",
+    "pdf-lib": "1.17.1",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
     "server-only": "^0.0.1",
+    "sharp": "0.35.5",
     "zod": "^4.1.12"
   },
   "devDependencies": {

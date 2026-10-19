@@ -6,6 +6,7 @@ import { where } from "../../framework/db";
 import { agentDb, alertStaff, proposeClientMessage, requestApproval } from "../../framework/kit";
 import { runAgent, type RunOutcome } from "../../framework/runner";
 import type { AgentDeps } from "../../framework/types";
+import { openDecorQuestionnaire, onShareDecided } from "./ai-moodboards";
 import { DESIGN_GATE } from "./gate";
 import { DESIGN_TOOLS } from "./tools";
 
@@ -59,11 +60,12 @@ export async function generateMoodboards(deps: AgentDeps, weddingId: string): Pr
 export async function onShortlisted(deps: AgentDeps, moodboardId: string): Promise<RunOutcome<{ details: number }>> {
   return runAgent(deps, DESIGN, { action: "moodboard_shortlisted", input: { moodboard_id: moodboardId }, fallbackTitle: "Refine a shortlisted moodboard" }, async (ctx) => {
     const db = agentDb(ctx, DESIGN_TOOLS);
-    const [m] = await db.select<{ id: string; wedding_id: string; function_id: string; round: number; theme: string; palette: string[]; description: string | null; design_kind: string; client_feedback: string | null }>("moodboards", { where: { id: moodboardId } });
+    const [m] = await db.select<{ id: string; wedding_id: string; function_id: string; round: number; theme: string; palette: string[]; description: string | null; design_kind: string; client_feedback: string | null; source: string | null }>("moodboards", { where: { id: moodboardId } });
     if (!m) throw new Error("Moodboard not found");
     const already = await db.select("moodboards", { where: { parent_id: m.id } });
     let details = 0;
-    if (already.length === 0 && m.round === 1) {
+    // AI boards are refined slide by slide from the couple's notes, not with prompt-only detail boards.
+    if (already.length === 0 && m.round === 1 && m.source !== "ai") {
       const variations = detailVariations(m).map((v) => ({ wedding_id: m.wedding_id, function_id: m.function_id, round: 2, parent_id: m.id, theme: v.theme, palette: v.palette, design_kind: m.design_kind, description: m.client_feedback ? `${v.description} Couple's note: ${m.client_feedback}` : v.description, status: "generated", images: [{ kind: "prompt", prompt: `${v.theme}, detailed close-up styling`, alt: v.theme }] }));
       await db.insert("moodboards", variations);
       details = variations.length;
@@ -108,3 +110,18 @@ export async function onCustomDecided(deps: AgentDeps, approvalId: string, statu
 }
 
 export const DESIGN_FINALISED_STATUSES = where.in(["finalised", "approved"]);
+
+/**
+ * The décor stage started. With AI moodboards on, the couple first fills in
+ * the décor questionnaire; otherwise the template boards are made straight away.
+ */
+export async function onDecorStageStarted(deps: AgentDeps, weddingId: string): Promise<RunOutcome<unknown>> {
+  const rows = await deps.store.loadPolicyRows();
+  const ai = rows.find((r) => r.key === "decor.ai_moodboards")?.value as { enabled?: boolean } | undefined;
+  return ai?.enabled === false ? generateMoodboards(deps, weddingId) : openDecorQuestionnaire(deps, weddingId);
+}
+
+/** A decision on one of Design's approvals: custom décor, or sharing AI boards. */
+export async function onDesignDecided(deps: AgentDeps, approvalId: string, status: string, kind: string | null): Promise<RunOutcome<unknown>> {
+  return kind === DESIGN_GATE.shareApproval ? onShareDecided(deps, approvalId, status) : onCustomDecided(deps, approvalId, status);
+}

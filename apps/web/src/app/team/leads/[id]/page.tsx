@@ -10,6 +10,8 @@ import { requireStaff } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { releaseEntry, rerunLeadDesk } from "../actions";
 import { HoldForm, StatusSelect } from "./lead-controls";
+import { googleCalendarLink } from "@/lib/calendar-links";
+import { env } from "@/lib/env";
 import { BookVisit, VisitCard, type SlotOption } from "./visit-panel";
 import { BookedForm } from "./booked-form";
 import { standardSplit } from "@/lib/standard-split";
@@ -81,7 +83,7 @@ export default async function LeadPage({ params, searchParams }: { params: Promi
         {canEdit ? <ActionButton action={rerunLeadDesk.bind(null, id)} pendingLabel="Lead Desk is working…">Re-run Lead Desk</ActionButton> : null}
       </div>
 
-      <div className="grid gap-5 lg:grid-cols-[1fr_340px]">
+      <div className="grid gap-5 *:min-w-0 lg:grid-cols-[1fr_340px]">
         <div className="space-y-5">
           <Card>
             <CardHeader title="Enquiry" />
@@ -146,7 +148,7 @@ export default async function LeadPage({ params, searchParams }: { params: Promi
             ) : null}
             <p className="text-sm">{contact.email ?? "No email"}</p>
             <p className="mt-2 text-xs text-ink-soft">WhatsApp {contact.consent_whatsapp ? "✓ consented" : "✗ no consent"} · Email {contact.consent_email ? "✓" : "✗"}</p>
-            {canEdit ? <div className="mt-4"><StatusSelect leadId={id} status={lead.status as LeadStatus} /></div> : null}
+            {canEdit ? <div className="mt-4"><StatusSelect leadId={id} status={lead.status as LeadStatus} lostReason={(lead.lost_reason as string | null) ?? null} /></div> : null}
           </Card>
 
           {breakdown ? (
@@ -188,6 +190,9 @@ export default async function LeadPage({ params, searchParams }: { params: Promi
                 }} />
               ))}
             </ul>
+            {(visits.data ?? []).filter((v) => v.status === "scheduled" && Date.parse(v.scheduled_at as string) > Date.now()).map((v) => (
+              <a key={`g${v.id as string}`} href={googleCalendarLink({ title: `Site visit: ${contact.full_name}`, start: v.scheduled_at as string, minutes: Number(v.duration_minutes ?? 60), details: [v.attendees ? `Coming: ${v.attendees as string}` : null, `Lead: ${env.appUrl()}/team/leads/${id}`].filter(Boolean).join("\n") })} target="_blank" rel="noreferrer" className="mt-2 inline-block text-sm text-sage-700 underline">Add visit #{v.visit_number as number} to Google Calendar</a>
+            ))}
             {canEdit ? <div className="mt-4 border-t border-line pt-4"><BookVisit leadId={id} slots={slots} /></div> : null}
           </Card>
 

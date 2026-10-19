@@ -4,6 +4,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createHash } from "node:crypto";
 import { describe, expect, it } from "vitest";
+import { shortPaymentError } from "../payment-parts";
 import { pkceOk } from "./oauth";
 import { registerTools } from "./tools";
 
@@ -63,5 +64,13 @@ describe("OAuth PKCE", () => {
     expect(pkceOk(verifier, challenge)).toBe(true);
     expect(pkceOk(verifier + "x", challenge)).toBe(false);
     expect(pkceOk("short", challenge)).toBe(false);
+  });
+});
+
+describe("Recording a payment", () => {
+  it("refuses less than the part, since paying a part fires its unlocks", () => {
+    expect(shortPaymentError(60_000_000, 180_000_000)).toMatch(/less than this part/);
+    expect(shortPaymentError(180_000_000, 180_000_000)).toBeNull();
+    expect(shortPaymentError(180_000_100, 180_000_000)).toBeNull();
   });
 });

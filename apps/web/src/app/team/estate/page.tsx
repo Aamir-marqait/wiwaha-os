@@ -24,7 +24,7 @@ export default async function EstatePage() {
   return (
     <>
       <PageTitle title="Estate" subtitle="The Estate agent raises maintenance tasks and low-stock purchase requests every morning." action={<span className="flex flex-wrap gap-2"><Link href="/team/catalogue/inventory" className={buttonClass("secondary", "sm")}>Add or edit stock items</Link><Link href="/team/catalogue/maintenance" className={buttonClass("secondary", "sm")}>Add or edit schedules</Link><Link href="/team/catalogue/rooms" className={buttonClass("secondary", "sm")}>Rooms</Link></span>} />
-      <div className="grid gap-5 lg:grid-cols-2">
+      <div className="grid gap-5 *:min-w-0 lg:grid-cols-2">
         <Card>
           <CardHeader title="Maintenance" subtitle="Garden, pool, AC, generator, pest control" />
           <ul className="divide-y divide-line/70">

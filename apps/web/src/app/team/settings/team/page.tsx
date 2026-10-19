@@ -22,7 +22,7 @@ export default async function TeamSettings() {
     <>
       <Link href="/team/settings" className="text-sm text-sage-700 hover:underline">← Settings</Link>
       <PageTitle title="Team & access" subtitle="Choose what each person sees: Sales & Marketing, Venue, Weddings, Vendors, Accounts, Client. Staff sign in at /login; couples and families at /portal/login." />
-      <div className="grid gap-5 lg:grid-cols-[1.5fr_1fr]">
+      <div className="grid gap-5 *:min-w-0 lg:grid-cols-[1.5fr_1fr]">
         <Card>
           <CardHeader title="People" />
           <ul className="divide-y divide-line/70">

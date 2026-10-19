@@ -30,7 +30,7 @@ export default async function ClientsPage() {
     <>
       <PageTitle title="Client portal" subtitle="Couples and families sign in at /portal/login. Logins are made when a wedding is booked or a family member is added, and close after the wedding day (policy: Portal access)." />
       {(weddings ?? []).length === 0 ? <Card className="p-5 text-sm text-ink-soft">No upcoming weddings.</Card> : null}
-      <div className="grid gap-5 lg:grid-cols-2">
+      <div className="grid gap-5 *:min-w-0 lg:grid-cols-2">
         {(weddings ?? []).map((w) => {
           const until = (w.portal_access_until as string | null) ?? addDays(w.event_end as string, closeDays);
           const closed = until < today;

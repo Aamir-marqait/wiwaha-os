@@ -39,7 +39,7 @@ export function Simulator() {
   }
 
   return (
-    <div className="grid gap-5 lg:grid-cols-[1fr_280px]">
+    <div className="grid gap-5 *:min-w-0 lg:grid-cols-[1fr_280px]">
       <div className="flex h-[70dvh] flex-col rounded-2xl border border-line bg-white">
         <div className="flex-1 space-y-2 overflow-y-auto p-4">
           {lines.length === 0 ? <p className="text-sm text-ink-soft">Start a call to talk to the Voice Concierge exactly as a caller would. Everything it does is real: leads, visits, tasks and approvals are created.</p> : null}

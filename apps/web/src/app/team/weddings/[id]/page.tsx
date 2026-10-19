@@ -10,8 +10,13 @@ import { EFFECT_LABELS, isEffect } from "@/lib/payment-parts";
 import { createClient } from "@/lib/supabase/server";
 import { OperationsPanels } from "./closeout";
 import { FamilyForm, FunctionsEditor } from "./family-forms";
+import { AiMoodboards } from "./ai-moodboards";
 import { CostingCard } from "./costing";
 import { DecorStockCard } from "./decor-stock";
+import { startPortalPreview } from "@/app/team/clients/preview-actions";
+import { googleCalendarLink } from "@/lib/calendar-links";
+import { env } from "@/lib/env";
+import { METHOD_LABELS } from "@/lib/finance/labels";
 import { GuestPanel } from "./guest-panel";
 import { Lifecycle } from "./lifecycle";
 import { PaymentForm } from "./panel-forms";
@@ -58,6 +63,10 @@ export default async function WeddingRoom({ params, searchParams }: { params: Pr
         <p className="text-xs font-medium uppercase tracking-[0.2em] text-gold-600">Wedding Room · {w.code as string}</p>
         <h1 className="font-serif text-4xl font-semibold">{w.title as string}</h1>
         <p className="mt-1 text-sm text-ink-soft">{formatDateIST(w.event_start as string, { weekday: "short", day: "numeric", month: "long", year: "numeric" })} – {formatDateIST(w.event_end as string)} · {(w.guest_count as number | null) ?? "?"} guests · {(w.complimentary_rooms as number)} complimentary rooms · Event manager: {m?.full_name ?? "unassigned"}</p>
+        <div className="mt-2 flex flex-wrap items-center gap-3">
+          {["owner", "sales", "event_manager"].includes(role) ? <ActionButton action={startPortalPreview.bind(null, id)} pendingLabel="Opening…">See the portal as the couple</ActionButton> : null}
+          <a href={googleCalendarLink({ title: `${w.title as string} (Wiwaha)`, start: w.event_start as string, end: w.event_end as string, allDay: true, details: `Wedding Room: ${env.appUrl()}/team/weddings/${id}` })} target="_blank" rel="noreferrer" className="text-sm text-sage-700 underline">Add to Google Calendar</a>
+        </div>
       </div>
 
       <nav aria-label="Wedding sections" className="-mx-4 mb-5 overflow-x-auto px-4 [scrollbar-width:none] sm:mx-0 sm:px-0">
@@ -76,14 +85,15 @@ export default async function WeddingRoom({ params, searchParams }: { params: Pr
       {tab === "overview" ? <Overview supabase={supabase} w={w} id={id} role={role} canEdit={canEdit} /> : null}
       {tab === "decor" ? (
         <div className="space-y-5">
+          <AiMoodboards supabase={supabase} weddingId={id} canEdit={role === "owner" || (role === "event_manager" && w.event_manager_id === viewer.userId)} />
           <PlanningPanels supabase={supabase} weddingId={id} role={role} show={["decor"]} />
-          <DecorStockCard supabase={supabase} weddingId={id} />
-          <p className="text-sm text-ink-soft">Moodboards start from the <Link href="/team/decor/templates" className="text-sage-700 underline">décor templates by area</Link>.</p>
+          <DecorStockCard supabase={supabase} weddingId={id} showMoney={["owner", "accounts", "event_manager"].includes(role)} canEdit={["owner", "event_manager", "staff", "accounts"].includes(role)} />
+          <p className="text-sm text-ink-soft">AI moodboards dress the plain photos in <Link href="/team/decor/areas" className="text-sage-700 underline">venue areas</Link>, guided by the <Link href="/team/decor/templates" className="text-sage-700 underline">décor templates by area</Link>.</p>
         </div>
       ) : null}
       {tab === "entertainment" ? <SelectionsPanel supabase={supabase} weddingId={id} vertical="entertainment" canEdit={canVertical} /> : null}
       {tab === "extras" ? (
-        <div className="grid gap-5 lg:grid-cols-2">
+        <div className="grid gap-5 *:min-w-0 lg:grid-cols-2">
           <SelectionsPanel supabase={supabase} weddingId={id} vertical="extras" canEdit={canVertical} />
           <GuestPanel supabase={supabase} w={{ id, title: w.title as string, guest_token: w.guest_token as string, guest_welcome: (w.guest_welcome as string | null) ?? null }} canEdit={canEdit} />
         </div>
@@ -109,7 +119,7 @@ async function Overview({ supabase, w, id, role, canEdit }: { supabase: Supa; w:
     supabase.from("spaces").select("id, name").eq("active", true).order("sort"),
   ]);
   return (
-    <div className="grid gap-5 lg:grid-cols-[1.4fr_1fr]">
+    <div className="grid gap-5 *:min-w-0 lg:grid-cols-[1.4fr_1fr]">
       <div className="space-y-5">
         <Lifecycle supabase={supabase} w={{ id, lead_id: (w.lead_id as string | null) ?? null, event_start: w.event_start as string, event_end: w.event_end as string, whatsapp_group_url: (w.whatsapp_group_url as string | null) ?? null }} />
         <Card>
@@ -180,7 +190,7 @@ async function Payments({ supabase, w, id, role, eventEnded }: { supabase: Supa;
   const paid = (payments ?? []).filter((p) => p.status === "paid").reduce((s, p) => s + Number(p.amount_paise), 0);
   const effectText = (e: unknown) => (isEffect(e) && e !== "none" ? ` · ${EFFECT_LABELS[e].toLowerCase()}` : "");
   return (
-    <div className="grid gap-5 lg:grid-cols-[1fr_1.2fr]">
+    <div className="grid gap-5 *:min-w-0 lg:grid-cols-[1fr_1.2fr]">
       <div className="space-y-5">
         <Card>
           <CardHeader title="Payment parts" subtitle={`${rupees(paid)} of ${rupees(w.contract_value_paise as number | null)} received`} />
@@ -191,6 +201,7 @@ async function Payments({ supabase, w, id, role, eventEnded }: { supabase: Supa;
                 <div>
                   <p className="text-sm font-medium">{p.label as string}</p>
                   <p className="text-xs text-ink-soft">{p.percent_bps != null ? `${Number(p.percent_bps) / 100}% · ` : ""}{rupees(Number(p.amount_paise))} · due {formatDateIST(p.due_on as string)}{effectText(p.effect)}</p>
+                  {p.status === "paid" ? <p className="text-xs text-ink-soft">Received {p.paid_at ? formatDateIST(p.paid_at as string) : ""}{p.method ? ` by ${METHOD_LABELS[p.method as string] ?? String(p.method)}` : ""}{p.gateway_ref ? ` · ref ${p.gateway_ref as string}` : ""}{p.receipt_number ? <> · <a href={`/api/finance/receipt/${p.id as string}`} target="_blank" rel="noreferrer" className="text-sage-700 underline">Receipt {p.receipt_number as string}</a></> : null}</p> : null}
                 </div>
                 <span className="flex flex-col items-end gap-1">
                   <Badge tone={p.status === "paid" ? "solid" : p.status === "overdue" ? "burgundy" : "gold"}>{String(p.status).replace(/_/g, " ")}</Badge>
@@ -221,7 +232,7 @@ async function Family({ supabase, id, canEdit }: { supabase: Supa; id: string; c
     supabase.from("wedding_contacts").select("contact_id, relation, is_key_contact, contact:contacts(full_name, phone_e164, email)").eq("wedding_id", id),
   ]);
   return (
-    <div className="grid gap-5 lg:grid-cols-2">
+    <div className="grid gap-5 *:min-w-0 lg:grid-cols-2">
       <Card>
         <CardHeader title="Family contacts" subtitle="Key contacts join the family WhatsApp group" />
         <ul className="divide-y divide-line/70">

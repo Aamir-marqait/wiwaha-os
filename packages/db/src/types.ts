@@ -346,3 +346,163 @@ export interface IngestLeadResult {
   is_new_lead: boolean;
   is_new_contact: boolean;
 }
+
+// ---------------------------------------------------------------------------
+// Venue library, AI moodboards and the content studio (D39–D41)
+// ---------------------------------------------------------------------------
+export type VenueAreaKind = "entrance" | "pathway" | "lawn" | "hall" | "poolside" | "amphitheatre" | "courtyard" | "rooms" | "other";
+export interface VenueArea {
+  id: string;
+  name: string;
+  kind: VenueAreaKind;
+  description: string | null;
+  space_id: string | null;
+  suits: string[];
+  sort: number;
+  active: boolean;
+}
+
+export type MediaLook = "plain" | "decorated" | "event" | "detail" | "people" | "aerial" | "other";
+export const MEDIA_LOOKS: readonly MediaLook[] = ["plain", "decorated", "event", "detail", "people", "aerial", "other"];
+export interface MediaAsset {
+  id: string;
+  kind: "image" | "video";
+  path: string;
+  url: string;
+  thumb_url: string | null;
+  content_type: string | null;
+  bytes: number | null;
+  width: number | null;
+  height: number | null;
+  duration_ms: number | null;
+  title: string | null;
+  description: string | null;
+  tags: string[];
+  folder_id: string | null;
+  venue_area_id: string | null;
+  look: MediaLook;
+  angle: string | null;
+  is_primary: boolean;
+  status: "pending" | "ready" | "failed";
+  status_error: string | null;
+  described_by: "ai" | "staff" | null;
+  created_at: string;
+}
+
+export type DecorBriefStatus = "open" | "submitted" | "generating" | "ready";
+export interface DecorBriefRow {
+  wedding_id: string;
+  status: DecorBriefStatus;
+  answers: Json;
+  sent_at: string | null;
+  submitted_at: string | null;
+  generated_at: string | null;
+}
+
+export type SlideStatus = "queued" | "rendering" | "ready" | "failed";
+export interface MoodboardSlideRow {
+  id: string;
+  moodboard_id: string;
+  wedding_id: string;
+  function_id: string | null;
+  venue_area_id: string | null;
+  area_name: string;
+  base_asset_id: string | null;
+  base_url: string | null;
+  element: string;
+  caption: string | null;
+  prompt: string | null;
+  reference_urls: string[];
+  engine: "ai" | "reference";
+  status: SlideStatus;
+  result_url: string | null;
+  edited_url: string | null;
+  client_note: string | null;
+  redo_count: number;
+  error: string | null;
+  sort: number;
+}
+
+export type MediaJobStatus = "queued" | "submitted" | "done" | "failed" | "cancelled";
+export interface MediaJobRow {
+  id: string;
+  purpose: string;
+  subject_table: string;
+  subject_id: string;
+  endpoint: string | null;
+  request_id: string | null;
+  status_url: string | null;
+  response_url: string | null;
+  status: MediaJobStatus;
+  input: Json;
+  result: Json | null;
+  error: string | null;
+  attempts: number;
+  submitted_at: string | null;
+  created_at: string;
+  /** What fal should charge for it, from agents.config.media_prices (D42). */
+  cost_usd: number | null;
+  wedding_id: string | null;
+  item_id: string | null;
+  cost_entry_id: string | null;
+}
+
+/** Something rented or bought for one event (D42). Purchases join decor_items when they arrive. */
+export interface EventDecorExtraRow {
+  id: string;
+  wedding_id: string;
+  function_id: string | null;
+  area: string | null;
+  name: string;
+  kind: "rented" | "purchased";
+  supplier: string | null;
+  vendor_id: string | null;
+  quantity: number;
+  unit_cost_paise: number;
+  total_paise: number;
+  status: "planned" | "received" | "returned" | "cancelled";
+  return_by: string | null;
+  decor_item_id: string | null;
+  cost_entry_id: string | null;
+  notes: string | null;
+  created_at: string;
+}
+
+export type StudioContentType = "reel" | "carousel" | "single_post" | "story";
+export const STUDIO_CONTENT_TYPES: readonly StudioContentType[] = ["reel", "carousel", "single_post", "story"];
+export type StudioItemStatus = "drafting" | "draft" | "approved" | "generating" | "generated" | "failed" | "discarded";
+export interface StudioItemRow {
+  id: string;
+  plan_id: string | null;
+  content_type: StudioContentType;
+  scheduled_for: string | null;
+  pillar: string | null;
+  title: string;
+  brief: string | null;
+  hook: string | null;
+  script: string | null;
+  caption: string | null;
+  hashtags: string[];
+  options: Json;
+  status: StudioItemStatus;
+  change_count: number;
+  outputs: Json;
+  progress: Json;
+  error: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export type StudioRenderKind = "slide" | "shot" | "voice" | "music" | "reel";
+export interface StudioRenderRow {
+  id: string;
+  item_id: string;
+  kind: StudioRenderKind;
+  idx: number;
+  spec: Json;
+  status: "queued" | "rendering" | "ready" | "failed" | "skipped";
+  source_url: string | null;
+  result_url: string | null;
+  edits: number;
+  error: string | null;
+}

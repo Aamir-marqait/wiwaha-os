@@ -22,7 +22,7 @@ export default async function LinksPage() {
     <>
       <Link href="/team/settings" className="text-sm text-sage-700 hover:underline">← Settings</Link>
       <PageTitle title="Links" subtitle="Who signs in where. Everyone uses their own email; what they see depends on who they are." />
-      <div className="grid gap-5 lg:grid-cols-2">
+      <div className="grid gap-5 *:min-w-0 lg:grid-cols-2">
         <Card>
           <CardHeader title="1. Founder: main management" subtitle="Prashanth signs in here and sees everything: approvals, costing, payments, access for every team member." />
           <div className="space-y-2 p-4"><CopyField label="Management login" value={`${base}/login`} /></div>

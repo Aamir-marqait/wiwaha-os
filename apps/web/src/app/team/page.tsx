@@ -7,7 +7,8 @@ import { Markdown } from "@/components/markdown";
 import { relativeFromNow } from "@/components/time";
 import { requireStaff } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
-import { generateBriefNow } from "./actions";
+import { aiSpend } from "@/lib/media/spend";
+import { generateBriefNow, markNotificationRead } from "./actions";
 
 export const metadata = { title: "Today" };
 
@@ -21,7 +22,12 @@ export default async function TodayPage({ searchParams }: { searchParams: Promis
   const isOwner = viewer.profile.role === "owner";
   const since = new Date(Date.now() - 86_400_000).toISOString();
 
-  const [brief, newLeads, approvals, visits, myTasks, queue, toSend] = await Promise.all([
+  const role = viewer.profile.role;
+  const seesSales = ["owner", "sales"].includes(role);
+  const seesGuests = ["owner", "event_manager"].includes(role);
+  const seesSpend = ["owner", "accounts"].includes(role);
+  const soon = new Date(Date.now() + 2 * 86_400_000).toISOString();
+  const [brief, newLeads, approvals, visits, myTasks, queue, toSend, followUps, guestAsks, notes, spend] = await Promise.all([
     supabase.from("briefs").select("*").eq("kind", "morning").is("recipient_id", null).order("for_date", { ascending: false }).limit(1).maybeSingle(),
     supabase.from("leads").select("id, source, score, hot, date_wanted, guest_count, created_at, contact:contacts(full_name)").gte("last_touch_at", since).order("score", { ascending: false, nullsFirst: false }).limit(6),
     supabase.from("approvals").select("id", { count: "exact", head: true }).eq("status", "pending"),
@@ -29,6 +35,11 @@ export default async function TodayPage({ searchParams }: { searchParams: Promis
     supabase.from("tasks").select("id, title, due_at, priority, status, wedding:weddings(title)").eq("owner_id", viewer.userId).in("status", ["todo", "in_progress", "blocked"]).order("due_at").limit(8),
     supabase.from("human_queue").select("id, title, detail, reason, created_at, lead_id").neq("status", "done").order("created_at", { ascending: false }).limit(6),
     supabase.from("messages").select("id", { count: "exact", head: true }).eq("status", "approved").eq("direction", "outbound").in("channel", ["whatsapp", "email"]),
+    // The one follow-up call after a visit (policy), due in the next two days or overdue.
+    seesSales ? supabase.from("visits").select("id, follow_up_due_at, lead:leads(id, status, contact:contacts(full_name, phone_e164))").eq("follow_up_outcome", "pending").not("follow_up_due_at", "is", null).lte("follow_up_due_at", soon).order("follow_up_due_at").limit(8) : Promise.resolve({ data: [] }),
+    seesGuests ? supabase.from("guest_requests").select("id, option_name, guest_name, room, quantity, wanted_on, created_at, wedding:weddings(id, title)").eq("status", "new").order("created_at", { ascending: false }).limit(8) : Promise.resolve({ data: [] }),
+    supabase.from("notifications").select("id, title, body, link, created_at").is("read_at", null).order("created_at", { ascending: false }).limit(8),
+    seesSpend ? aiSpend().catch(() => null) : Promise.resolve(null),
   ]);
 
   const b = brief.data as BriefRow | null;
@@ -42,15 +53,17 @@ export default async function TodayPage({ searchParams }: { searchParams: Promis
       <PageTitle title={`${greeting}, ${viewer.profile.full_name.split(" ")[0]}`} subtitle={formatDateIST(today, { weekday: "long", day: "numeric", month: "long", year: "numeric" })} />
 
       {isOwner ? <p className="mb-3 text-sm"><Link href="/team/owner" className="text-sage-700 underline">Your five numbers, bookings and profit →</Link></p> : null}
-      <div className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-5">
+      <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7">
         <Stat label="New enquiries (24 h)" value={(newLeads.data ?? []).length} hint={<Link href="/team/leads" className="underline">Lead inbox</Link>} />
         <Stat label="Waiting for approval" value={approvals.count ?? 0} tone={(approvals.count ?? 0) > 0 ? "burgundy" : "sage"} hint={<Link href="/team/approvals" className="underline">Approval queue</Link>} />
         <Stat label="Approved, ready to send" value={toSend.count ?? 0} tone={(toSend.count ?? 0) > 0 ? "gold" : "sage"} hint={<Link href="/team/outbox" className="underline">To send</Link>} />
         <Stat label="Visits today & tomorrow" value={(visits.data ?? []).length} tone="gold" />
         <Stat label="My overdue tasks" value={overdue} tone={overdue ? "burgundy" : "sage"} />
+        {seesSales ? <Stat label="Follow-up calls due" value={(followUps.data ?? []).length} tone={(followUps.data ?? []).length ? "gold" : "sage"} hint="One call, two days after a visit" /> : null}
+        {seesGuests ? <Stat label="New guest requests" value={(guestAsks.data ?? []).length} tone={(guestAsks.data ?? []).length ? "gold" : "sage"} /> : null}
       </div>
 
-      <div className="grid gap-5 lg:grid-cols-[1.6fr_1fr]">
+      <div className="grid gap-5 *:min-w-0 lg:grid-cols-[1.6fr_1fr]">
         <Card>
           <CardHeader
             title={b ? b.title : "Morning brief"}
@@ -63,6 +76,80 @@ export default async function TodayPage({ searchParams }: { searchParams: Promis
         </Card>
 
         <div className="space-y-5">
+          {(notes.data ?? []).length ? (
+            <Card>
+              <CardHeader title="For you" subtitle="Alerts from guests, agents and the team" />
+              <ul className="divide-y divide-line/70">
+                {(notes.data ?? []).map((n) => (
+                  <li key={n.id as string} className="flex items-start justify-between gap-2 px-4 py-3 sm:px-5">
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium">{n.link ? <Link href={n.link as string} className="hover:underline">{n.title as string}</Link> : (n.title as string)}</p>
+                      <p className="text-xs text-ink-soft">{n.body ? `${n.body as string} · ` : ""}{relativeFromNow(n.created_at as string)}</p>
+                    </div>
+                    <ActionButton action={markNotificationRead.bind(null, n.id as string)} variant="ghost" pendingLabel="…">Done</ActionButton>
+                  </li>
+                ))}
+              </ul>
+            </Card>
+          ) : null}
+
+          {seesSales ? (
+            <Card>
+              <CardHeader title="Follow-up calls" subtitle="Exactly one, two days after the visit; if there's no answer, we stop" />
+              <ul className="divide-y divide-line/70">
+                {(followUps.data ?? []).length === 0 ? <li className="px-5 py-4 text-sm text-ink-soft">None due.</li> : null}
+                {(followUps.data ?? []).map((f) => {
+                  const lead = (Array.isArray(f.lead) ? f.lead[0] : f.lead) as { id: string; contact: { full_name: string; phone_e164: string | null } | { full_name: string; phone_e164: string | null }[] | null } | null;
+                  const c = Array.isArray(lead?.contact) ? lead?.contact[0] : lead?.contact;
+                  const late = Date.parse(f.follow_up_due_at as string) < Date.now();
+                  return (
+                    <li key={f.id as string} className="flex items-center justify-between gap-2 px-4 py-3 sm:px-5">
+                      <div className="min-w-0">
+                        <Link href={lead ? `/team/leads/${lead.id}` : "#"} className="text-sm font-medium hover:underline">{c?.full_name ?? "Lead"}</Link>
+                        <p className={`text-xs ${late ? "text-burgundy-700" : "text-ink-soft"}`}>{late ? "Overdue: was due " : "Due "}{relativeFromNow(f.follow_up_due_at as string)}</p>
+                      </div>
+                      {c?.phone_e164 ? <a href={`tel:${c.phone_e164}`} className="shrink-0 rounded-full bg-sage-100 px-3 py-1.5 text-xs font-medium text-sage-800">Call</a> : null}
+                    </li>
+                  );
+                })}
+              </ul>
+            </Card>
+          ) : null}
+
+          {seesGuests && (guestAsks.data ?? []).length ? (
+            <Card>
+              <CardHeader title="Guest requests" subtitle="From the guests' page; confirm them in the wedding's Extras tab" />
+              <ul className="divide-y divide-line/70">
+                {(guestAsks.data ?? []).map((g) => {
+                  const w = (Array.isArray(g.wedding) ? g.wedding[0] : g.wedding) as { id: string; title: string } | null;
+                  return (
+                    <li key={g.id as string} className="px-4 py-3 sm:px-5">
+                      <Link href={w ? `/team/weddings/${w.id}?tab=extras` : "#"} className="text-sm font-medium hover:underline">{g.option_name as string}{Number(g.quantity) > 1 ? ` × ${g.quantity as number}` : ""}</Link>
+                      <p className="text-xs text-ink-soft">{[g.guest_name, g.room ? `room ${g.room as string}` : null, w?.title, g.wanted_on ? formatDateIST(g.wanted_on as string, { day: "numeric", month: "short" }) : null].filter(Boolean).join(" · ")}</p>
+                    </li>
+                  );
+                })}
+              </ul>
+            </Card>
+          ) : null}
+
+          {spend ? (() => {
+            const pct = spend.budgetUsd ? Math.round((spend.monthUsd / spend.budgetUsd) * 100) : 0;
+            const warn = pct >= spend.warnAtPct;
+            const inr = (usd: number) => `₹${Math.round(usd * spend.inrPerUsd).toLocaleString("en-IN")}`;
+            return (
+              <Card>
+                <CardHeader title="AI credits" subtitle={spend.live ? "Moodboard pictures, voiceovers, music and clips (fal)" : "fal isn't connected yet: nothing is being spent"} action={<a href="https://fal.ai/dashboard/billing" target="_blank" rel="noreferrer" className="text-sm text-sage-700 underline">Top up</a>} />
+                <div className="space-y-2 px-4 pb-4 text-sm sm:px-5">
+                  {spend.balanceUsd !== null ? <p><span className="font-serif text-2xl font-semibold">${spend.balanceUsd.toFixed(2)}</span> <span className="text-ink-soft">left in the fal account ({inr(spend.balanceUsd)})</span></p> : spend.live ? <p className="text-xs text-ink-soft">To see the live balance here, use a fal key with billing read access.</p> : null}
+                  <p>This month: <strong>${spend.monthUsd.toFixed(2)}</strong> of ${spend.budgetUsd} budget ({inr(spend.monthUsd)})</p>
+                  <div className="h-2 rounded-full bg-ivory-100"><div className={`h-2 rounded-full ${warn ? "bg-burgundy-600" : "bg-sage-600"}`} style={{ width: `${Math.min(100, pct)}%` }} /></div>
+                  <p className="text-xs text-ink-soft">Moodboards ${spend.moodboardsUsd.toFixed(2)} · Content ${spend.contentUsd.toFixed(2)} · {spend.jobs} AI job{spend.jobs === 1 ? "" : "s"}{warn ? " · over the warning line" : ""}. Each wedding&rsquo;s moodboard spend is in its costs; content is marketing spend.</p>
+                </div>
+              </Card>
+            );
+          })() : null}
+
           <Card>
             <CardHeader title="Needs a person" subtitle="Escalations and work from paused agents" />
             <ul className="divide-y divide-line/70">

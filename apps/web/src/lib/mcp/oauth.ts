@@ -25,11 +25,11 @@ export function allowedRoles(): AppRole[] {
   return roles.filter((r): r is AppRole => ["owner", "sales", "event_manager", "staff", "accounts"].includes(r));
 }
 
-/** Claude's callback hosts (and localhost for the MCP Inspector). */
+/** Claude's and ChatGPT's callback hosts (and localhost for the MCP Inspector). */
 function redirectAllowed(uri: string): boolean {
   let u: URL;
   try { u = new URL(uri); } catch { return false; }
-  const hosts = (process.env.MCP_REDIRECT_HOSTS ?? "claude.ai,claude.com,localhost,127.0.0.1").split(",").map((h) => h.trim()).filter(Boolean);
+  const hosts = (process.env.MCP_REDIRECT_HOSTS ?? "claude.ai,claude.com,chatgpt.com,openai.com,localhost,127.0.0.1").split(",").map((h) => h.trim()).filter(Boolean);
   const local = u.hostname === "localhost" || u.hostname === "127.0.0.1";
   if (u.protocol !== "https:" && !(local && u.protocol === "http:")) return false;
   return hosts.some((h) => u.hostname === h || u.hostname.endsWith(`.${h}`));

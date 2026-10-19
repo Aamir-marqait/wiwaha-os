@@ -25,12 +25,16 @@ export default async function MarketingPage() {
   const spendBy = (spend.data ?? []).reduce<Record<string, number>>((m, s) => ({ ...m, [s.platform as string]: (m[s.platform as string] ?? 0) + Number(s.spend_paise) }), {});
   return (
     <>
-      <PageTitle title="Marketing" subtitle="Content Studio drafts next week every week; nothing posts without approval." />
-      <div className="grid gap-5 lg:grid-cols-[1.5fr_1fr]">
+      <PageTitle title="Marketing" subtitle="Ad spend and the weekly ads report. Posts, carousels and reels are made in the Content studio; nothing posts without approval." />
+      <Card className="mb-5 flex flex-wrap items-center justify-between gap-3 p-4">
+        <p className="text-sm">The Content studio plans next week every week and turns the estate's own photos into posts, carousels and reels.</p>
+        <Link href="/team/studio" className="text-sm font-medium text-sage-700 underline">Open the Content studio</Link>
+      </Card>
+      <div className="grid gap-5 *:min-w-0 lg:grid-cols-[1.5fr_1fr]">
         <Card>
-          <CardHeader title="Post calendar" subtitle="Brand rhythm: Mon problem/solution · Tue feature · Wed testimonial · Thu tips · Fri–Sun showcases" action={<Link href="/team/approvals" className="text-sm text-sage-700 underline">Approve</Link>} />
+          <CardHeader title="Earlier post drafts" subtitle="Caption-only drafts from before the studio. New work lives in the Content studio calendar." action={<Link href="/team/studio/calendar" className="text-sm text-sage-700 underline">Calendar</Link>} />
           <ul className="divide-y divide-line/70">
-            {days.size === 0 ? <li className="px-5 py-4 text-sm text-ink-soft">The first week of drafts appears after the next tick.</li> : null}
+            {days.size === 0 ? <li className="px-5 py-4 text-sm text-ink-soft">Nothing here. See the Content studio calendar.</li> : null}
             {[...days.entries()].map(([d, v]) => (
               <li key={d} className="px-4 py-3 sm:px-5">
                 <p className="text-sm font-medium">{formatDateIST(d, { weekday: "short", day: "numeric", month: "short" })} · {v.theme}</p>

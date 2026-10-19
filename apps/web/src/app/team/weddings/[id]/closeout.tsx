@@ -1,3 +1,5 @@
+import { ActionButton } from "@/components/action-button";
+import { prepareInvoicesNow } from "./actions";
 import { Badge, Card, CardHeader } from "@wiwaha/ui";
 import { formatDateIST, rupees } from "@wiwaha/db";
 import type { createClient } from "@/lib/supabase/server";
@@ -77,11 +79,12 @@ export async function OperationsPanels({ supabase, weddingId, role, eventEnded, 
         </Card>
       ) : null}
 
-      {on("invoices") && money && (invoices.data ?? []).length ? (
+      {on("invoices") && money ? (
         <Card>
-          <CardHeader title="Invoices" />
+          <CardHeader title="Invoices" subtitle="Final and GST invoices from the approved quote; Prashanth approves them before the couple sees them" action={(invoices.data ?? []).length === 0 ? <ActionButton action={prepareInvoicesNow.bind(null, weddingId)} pendingLabel="Preparing…">Prepare invoices now</ActionButton> : undefined} />
           <ul className="divide-y divide-line/70">
-            {(invoices.data ?? []).map((i) => <li key={i.id} className="flex justify-between gap-2 px-4 py-2.5 text-sm sm:px-5"><span>{i.number} <span className="text-xs uppercase text-ink-soft">{i.kind}</span></span><span>{rupees(Number(i.total_paise))} · <Badge tone={i.status === "issued" ? "solid" : "gold"}>{i.status.replace("_", " ")}</Badge></span></li>)}
+            {(invoices.data ?? []).length === 0 ? <li className="px-4 py-3 text-sm text-ink-soft sm:px-5">They&rsquo;re prepared automatically after the event, or now if the couple needs one.</li> : null}
+            {(invoices.data ?? []).map((i) => <li key={i.id} className="flex flex-wrap items-center justify-between gap-2 px-4 py-2.5 text-sm sm:px-5"><span>{i.number} <span className="text-xs uppercase text-ink-soft">{i.kind}</span> · <a href={`/api/finance/invoice/${i.id}`} target="_blank" rel="noreferrer" className="text-sage-700 underline">PDF</a></span><span>{rupees(Number(i.total_paise))} · <Badge tone={i.status === "issued" ? "solid" : "gold"}>{i.status.replace("_", " ")}</Badge></span></li>)}
           </ul>
         </Card>
       ) : null}

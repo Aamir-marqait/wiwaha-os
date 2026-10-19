@@ -16,11 +16,14 @@ function display(f: FieldSpec, v: string | boolean): string {
   if (f.kind === "percent") return `${v}% GST`;
   if (f.kind === "select") return pretty(String(v));
   if (f.kind === "image") return "photo";
+  if (f.kind === "tags") return String(v);
   if (f.kind === "images") { const n = String(v).split(/\s+/).filter(Boolean).length; return n ? `${n} photo${n === 1 ? "" : "s"}` : ""; }
   return String(v);
 }
 
-function RowForm({ spec, initial, id, onDone }: { spec: CatalogueSpec; initial: CatalogueValues; id: string | null; onDone: () => void }) {
+export type RefOptions = Record<string, { id: string; label: string }[]>;
+
+function RowForm({ spec, initial, id, onDone, refs }: { spec: CatalogueSpec; initial: CatalogueValues; id: string | null; onDone: () => void; refs: RefOptions }) {
   const [v, setV] = useState<CatalogueValues>(initial);
   const [pending, start] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -34,6 +37,10 @@ function RowForm({ spec, initial, id, onDone }: { spec: CatalogueSpec; initial: 
           <PhotoField key={f.key} label={f.label} value={String(v[f.key] ?? "")} multiple={f.kind === "images"} onChange={(x) => set(f.key, x)} />
         ) : f.kind === "textarea" ? (
           <label key={f.key} className={cn(label, "sm:col-span-2")}>{f.label}<textarea value={String(v[f.key] ?? "")} onChange={(e) => set(f.key, e.target.value)} rows={2} className="mt-1 block w-full rounded-xl border border-line bg-white px-3 py-2 text-sm normal-case tracking-normal" /></label>
+        ) : f.kind === "ref" ? (
+          <label key={f.key} className={label}>{f.label}{f.required ? " *" : ""}
+            <select value={String(v[f.key] ?? "")} onChange={(e) => set(f.key, e.target.value)} className={input}><option value="">—</option>{(refs[f.key] ?? []).map((o) => <option key={o.id} value={o.id}>{o.label}</option>)}</select>
+          </label>
         ) : f.kind === "select" ? (
           <label key={f.key} className={label}>{f.label}{f.required ? " *" : ""}
             <select value={String(v[f.key] ?? "")} onChange={(e) => set(f.key, e.target.value)} className={input}>{f.options!.map((o) => <option key={o} value={o}>{o ? pretty(o) : "—"}</option>)}</select>
@@ -54,13 +61,13 @@ function RowForm({ spec, initial, id, onDone }: { spec: CatalogueSpec; initial: 
 }
 
 /** List + add + edit for one reference list (see lib/catalogue.ts). */
-export function CatalogueEditor({ spec, rows, canEdit }: { spec: CatalogueSpec; rows: Record<string, unknown>[]; canEdit: boolean }) {
+export function CatalogueEditor({ spec, rows, canEdit, refs = {} }: { spec: CatalogueSpec; rows: Record<string, unknown>[]; canEdit: boolean; refs?: RefOptions }) {
   const [editing, setEditing] = useState<string | "new" | null>(null);
   const primary = spec.fields.find((f) => f.primary) ?? spec.fields[0]!;
   return (
     <div className="space-y-3">
       {canEdit ? (editing === "new"
-        ? <Card className="p-4 sm:p-5"><RowForm spec={spec} initial={toValues(spec, null)} id={null} onDone={() => setEditing(null)} /></Card>
+        ? <Card className="p-4 sm:p-5"><RowForm spec={spec} initial={toValues(spec, null)} id={null} onDone={() => setEditing(null)} refs={refs} /></Card>
         : <button onClick={() => setEditing("new")} className={buttonClass("primary", "md")}>+ Add {spec.singular}</button>) : null}
       {rows.length === 0 ? <Card className="p-5 text-sm text-ink-soft">Nothing here yet.</Card> : null}
       <ul className="space-y-2">
@@ -71,12 +78,12 @@ export function CatalogueEditor({ spec, rows, canEdit }: { spec: CatalogueSpec; 
           return (
             <li key={id}>
               <Card className={cn("p-4", inactive && "opacity-60")}>
-                {editing === id ? <RowForm spec={spec} initial={values} id={id} onDone={() => setEditing(null)} /> : (
+                {editing === id ? <RowForm spec={spec} initial={values} id={id} onDone={() => setEditing(null)} refs={refs} /> : (
                   <div className="flex items-start justify-between gap-3">
                     {(() => { const img = spec.fields.find((f) => f.kind === "image"); const u = img ? String(values[img.key] ?? "") : ""; return u ? <img src={u} alt="" className="size-14 shrink-0 rounded-lg border border-line object-cover" /> : null; })()}
                     <div className="min-w-0 flex-1">
                       <p className="font-medium">{String(values[primary.key] ?? "")} {inactive ? <Badge>inactive</Badge> : null}</p>
-                      <p className="mt-0.5 text-sm text-ink-soft">{spec.fields.filter((f) => f !== primary && f.key !== "active" && f.kind !== "textarea").map((f) => display(f, values[f.key]!)).filter(Boolean).join(" · ")}</p>
+                      <p className="mt-0.5 text-sm text-ink-soft">{spec.fields.filter((f) => f !== primary && f.key !== "active" && f.kind !== "textarea").map((f) => (f.kind === "ref" ? (refs[f.key] ?? []).find((o) => o.id === values[f.key])?.label ?? "" : display(f, values[f.key]!))).filter(Boolean).join(" · ")}</p>
                     </div>
                     {canEdit ? <button onClick={() => setEditing(id)} className={buttonClass("secondary", "sm")}>Edit</button> : null}
                   </div>

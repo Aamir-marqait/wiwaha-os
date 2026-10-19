@@ -22,16 +22,16 @@ export default async function FinancePage() {
   return (
     <>
       <PageTitle title="Finance" subtitle="Final and GST invoices are prepared by the Finance agent after each event; you approve them." action={<a href={`/api/finance/export?month=${month}&format=${format}`} className={buttonClass("secondary", "sm")}>Export {month} ({format === "tally_csv" ? "Tally" : "Zoho"})</a>} />
-      <div className="grid gap-5 lg:grid-cols-2">
+      <div className="grid gap-5 *:min-w-0 lg:grid-cols-2">
         <Card>
           <CardHeader title="Invoices" />
           <ul className="divide-y divide-line/70">
-            {(invoices.data ?? []).length === 0 ? <li className="px-5 py-4 text-sm text-ink-soft">Invoices appear after the first event.</li> : null}
+            {(invoices.data ?? []).length === 0 ? <li className="px-5 py-4 text-sm text-ink-soft">Invoices appear after each event, or from a wedding&rsquo;s Payments tab when needed sooner.</li> : null}
             {(invoices.data ?? []).map((i) => {
               const w = (Array.isArray(i.wedding) ? i.wedding[0] : i.wedding) as { title: string } | null;
               return (
                 <li key={i.id as string} className="flex items-center justify-between gap-2 px-4 py-2.5 sm:px-5">
-                  <div className="min-w-0"><p className="text-sm font-medium">{i.number as string} <span className="text-xs uppercase text-ink-soft">{i.kind as string}</span></p><p className="text-xs text-ink-soft">{w?.title} · {formatDateIST(i.issued_on as string)} · {rupees(Number(i.total_paise))}{Number(i.balance_paise) > 0 ? ` · balance ${rupees(Number(i.balance_paise))}` : ""}</p></div>
+                  <div className="min-w-0"><p className="text-sm font-medium">{i.number as string} <span className="text-xs uppercase text-ink-soft">{i.kind as string}</span> · <a href={`/api/finance/invoice/${i.id as string}`} target="_blank" rel="noreferrer" className="text-xs font-normal text-sage-700 underline">PDF</a></p><p className="text-xs text-ink-soft">{w?.title} · {formatDateIST(i.issued_on as string)} · {rupees(Number(i.total_paise))}{Number(i.balance_paise) > 0 ? ` · balance ${rupees(Number(i.balance_paise))}` : ""}</p></div>
                   <Badge tone={i.status === "issued" || i.status === "paid" ? "solid" : i.status === "pending_approval" ? "burgundy" : "neutral"}>{String(i.status).replace(/_/g, " ")}</Badge>
                 </li>
               );

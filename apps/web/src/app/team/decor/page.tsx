@@ -65,7 +65,7 @@ export default async function DecorStockPage({ searchParams }: { searchParams: P
                   <p className="text-sm text-ink-soft">{pretty(i.category as string)} · {i.quantity as number} owned{busy ? ` · ${busy} promised to upcoming events` : ""}{i.location ? ` · ${i.location as string}` : ""}</p>
                   {i.notes ? <p className="text-xs italic text-ink-soft">{i.notes as string}</p> : null}
                   <ItemActions id={i.id as string} canEdit={canEdit} max={Number(i.quantity)} events={events} areas={[...DECOR_AREAS]}
-                    initial={{ name: i.name as string, category: i.category as string, photos: photos.join("\n"), quantity: String(i.quantity), condition: cond, location: (i.location as string | null) ?? "", notes: (i.notes as string | null) ?? "", active: i.active as boolean }} />
+                    initial={{ name: i.name as string, category: i.category as string, photos: photos.join("\n"), quantity: String(i.quantity), condition: cond, location: (i.location as string | null) ?? "", notes: (i.notes as string | null) ?? "", active: i.active as boolean, unitCost: i.unit_cost_paise != null ? String(Number(i.unit_cost_paise) / 100) : "", useCost: i.use_cost_paise != null ? String(Number(i.use_cost_paise) / 100) : "" }} />
                 </div>
               </Card>
             </li>

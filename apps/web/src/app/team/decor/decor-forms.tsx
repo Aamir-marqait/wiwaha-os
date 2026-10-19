@@ -10,7 +10,7 @@ const label = "block text-xs font-medium uppercase tracking-wide text-ink-soft";
 
 /** Add or edit a piece: photos (camera on a phone), name, quantity, condition, where it's kept. */
 export function ItemForm({ id, initial, onDone }: { id: string | null; initial?: Partial<DecorInput>; onDone?: () => void }) {
-  const [v, setV] = useState<DecorInput>({ name: "", category: "props", photos: "", quantity: "1", condition: "good", location: "", notes: "", active: true, ...initial });
+  const [v, setV] = useState<DecorInput>({ name: "", category: "props", photos: "", quantity: "1", condition: "good", location: "", notes: "", active: true, unitCost: "", useCost: "", ...initial });
   const [error, setError] = useState<string | null>(null);
   const [pending, start] = useTransition();
   const set = <K extends keyof DecorInput>(k: K, x: DecorInput[K]) => setV((o) => ({ ...o, [k]: x }));
@@ -23,6 +23,8 @@ export function ItemForm({ id, initial, onDone }: { id: string | null; initial?:
         <label className={label}>Quantity *<input value={v.quantity} onChange={(e) => set("quantity", e.target.value)} inputMode="numeric" className={field} /></label>
         <label className={label}>Condition<select value={v.condition} onChange={(e) => set("condition", e.target.value)} className={field}>{CONDITIONS.map((c) => <option key={c} value={c}>{CONDITION_LABELS[c]}</option>)}</select></label>
         <label className={label}>Stored at<input value={v.location} onChange={(e) => set("location", e.target.value)} placeholder="e.g. Décor store, rack 3" className={field} /></label>
+        <label className={label}>What one cost us (₹)<input value={v.unitCost ?? ""} onChange={(e) => set("unitCost", e.target.value)} inputMode="decimal" placeholder="Optional" className={field} /></label>
+        <label className={label}>Cost per event use (₹)<input value={v.useCost ?? ""} onChange={(e) => set("useCost", e.target.value)} inputMode="decimal" placeholder="Wear, cleaning, transport" className={field} /></label>
         <label className={`${label} sm:col-span-2`}>Notes<input value={v.notes} onChange={(e) => set("notes", e.target.value)} className={field} /></label>
         {id ? <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={v.active} onChange={(e) => set("active", e.target.checked)} /> In use (untick to retire it)</label> : null}
       </div>

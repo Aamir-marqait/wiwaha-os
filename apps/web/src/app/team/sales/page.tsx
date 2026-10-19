@@ -17,15 +17,19 @@ export default async function SalesPage() {
   await requireSection("sales_marketing", ["owner", "sales"]);
   const supabase = await createClient();
   const since = new Date(Date.now() - 30 * 86_400_000).toISOString();
-  const [funnel, calls, visits, reviews, outbox] = await Promise.all([
+  const [funnel, calls, visits, reviews, outbox, lostLeads] = await Promise.all([
     supabase.from("sales_funnel").select("*"),
     supabase.from("calls").select("status, direction, handled_by, handed_over").eq("direction", "inbound").gte("started_at", since),
     supabase.from("visits").select("id, lead_id, scheduled_at, status, attendees, lead:leads(contact:contacts(full_name))").gte("scheduled_at", new Date().toISOString()).eq("status", "scheduled").order("scheduled_at").limit(10),
     supabase.from("external_reviews").select("*").order("created_at", { ascending: false }).limit(12),
     supabase.from("outbox").select("id, kind, provider, to_address, status, created_at, body").order("created_at", { ascending: false }).limit(15),
+    supabase.from("leads").select("status, lost_reason, source").in("status", ["lost", "no_response"]),
   ]);
   const rows = (funnel.data ?? []) as { source: string; enquiries: number; visits: number; bookings: number; median_first_reply_minutes: number | null }[];
   const total = rows.reduce((a, r) => ({ e: a.e + r.enquiries, v: a.v + r.visits, b: a.b + r.bookings }), { e: 0, v: 0, b: 0 });
+  const lostBy = new Map<string, number>();
+  for (const l of lostLeads.data ?? []) { const r = String(l.lost_reason ?? "").replace(/^Other:\s*/, "Other: ").trim() || "No reason given"; const k = r.startsWith("Other: ") ? "Other" : r; lostBy.set(k, (lostBy.get(k) ?? 0) + 1); }
+  const lostTotal = (lostLeads.data ?? []).length;
   const c = calls.data ?? [];
   const answered = c.filter((x) => ["completed", "transferred", "in_progress"].includes(x.status as string)).length;
   const replyTimes = rows.map((r) => r.median_first_reply_minutes).filter((x): x is number => x !== null);
@@ -40,7 +44,7 @@ export default async function SalesPage() {
         <Stat label="Calls answered" value={c.length ? pct(answered, c.length) : "—"} hint={`${c.length} inbound, 30 days`} />
       </div>
 
-      <div className="mt-5 grid gap-5 lg:grid-cols-[1fr_360px]">
+      <div className="mt-5 grid gap-5 *:min-w-0 lg:grid-cols-[1fr_360px]">
         <div className="space-y-5">
           <Card>
             <CardHeader title="Funnel by source" subtitle={replyTimes.length ? `Median first reply ${Math.round(Math.min(...replyTimes))}–${Math.round(Math.max(...replyTimes))} min across sources` : "Reply times appear once replies are sent"} />
@@ -54,6 +58,18 @@ export default async function SalesPage() {
                 </tbody>
               </table>
             </div>
+          </Card>
+
+          <Card>
+            <CardHeader title="Why leads didn't book" subtitle={lostTotal ? `${lostTotal} lost or stopped responding; the reason is asked when a lead is closed` : "Reasons appear here when leads are marked lost"} />
+            <ul className="space-y-2 px-4 pb-4 sm:px-5">
+              {[...lostBy.entries()].sort((a, b) => b[1] - a[1]).map(([r, n]) => (
+                <li key={r} className="text-sm">
+                  <div className="flex justify-between gap-2"><span>{r}</span><span className="text-ink-soft">{n} · {pct(n, lostTotal)}</span></div>
+                  <div className="mt-1 h-1.5 rounded-full bg-ivory-100"><div className="h-1.5 rounded-full bg-burgundy-600" style={{ width: `${Math.round((n / lostTotal) * 100)}%` }} /></div>
+                </li>
+              ))}
+            </ul>
           </Card>
 
           <Card>

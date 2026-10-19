@@ -7,7 +7,7 @@ import { lockPlateCounts } from "./agents/menu/agent";
 import { chaseVendors } from "./agents/vendor_coordinator/agent";
 import { nudgeStages } from "./agents/wedding_room/agent";
 import { anniversaryWishes, sendEveningReviewForms, sendOffboardingSteps } from "./agents/offboarding/agent";
-import { draftWeek } from "./agents/content_studio/agent";
+import { studioWeek } from "./agents/content_studio/studio";
 import { weeklyAdsReport } from "./agents/ads_analyst/agent";
 import { estateSweep } from "./agents/estate/agent";
 import { reconcilePayments, startCloseOuts } from "./agents/finance/agent";
@@ -41,7 +41,8 @@ const JOBS: ScheduledJob[] = [
   { name: "evening_review_forms", run: sendEveningReviewForms },
   { name: "offboarding_steps", run: sendOffboardingSteps },
   { name: "anniversaries", run: anniversaryWishes },
-  { name: "content_week", run: draftWeek },
+  // Next week's posts are planned in the Studio (scripts to approve), D41.
+  { name: "studio_week", run: studioWeek },
   { name: "ads_report", run: weeklyAdsReport },
 ];
 

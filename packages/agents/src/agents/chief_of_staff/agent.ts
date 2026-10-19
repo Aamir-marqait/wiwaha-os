@@ -149,6 +149,9 @@ const ROUTES: Record<string, string> = {
   deposit_paid: "onboarding",
   brief_submitted: "brief",
   menu_approved: "menu",
+  decor_brief_submitted: "design",
+  moodboard_rendered: "design",
+  moodboard_feedback: "design",
   moodboard_shortlisted: "design",
   moodboard_finalised: "design",
   quote_requested: "quote",
@@ -158,6 +161,8 @@ const ROUTES: Record<string, string> = {
   work_order_approved: "vendor_coordinator",
   family_message: "wedding_room",
   // Phase 4
+  studio_plan: "content_studio",
+  studio_script: "content_studio",
   plan_requested: "planner",
   brief_reviewed: "planner",
   rooming_list_submitted: "rooms_guests",

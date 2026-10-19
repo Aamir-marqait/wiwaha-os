@@ -35,3 +35,23 @@
 
 ## 6. The couple's portal (1 min)
 Sign in at **/portal/login** as Ananya ("Use a password instead"). Her stage cards show: the brief is in progress, **Ceremonies** is open (press Start), and **Décor & moodboards** is paid for by the 50% advance but opens 90 days before the wedding; until then she can share ideas under **Ideas**.
+
+## 7. Décor moodboards from the couple's answers (3 min, D40)
+1. **Décor → Venue areas**: each space with its plain photos (the starred one is the base). Upload a photo from the phone camera.
+2. Open Ananya & Rohan's Wedding Room → **Décor**. Once décor has opened and Ananya has sent the questionnaire (portal → Décor: traditions, colours, flowers, touches, then spaces and mood per function), the boards appear here, one per function, each space shown as it is and as it could look. Redo a picture, upload your own edit, or **Download PDF**.
+3. **Approvals**: share the boards. Only now do they show in Ananya's portal, where she can shortlist or ask for a change on any picture.
+
+## 8. Content studio (3 min, D41)
+1. **Sales & Marketing → Content studio → Brand**: the voice, pillars and logos every script uses.
+2. **Library**: the estate's own photos and clips, described automatically.
+3. **New**: "A reel about arriving at Wiwaha from the airport". Read and edit the script, then **Approve and render**. Slides or the reel appear on the same page; **Download** gives a zip with the caption. Without `FAL_KEY`, reels are assembled without a voice.
+4. **Calendar**: next week's plan, made automatically.
+
+## 9. The money and the day-to-day (3 min, D42)
+1. **Today**: follow-up calls due (one call after each visit), guest requests, alerts, and AI credits.
+2. A lead → Status → Lost: it asks why. **Sales numbers** shows why leads didn't book.
+3. Wedding Room → **Décor**: add a rented chandelier and a bought uruli; mark the uruli arrived: it joins the stock, and both costs land in **Finance**.
+4. **Payments** tab: the receipt for the advance (method, schedule, balance); **Prepare invoices now** drafts the final and GST invoices for approval.
+5. **See the portal as the couple**, then Back to the Wedding Room.
+6. Open the guest page (Links), request an airport pickup: it shows on Arjun's Today.
+

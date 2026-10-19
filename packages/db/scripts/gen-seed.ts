@@ -27,10 +27,10 @@ const lines: string[] = [
   ).join(",\n"),
   "on conflict (key) do nothing;",
   "",
-  "insert into public.agents (key, name, vertical, job, human_gate, phase, implemented, enabled, autonomy, model) values",
+  "insert into public.agents (key, name, vertical, job, human_gate, phase, implemented, enabled, autonomy, model, config) values",
   AGENT_ROSTER.map(
     (a) =>
-      `  (${q(a.key)}, ${q(a.name)}, ${q(a.vertical)}, ${q(a.job)}, ${q(a.humanGate)}, ${a.phase}, true, true, 'draft', ${q(a.model)})`,
+      `  (${q(a.key)}, ${q(a.name)}, ${q(a.vertical)}, ${q(a.job)}, ${q(a.humanGate)}, ${a.phase}, true, true, 'draft', ${q(a.model)}, ${j(a.config ?? {})})`,
   ).join(",\n"),
   "on conflict (key) do nothing;",
   "",

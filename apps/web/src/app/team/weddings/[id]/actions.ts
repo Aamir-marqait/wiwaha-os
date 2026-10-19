@@ -1,10 +1,11 @@
 "use server";
 import { revalidatePath } from "next/cache";
 import { after } from "next/server";
-import { runRouting } from "@/lib/agents";
+import { closeOutWedding } from "@wiwaha/agents";
+import { agentDeps, runRouting } from "@/lib/agents";
 import { requireStaff } from "@/lib/auth";
 import { friendlyError } from "@/lib/errors";
-import { type DatedPart, isEffect, toRpcParts, totalPercent } from "@/lib/payment-parts";
+import { type DatedPart, isEffect, shortPaymentError, toRpcParts, totalPercent } from "@/lib/payment-parts";
 import { createClient } from "@/lib/supabase/server";
 
 type Result = { error?: string };
@@ -95,6 +96,8 @@ export async function recordPayment(weddingId: string, paymentId: string, input:
   if (p.status === "paid") return { error: "This payment is already recorded." };
   const paise = Math.round((input.rupees || Number(p.amount_paise) / 100) * 100);
   if (!(paise > 0)) return { error: "Enter the amount received." };
+  const short = shortPaymentError(paise, Number(p.amount_paise));
+  if (short) return { error: short };
   const { error } = await supabase.from("payments").update({ status: "paid", paid_at: new Date().toISOString(), paid_amount_paise: paise, method: input.method, gateway: "manual", gateway_ref: input.reference.trim() || null }).eq("id", paymentId);
   if (!error) after(runRouting);
   return done(weddingId, error);
@@ -269,4 +272,14 @@ export async function openStageNow(weddingId: string, stageId: string): Promise<
   const { error } = await supabase.rpc("start_stage", { p_stage_id: stageId });
   if (!error) after(runRouting);
   return done(weddingId, error);
+}
+
+/** The final and GST invoices now, instead of after the event (they still wait for Prashanth's approval). */
+export async function prepareInvoicesNow(weddingId: string): Promise<{ error?: string }> {
+  await requireStaff(["owner", "accounts"]);
+  const out = await closeOutWedding(agentDeps(), weddingId);
+  revalidatePath(`/team/weddings/${weddingId}`);
+  if (out.status === "error") return { error: out.error };
+  if (out.status === "disabled") return { error: "The Finance agent is switched off; the request went to Needs a person." };
+  return {};
 }

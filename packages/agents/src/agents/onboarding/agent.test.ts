@@ -22,6 +22,8 @@ describe("Onboarding", () => {
     expect(w.db.rows("weddings")[0]).toMatchObject({ stage: "planning" });
     // Planning opens on a date from the policy book; until then, ideas are noted.
     expect(w.store.messages[0]!.body).toMatch(/Active planning opens on/);
+    expect(w.store.messages[0]!.body).toMatch(/\/portal\/login/);
+    expect(w.store.messages[0]!.body).toMatch(/Sign in with ananya@example.com/);
     expect(String(task.description)).toMatch(/Welcome message to post/);
     expect(String(task.description)).toMatch(/invite link on the Wedding Room/);
   });

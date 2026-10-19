@@ -33,7 +33,12 @@ export class AnthropicLlm implements LlmClient {
       model: req.model,
       max_tokens: req.maxTokens ?? 4000,
       system: req.system,
-      messages: [{ role: "user", content: req.prompt }],
+      messages: [{
+        role: "user",
+        content: req.images?.length
+          ? [...req.images.slice(0, 8).map((url) => ({ type: "image" as const, source: { type: "url" as const, url } })), { type: "text" as const, text: req.prompt }]
+          : req.prompt,
+      }],
       ...(SUPPORTS_EFFORT.test(req.model) ? { output_config: { effort: req.effort ?? "low" } } : {}),
       // Server-side refusal fallback (routes a declined request to a fallback model).
       ...(withFallbacks ? { betas: ["server-side-fallback-2026-07-01"], fallbacks: "default" as const } : {}),

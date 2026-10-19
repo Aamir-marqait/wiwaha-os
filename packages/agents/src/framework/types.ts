@@ -154,6 +154,8 @@ export interface LlmRequest {
   model: string;
   system: string;
   prompt: string;
+  /** Public image URLs the model should look at (vision), placed before the prompt. */
+  images?: string[];
   maxTokens?: number;
   effort?: "low" | "medium" | "high";
 }
