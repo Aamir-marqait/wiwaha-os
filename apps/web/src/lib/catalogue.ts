@@ -171,7 +171,7 @@ export const CATALOGUES: Record<string, CatalogueSpec> = {
   },
   spaces: {
     key: "spaces", table: "spaces", title: "Spaces", singular: "space",
-    description: "The lawns, halls and courtyards on the calendar. Capacity decides which spaces agents suggest.",
+    description: "The lawns, halls and courtyards on the calendar. Capacity decides which spaces agents suggest. Photos: add plain photos (no décor, a few angles) for AI moodboards, and event photos for the Content studio.",
     editRoles: ["owner"], viewRoles: ROLES,
     order: [{ column: "sort" }],
     fields: [

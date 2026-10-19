@@ -29,7 +29,7 @@ export default async function AreaPage({ params }: { params: Promise<{ id: strin
   const areaOptions = (areas.data ?? []).map((x) => ({ id: x.id as string, name: x.name as string }));
   return (
     <>
-      <PageTitle title={a.name as string} subtitle={<Link href="/team/decor/areas" className="underline">← Venue areas</Link>} />
+      <PageTitle title={a.name as string} subtitle={<span className="flex flex-wrap gap-3">{a.space_id ? <Link href="/team/catalogue/spaces" className="underline">← Spaces</Link> : null}<Link href="/team/decor/areas" className="underline">← Venue areas</Link></span>} />
       <DecorTabs active="areas" />
       <div className="grid gap-5 *:min-w-0 lg:grid-cols-[1fr_22rem]">
         <div className="space-y-5">

@@ -220,3 +220,8 @@ Walking lead → visit → booking → portal → event → farewell with the fo
 - **See the portal as the couple:** a read-only preview from the Wedding Room. Pages render through a short session for the couple's own login (the same helper as the Claude connector, `lib/supabase/as-user.ts`), so row-level security shows exactly what they see; the cookie only names the wedding and is checked on every render; actions still run as the signed-in staff member and are refused by the portal.
 - **Google Calendar:** "Add to Google Calendar" on upcoming visits and on each wedding, alongside the subscribed feed on the Calendar page.
 
+
+## D43 — Spaces carry photos; marketing is the Content studio (2026-10-19)
+- **Space photos:** each space in Lists → Spaces has a Photos button. It opens the space's venue area (made the first time, linked by `venue_areas.space_id`), where plain photos feed AI moodboards and event photos the Content studio, all in the one media library.
+- **Navigation:** Sales & Marketing keeps the Content studio; the Marketing (ad spend) and Phone pages are no longer in the menu. Sales numbers no longer shows reviews.
+- **Staging migrations:** the first section of `20261016000100` was applied by hand on 2026-10-19 while the deploy token was missing; that section is now guarded so the workflow can apply the whole file. `20261019000100` removes a test function left behind.

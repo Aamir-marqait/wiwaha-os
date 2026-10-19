@@ -1,5 +1,5 @@
 import type { AppRole } from "@wiwaha/db";
-import { BarChart3, BedDouble, CalendarDays, CheckCircle2, Clapperboard, ClipboardCheck, FileUp, Flower2, Gem, Handshake, Inbox, IndianRupee, LayoutTemplate, Link2, List, MapPin, Megaphone, Phone, Plus, Send, Settings, Sparkles, Sun, Trees, UserCog, Users } from "lucide-react";
+import { BarChart3, BedDouble, CalendarDays, CheckCircle2, Clapperboard, ClipboardCheck, FileUp, Flower2, Gem, Handshake, Inbox, IndianRupee, LayoutTemplate, Link2, List, MapPin, Plus, Send, Settings, Sparkles, Sun, Trees, UserCog, Users } from "lucide-react";
 import { type Section, SECTION_LABELS } from "./sections";
 
 export type Icon = typeof Sun;
@@ -19,8 +19,6 @@ const GROUPS: NavGroup[] = [
     { href: "/team/leads/import", label: "Import leads", icon: FileUp, roles: ["owner", "sales"] },
     { href: "/team/sales", label: "Sales numbers", icon: BarChart3, roles: ["owner", "sales"] },
     { href: "/team/studio", label: "Content studio", icon: Clapperboard, roles: ["owner", "sales"] },
-    { href: "/team/marketing", label: "Marketing", icon: Megaphone, roles: ["owner", "sales"] },
-    { href: "/team/voice", label: "Phone", icon: Phone, roles: ["owner", "sales"] },
   ] },
   { section: "venue", title: SECTION_LABELS.venue, items: [
     { href: "/team/calendar", label: "Calendar", icon: CalendarDays },

@@ -2,12 +2,9 @@ import { formatSlot } from "@wiwaha/agents";
 import { formatDateTimeIST } from "@wiwaha/db";
 import { Badge, Card, CardHeader, PageTitle, Stat } from "@wiwaha/ui";
 import Link from "next/link";
-import { ActionButton } from "@/components/action-button";
 import { SOURCE_LABELS } from "@/components/lead-badges";
 import { requireSection } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
-import { markReplyPosted } from "./actions";
-import { ReviewForm } from "./review-form";
 
 export const metadata = { title: "Sales" };
 
@@ -17,11 +14,10 @@ export default async function SalesPage() {
   await requireSection("sales_marketing", ["owner", "sales"]);
   const supabase = await createClient();
   const since = new Date(Date.now() - 30 * 86_400_000).toISOString();
-  const [funnel, calls, visits, reviews, outbox, lostLeads] = await Promise.all([
+  const [funnel, calls, visits, outbox, lostLeads] = await Promise.all([
     supabase.from("sales_funnel").select("*"),
     supabase.from("calls").select("status, direction, handled_by, handed_over").eq("direction", "inbound").gte("started_at", since),
     supabase.from("visits").select("id, lead_id, scheduled_at, status, attendees, lead:leads(contact:contacts(full_name))").gte("scheduled_at", new Date().toISOString()).eq("status", "scheduled").order("scheduled_at").limit(10),
-    supabase.from("external_reviews").select("*").order("created_at", { ascending: false }).limit(12),
     supabase.from("outbox").select("id, kind, provider, to_address, status, created_at, body").order("created_at", { ascending: false }).limit(15),
     supabase.from("leads").select("status, lost_reason, source").in("status", ["lost", "no_response"]),
   ]);
@@ -71,24 +67,6 @@ export default async function SalesPage() {
               ))}
             </ul>
           </Card>
-
-          <Card>
-            <CardHeader title="Reviews" subtitle="Reputation drafts every reply; nothing is posted without approval" />
-            <ul className="divide-y divide-line">
-              {(reviews.data ?? []).length === 0 ? <li className="px-4 py-4 text-sm text-ink-soft sm:px-5">No reviews yet.</li> : null}
-              {(reviews.data ?? []).map((r) => (
-                <li key={r.id as string} className="px-4 py-3 text-sm sm:px-5">
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <p className="font-medium">{"★".repeat((r.rating as number) ?? 0)} {r.author_name as string} <span className="text-xs font-normal capitalize text-ink-soft">· {r.platform as string}</span></p>
-                    <Badge tone={r.reply_status === "approved" ? "sage" : r.reply_status === "drafted" ? "gold" : "neutral"}>{String(r.reply_status)}</Badge>
-                  </div>
-                  <p className="mt-1 text-ink-soft">{r.body as string}</p>
-                  {r.reply_draft ? <p className="mt-2 whitespace-pre-line rounded-lg bg-ivory-100 px-3 py-2 text-xs">{r.reply_draft as string}</p> : null}
-                  {r.reply_status === "approved" ? <div className="mt-2"><ActionButton action={markReplyPosted.bind(null, r.id as string)}>I've posted it</ActionButton></div> : null}
-                </li>
-              ))}
-            </ul>
-          </Card>
         </div>
 
         <div className="space-y-5">
@@ -102,10 +80,6 @@ export default async function SalesPage() {
                 return <li key={v.id as string}><Link href={`/team/leads/${v.lead_id}`} className="font-medium hover:underline">{contact?.full_name ?? "Family"}</Link><p className="text-xs text-ink-soft">{formatSlot(v.scheduled_at as string)}{v.attendees ? ` · ${v.attendees}` : ""}</p></li>;
               })}
             </ul>
-          </Card>
-          <Card className="p-4 sm:p-5">
-            <h2 className="font-serif text-xl font-semibold">Add a review</h2>
-            <div className="mt-3"><ReviewForm /></div>
           </Card>
           <Card className="p-4 sm:p-5">
             <h2 className="font-serif text-xl font-semibold">Sent recently</h2>

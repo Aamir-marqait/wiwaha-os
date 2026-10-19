@@ -8,10 +8,8 @@ export const metadata = { title: "More" };
 const BLURBS: Record<string, string> = {
   "/team/outbox": "Approved WhatsApp and email waiting for you to send.",
   "/team/leads": "Every enquiry and where it stands.",
-  "/team/sales": "Funnel by source, calls answered, visits, reviews.",
+  "/team/sales": "Funnel by source, why leads didn't book, visits.",
   "/team/studio": "Posts, carousels and reels from the estate's own photos.",
-  "/team/marketing": "Post calendar and ad spend.",
-  "/team/voice": "Rehearse calls with the Voice Concierge.",
   "/team/calendar": "Every space, hold and booking.",
   "/team/estate": "Maintenance, stock, purchases and readings.",
   "/team/weddings": "Every wedding, by stage.",
