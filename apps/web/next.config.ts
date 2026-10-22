@@ -17,8 +17,17 @@ const nextConfig: NextConfig = {
   },
   async headers() {
     return [
+      // The enquiry form may be embedded on the Wiwaha website (D44); nothing else may be framed.
       {
-        source: "/:path*",
+        source: "/enquire",
+        headers: [
+          { key: "Content-Security-Policy", value: "frame-ancestors *" },
+          { key: "X-Content-Type-Options", value: "nosniff" },
+          { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+        ],
+      },
+      {
+        source: "/((?!enquire$).*)",
         headers: [
           { key: "X-Frame-Options", value: "DENY" },
           { key: "X-Content-Type-Options", value: "nosniff" },

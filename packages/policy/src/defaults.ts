@@ -420,6 +420,14 @@ export const DEFAULT_POLICIES = [
     { sort: 142 },
   ),
   def(
+    "messaging.channels",
+    "Communication",
+    "Messaging channels",
+    "The team talks to families on WhatsApp from their own phones. Wiwaha OS does not draft or send WhatsApp messages; it uses email and the couple's portal.",
+    { whatsapp: false, email: true },
+    { sort: 15 },
+  ),
+  def(
     "media.budget",
     "Marketing",
     "AI credits budget",

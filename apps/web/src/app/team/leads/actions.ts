@@ -7,7 +7,7 @@ import { runLeadDesk, runRouting } from "@/lib/agents";
 import { applySplit } from "@/lib/apply-split";
 import { requireStaff } from "@/lib/auth";
 import { friendlyError } from "@/lib/errors";
-import { ingestLead, leadInputSchema, toIngestPayload } from "@/lib/leads";
+import { ingestLead, leadInputSchema, saveHeardAbout, toIngestPayload } from "@/lib/leads";
 import { createClient } from "@/lib/supabase/server";
 
 export interface FormState {
@@ -24,6 +24,7 @@ export async function createManualLead(_prev: FormState, form: FormData): Promis
   try {
     const res = await ingestLead(supabase, toIngestPayload(parsed.data, "manual"));
     leadId = res.lead_id;
+    await saveHeardAbout(supabase, leadId, parsed.data.heard_about);
   } catch (e) {
     return { error: friendlyError({ message: e instanceof Error ? e.message : String(e) }) };
   }
@@ -58,7 +59,6 @@ export async function setLeadStatus(leadId: string, status: LeadStatus, reason =
   if (closing && (!why || why === "Other:")) return { error: "Choose a reason first." };
   const supabase = await createClient("team");
   const { error } = await supabase.from("leads").update({ status, lost_reason: closing ? why : null }).eq("id", leadId);
-  revalidatePath(`/team/leads/${leadId}`);
   return error ? { error: friendlyError(error) } : {};
 }
 
@@ -99,4 +99,13 @@ export async function markBooked(leadId: string, input: { start: string; end: st
   revalidatePath("/team/weddings");
   after(runRouting);
   return { weddingId, note: note ?? undefined };
+}
+
+/** How the family heard about Wiwaha (from the list in Settings → Lists). */
+export async function setHeardAbout(leadId: string, label: string): Promise<{ error?: string }> {
+  await requireStaff(["owner", "sales"]);
+  const supabase = await createClient("team");
+  const { error } = await supabase.from("leads").update({ heard_about: label.trim().slice(0, 80) || null }).eq("id", leadId);
+  revalidatePath(`/team/leads/${leadId}`);
+  return error ? { error: friendlyError(error) } : {};
 }

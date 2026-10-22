@@ -1,6 +1,6 @@
 import type { ApprovalKind, AppRole, Json, MessageChannel } from "@wiwaha/db";
 import type { Integrations, OutboundKind } from "@wiwaha/integrations";
-import type { PolicyKey } from "@wiwaha/policy";
+import { PolicyBook, type PolicyKey } from "@wiwaha/policy";
 import { PROMPTS } from "../prompts.generated";
 import { scopeDb, where, type Db, type DbGrants, type Row } from "./db";
 import { checkClientMessage, type GuardrailContext, type GuardrailFlag } from "./guardrails";
@@ -168,12 +168,22 @@ export interface ProposedMessage {
 }
 
 export interface ProposedResult {
-  messageId: string;
+  /** Null when the channel is switched off in the policy book (nothing is drafted). */
+  messageId: string | null;
   approvalId: string | null;
-  delivery: "approval" | "notify" | "silent";
+  delivery: "approval" | "notify" | "silent" | "skipped";
+}
+
+/** WhatsApp is off unless the policy book says otherwise (D44): the team messages families from their own phones. */
+export function whatsappOn(book: PolicyBook): boolean {
+  return book.has("messaging.channels") ? book.get("messaging.channels").whatsapp : false;
 }
 
 export async function proposeClientMessage(ctx: RunContext, m: ProposedMessage): Promise<ProposedResult> {
+  if (m.channel === "whatsapp" && !whatsappOn(ctx.book)) {
+    await ctx.log({ action: "message_skipped", status: "blocked", leadId: m.leadId ?? null, weddingId: m.weddingId ?? null, input: { title: m.title } as Json, output: { reason: "WhatsApp is handled by the team from their own phones (policy messaging.channels)" } as Json, policyKeys: ["messaging.channels"] });
+    return { messageId: null, approvalId: null, delivery: "skipped" };
+  }
   const flags = m.flags ?? [];
   const delivery = decideDelivery(ctx.agent, flags);
   const store = ctx.deps.store;
@@ -221,11 +231,15 @@ export async function alertStaff(deps: AgentDeps, a: { role?: AppRole; userIds?:
   if (people.length === 0 && a.role) await deps.store.notify({ role: a.role, title: a.title, body: a.body, link: a.link });
   for (const p of people) {
     await deps.store.notify({ userId: p.id, title: a.title, body: a.body, link: a.link });
-    if (a.whatsapp && p.phone_e164 && deps.channels) {
+    if (a.whatsapp && p.phone_e164 && deps.channels && (await whatsappAllowed(deps))) {
       await deliver(deps, { kind: "whatsapp", to: p.phone_e164, body: `${a.title}\n${a.body}${a.link ? `\n${deps.channels.appUrl}${a.link}` : ""}`, leadId: a.leadId, weddingId: a.weddingId, subjectTable: "profiles", subjectId: p.id });
     }
   }
   return people.length;
+}
+
+async function whatsappAllowed(deps: AgentDeps): Promise<boolean> {
+  try { return whatsappOn(PolicyBook.fromRows(await deps.store.loadPolicyRows())); } catch { return false; }
 }
 
 // ---------------------------------------------------------------------------

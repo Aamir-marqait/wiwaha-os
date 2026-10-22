@@ -12,7 +12,7 @@ export default async function TeamLayout({ children }: { children: React.ReactNo
   const supabase = await createClient();
   const { count } = await supabase.from("approvals").select("id", { count: "exact", head: true }).eq("status", "pending");
   const approvals = count ?? 0;
-  const { count: sendCount } = await supabase.from("messages").select("id", { count: "exact", head: true }).eq("status", "approved").eq("direction", "outbound").in("channel", ["whatsapp", "email"]);
+  const { count: sendCount } = await supabase.from("messages").select("id", { count: "exact", head: true }).eq("status", "approved").eq("direction", "outbound").eq("channel", "email");
   const toSend = sendCount ?? 0;
   const first = viewer.profile.full_name.split(" ")[0];
   const sections = viewerSections(viewer);

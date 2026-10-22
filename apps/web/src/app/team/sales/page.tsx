@@ -1,6 +1,5 @@
 import { formatSlot } from "@wiwaha/agents";
-import { formatDateTimeIST } from "@wiwaha/db";
-import { Badge, Card, CardHeader, PageTitle, Stat } from "@wiwaha/ui";
+import { Card, CardHeader, PageTitle, Stat } from "@wiwaha/ui";
 import Link from "next/link";
 import { SOURCE_LABELS } from "@/components/lead-badges";
 import { requireSection } from "@/lib/auth";
@@ -14,21 +13,19 @@ export default async function SalesPage() {
   await requireSection("sales_marketing", ["owner", "sales"]);
   const supabase = await createClient();
   const since = new Date(Date.now() - 30 * 86_400_000).toISOString();
-  const [funnel, calls, visits, outbox, lostLeads] = await Promise.all([
+  const [funnel, calls, visits, lostLeads] = await Promise.all([
     supabase.from("sales_funnel").select("*"),
     supabase.from("calls").select("status, direction, handled_by, handed_over").eq("direction", "inbound").gte("started_at", since),
     supabase.from("visits").select("id, lead_id, scheduled_at, status, attendees, lead:leads(contact:contacts(full_name))").gte("scheduled_at", new Date().toISOString()).eq("status", "scheduled").order("scheduled_at").limit(10),
-    supabase.from("outbox").select("id, kind, provider, to_address, status, created_at, body").order("created_at", { ascending: false }).limit(15),
     supabase.from("leads").select("status, lost_reason, source").in("status", ["lost", "no_response"]),
   ]);
-  const rows = (funnel.data ?? []) as { source: string; enquiries: number; visits: number; bookings: number; median_first_reply_minutes: number | null }[];
+  const rows = (funnel.data ?? []) as { source: string; enquiries: number; visits: number; bookings: number }[];
   const total = rows.reduce((a, r) => ({ e: a.e + r.enquiries, v: a.v + r.visits, b: a.b + r.bookings }), { e: 0, v: 0, b: 0 });
   const lostBy = new Map<string, number>();
   for (const l of lostLeads.data ?? []) { const r = String(l.lost_reason ?? "").replace(/^Other:\s*/, "Other: ").trim() || "No reason given"; const k = r.startsWith("Other: ") ? "Other" : r; lostBy.set(k, (lostBy.get(k) ?? 0) + 1); }
   const lostTotal = (lostLeads.data ?? []).length;
   const c = calls.data ?? [];
   const answered = c.filter((x) => ["completed", "transferred", "in_progress"].includes(x.status as string)).length;
-  const replyTimes = rows.map((r) => r.median_first_reply_minutes).filter((x): x is number => x !== null);
 
   return (
     <>
@@ -43,13 +40,13 @@ export default async function SalesPage() {
       <div className="mt-5 grid gap-5 *:min-w-0 lg:grid-cols-[1fr_360px]">
         <div className="space-y-5">
           <Card>
-            <CardHeader title="Funnel by source" subtitle={replyTimes.length ? `Median first reply ${Math.round(Math.min(...replyTimes))}–${Math.round(Math.max(...replyTimes))} min across sources` : "Reply times appear once replies are sent"} />
+            <CardHeader title="Funnel by source" subtitle="How each lead heard about us (or how they reached us), and how many visited and booked" />
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[480px] text-sm">
-                <thead className="text-left text-xs text-ink-soft"><tr><th className="px-4 py-2 font-medium">Source</th><th className="px-2 py-2 text-right font-medium">Enquiries</th><th className="px-2 py-2 text-right font-medium">Visits</th><th className="px-2 py-2 text-right font-medium">Bookings</th><th className="px-2 py-2 text-right font-medium">Conversion</th><th className="px-4 py-2 text-right font-medium">1st reply</th></tr></thead>
+              <table className="w-full min-w-[400px] text-sm">
+                <thead className="text-left text-xs text-ink-soft"><tr><th className="px-4 py-2 font-medium">Source</th><th className="px-2 py-2 text-right font-medium">Enquiries</th><th className="px-2 py-2 text-right font-medium">Visits</th><th className="px-2 py-2 text-right font-medium">Bookings</th><th className="px-2 py-2 text-right font-medium">Conversion</th></tr></thead>
                 <tbody className="divide-y divide-line">
                   {rows.sort((a, b) => b.enquiries - a.enquiries).map((r) => (
-                    <tr key={r.source}><td className="px-4 py-2">{SOURCE_LABELS[r.source] ?? r.source}</td><td className="px-2 py-2 text-right">{r.enquiries}</td><td className="px-2 py-2 text-right">{r.visits}</td><td className="px-2 py-2 text-right">{r.bookings}</td><td className="px-2 py-2 text-right">{pct(r.bookings, r.enquiries)}</td><td className="px-4 py-2 text-right">{r.median_first_reply_minutes !== null ? `${Math.round(r.median_first_reply_minutes)} min` : "—"}</td></tr>
+                    <tr key={r.source}><td className="px-4 py-2">{SOURCE_LABELS[r.source] ?? r.source}</td><td className="px-2 py-2 text-right">{r.enquiries}</td><td className="px-2 py-2 text-right">{r.visits}</td><td className="px-2 py-2 text-right">{r.bookings}</td><td className="px-2 py-2 text-right">{pct(r.bookings, r.enquiries)}</td></tr>
                   ))}
                 </tbody>
               </table>
@@ -79,18 +76,6 @@ export default async function SalesPage() {
                 const contact = lead ? (Array.isArray(lead.contact) ? lead.contact[0] : lead.contact) : null;
                 return <li key={v.id as string}><Link href={`/team/leads/${v.lead_id}`} className="font-medium hover:underline">{contact?.full_name ?? "Family"}</Link><p className="text-xs text-ink-soft">{formatSlot(v.scheduled_at as string)}{v.attendees ? ` · ${v.attendees}` : ""}</p></li>;
               })}
-            </ul>
-          </Card>
-          <Card className="p-4 sm:p-5">
-            <h2 className="font-serif text-xl font-semibold">Sent recently</h2>
-            <ul className="mt-2 space-y-2 text-xs">
-              {(outbox.data ?? []).map((o) => (
-                <li key={o.id as string} className="rounded-lg bg-ivory-100 px-3 py-2">
-                  <p className="font-medium capitalize">{o.kind as string} → {o.to_address as string} <Badge tone={o.status === "sandboxed" ? "gold" : o.status === "failed" ? "burgundy" : "sage"}>{o.status === "sandboxed" ? "sandbox" : String(o.status)}</Badge></p>
-                  <p className="text-ink-soft">{formatDateTimeIST(o.created_at as string)}</p>
-                  {o.body ? <p className="mt-1 line-clamp-2">{o.body as string}</p> : null}
-                </li>
-              ))}
             </ul>
           </Card>
         </div>

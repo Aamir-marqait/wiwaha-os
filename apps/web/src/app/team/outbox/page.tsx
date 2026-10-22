@@ -14,11 +14,11 @@ type Row = { id: string; channel: string; to_address: string | null; subject: st
 export default async function OutboxPage() {
   await requireStaff(["owner", "sales", "event_manager"]);
   const supabase = await createClient();
-  const { data } = await supabase.from("messages").select("id, channel, to_address, subject, body, created_at, lead_id, wedding_id, lead:leads(contact:contacts(full_name)), wedding:weddings(title)").eq("status", "approved").eq("direction", "outbound").in("channel", ["whatsapp", "email"]).order("created_at");
+  const { data } = await supabase.from("messages").select("id, channel, to_address, subject, body, created_at, lead_id, wedding_id, lead:leads(contact:contacts(full_name)), wedding:weddings(title)").eq("status", "approved").eq("direction", "outbound").eq("channel", "email").order("created_at");
   const rows = (data ?? []) as unknown as Row[];
   return (
     <>
-      <PageTitle title="To send" subtitle="Approved messages waiting for you. Tap the button, press send in WhatsApp or your mail app, then come back and confirm." />
+      <PageTitle title="Emails to send" subtitle="Approved emails waiting for you while email isn't connected. Tap the button, press send in your mail app, then come back and confirm." />
       {rows.length === 0 ? <EmptyState title="Nothing to send">Messages appear here once they're approved. When WhatsApp and email are connected they go out by themselves.</EmptyState> : null}
       <div className="space-y-3">
         {rows.map((m) => {

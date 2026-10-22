@@ -6,18 +6,16 @@ import { visibleGroups } from "@/lib/nav";
 export const metadata = { title: "More" };
 
 const BLURBS: Record<string, string> = {
-  "/team/outbox": "Approved WhatsApp and email waiting for you to send.",
   "/team/leads": "Every enquiry and where it stands.",
   "/team/sales": "Funnel by source, why leads didn't book, visits.",
   "/team/studio": "Posts, carousels and reels from the estate's own photos.",
   "/team/calendar": "Every space, hold and booking.",
   "/team/estate": "Maintenance, stock, purchases and readings.",
   "/team/weddings": "Every wedding, by stage.",
-  "/team/vendors": "Work orders to approve, and what each vendor is booked for.",
+  "/team/vendors": "Every vendor, their details, and who they're booked for.",
   "/team/finance": "Invoices, costs, profit and Tally export.",
   "/team/owner": "The five morning numbers, bookings and profit.",
   "/team/clients": "Couples' and families' portal logins.",
-  "/team/settings": "Policy book, agents, connections, activity log.",
   "/team/leads/import": "Bring in leads from Meta, Google or a spreadsheet.",
   "/team/catalogue/spaces": "Lawns, halls and other spaces.",
   "/team/catalogue/rooms": "Guest rooms.",
@@ -30,8 +28,13 @@ const BLURBS: Record<string, string> = {
   "/team/settings/claude": "Use Wiwaha OS from Claude.",
   "/team/settings/lists": "Every list the team maintains.",
   "/team/settings/team": "Invite people and choose what each sees.",
+  "/team/spaces": "Every space and area, with photos for moodboards and posts.",
+  "/team/tasks": "To-dos for you and the team; tick them off when done.",
+  "/team/approvals": "Things waiting for your OK: quotes, invoices, moodboards.",
+  "/team/outbox": "Approved emails waiting to be sent.",
+  "/team/settings": "Policy book, lists, links, agents and the activity log.",
 };
-const IN_BOTTOM_BAR = new Set(["/team", "/team/tasks", "/team/approvals"]);
+const IN_BOTTOM_BAR = new Set(["/team"]);
 
 /** Phone navigation: everything under its heading. */
 export default async function MorePage() {

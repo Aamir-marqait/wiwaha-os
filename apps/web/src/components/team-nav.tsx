@@ -1,7 +1,7 @@
 "use client";
 import type { AppRole } from "@wiwaha/db";
 import { cn } from "@wiwaha/ui";
-import { CheckCircle2, ChevronDown, ClipboardCheck, Gem, Inbox, IndianRupee, LayoutGrid, Sun, Trees } from "lucide-react";
+import { CalendarDays, ChevronDown, Gem, Inbox, IndianRupee, LayoutDashboard, LayoutGrid, Trees } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -14,7 +14,7 @@ function isActive(path: string, href: string, exact?: boolean) {
 
 const STORE = "wiwaha.nav.open";
 
-/** Desktop sidebar: Today, Tasks and Approvals on top, then each heading as a dropdown. */
+/** Desktop sidebar: the dashboard on top, then each heading as a dropdown. */
 export function SideNav({ role, sections, approvals, toSend = 0 }: { role: AppRole; sections: Section[]; approvals: number; toSend?: number }) {
   const path = usePathname();
   const counts = { approvals, toSend };
@@ -38,6 +38,7 @@ export function SideNav({ role, sections, approvals, toSend = 0 }: { role: AppRo
   const link = (item: NavItem, nested: boolean) => {
     const active = isActive(path, item.href, item.exact);
     const n = item.badge ? counts[item.badge] : 0;
+    if (item.hideWhenZero && n === 0 && !active) return null;
     return (
       <Link key={item.href} href={item.href} aria-current={active ? "page" : undefined} className={cn("flex items-center gap-3 rounded-xl px-3 text-sm font-medium transition-colors", nested ? "py-1.5 pl-9" : "py-2", active ? "bg-sage-700 text-white" : "text-sage-100 hover:bg-sage-700/50")}>
         {nested ? null : <item.icon className="size-[18px]" aria-hidden />}
@@ -50,6 +51,8 @@ export function SideNav({ role, sections, approvals, toSend = 0 }: { role: AppRo
     <nav className="-mx-1 space-y-1 overflow-y-auto px-1">
       {groups.map((g) => {
         if (!g.title) return <div key="top" className="space-y-0.5 pb-2">{g.items.map((i) => link(i, false))}</div>;
+        // A heading with one page is just that page.
+        if (g.items.length === 1) return <div key={g.title}>{link(g.items[0]!, false)}</div>;
         const isOpen = open.has(g.title);
         const Icon = g.items[0]!.icon;
         const here = g.title === activeTitle;
@@ -69,23 +72,20 @@ export function SideNav({ role, sections, approvals, toSend = 0 }: { role: AppRo
   );
 }
 
-/** Phone: Today, the person's main heading, Tasks, Approvals and More. */
+/** Phone: the dashboard, the person's main pages, and More for everything else. */
 export function BottomNav({ role, sections, approvals }: { role: AppRole; sections: Section[]; approvals: number }) {
   const path = usePathname();
-  const main: NavItem | null =
-    sections.includes("weddings") && role !== "sales" ? { href: "/team/weddings", label: "Weddings", icon: Gem }
-    : sections.includes("sales_marketing") ? { href: "/team/leads", label: "Leads", icon: Inbox }
-    : sections.includes("accounts") ? { href: "/team/finance", label: "Finance", icon: IndianRupee }
-    : sections.includes("venue") ? { href: "/team/estate", label: "Estate", icon: Trees }
-    : null;
-  const second: NavItem | null = role === "sales" && sections.includes("weddings") ? { href: "/team/weddings", label: "Weddings", icon: Gem } : null;
+  const pick: NavItem[] = [
+    ...(sections.includes("sales_marketing") && role !== "staff" ? [{ href: "/team/leads", label: "Leads", icon: Inbox }] : []),
+    ...(sections.includes("weddings") ? [{ href: "/team/weddings", label: "Weddings", icon: Gem }] : []),
+    ...(sections.includes("venue") ? [{ href: "/team/calendar", label: "Calendar", icon: CalendarDays }] : []),
+    ...(sections.includes("accounts") && !sections.includes("sales_marketing") ? [{ href: "/team/finance", label: "Finance", icon: IndianRupee }] : []),
+    ...(role === "staff" ? [{ href: "/team/estate", label: "Estate", icon: Trees }] : []),
+  ].slice(0, 3);
   const items: NavItem[] = [
-    { href: "/team", label: "Today", icon: Sun, exact: true },
-    ...(main ? [main] : []),
-    ...(second ? [second] : []),
-    { href: "/team/tasks", label: "Tasks", icon: ClipboardCheck },
-    { href: "/team/approvals", label: "Approvals", icon: CheckCircle2, badge: "approvals" as const },
-    { href: "/team/more", label: "More", icon: LayoutGrid },
+    { href: "/team", label: "Dashboard", icon: LayoutDashboard, exact: true },
+    ...pick,
+    { href: "/team/more", label: "More", icon: LayoutGrid, badge: "approvals" as const },
   ];
   return (
     <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-white/95 pb-[env(safe-area-inset-bottom)] backdrop-blur lg:hidden">
