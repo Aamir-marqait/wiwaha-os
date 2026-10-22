@@ -67,3 +67,29 @@ export async function setAssignmentStatus(id: string, status: "set_up" | "return
   const { error } = await supabase.from("decor_assignments").update({ status, return_condition: status === "returned" && isCondition(returnCondition) ? returnCondition : null }).eq("id", id);
   return done(error);
 }
+
+/** The +/− buttons on a stock card: change how many we own, at once. */
+export async function setDecorQuantity(id: string, quantity: number): Promise<Result> {
+  await requireSection("decor", EDITORS);
+  if (!Number.isInteger(quantity) || quantity < 0 || quantity > 100000) return { error: "Quantity must be a whole number." };
+  const supabase = await createClient("team");
+  const { error } = await supabase.from("decor_items").update({ quantity }).eq("id", id);
+  return error ? { error: friendlyError(error) } : {};
+}
+
+/** Put a template on one event's function as a moodboard (the décor stage must be open). */
+export async function applyTemplate(templateId: string, weddingId: string, functionId: string): Promise<Result> {
+  await requireSection("decor", ["owner", "event_manager"]);
+  if (!weddingId || !functionId) return { error: "Choose the event and the function." };
+  const supabase = await createClient("team");
+  const { data: t } = await supabase.from("decor_templates").select("id, title, area, description, design_kind, palette, examples, reference_image_url").eq("id", templateId).maybeSingle();
+  if (!t) return { error: "Template not found." };
+  const images = [...((t.examples ?? []) as { url: string; caption?: string }[]).map((e) => ({ url: e.url, caption: e.caption ?? null, source: "template" })),
+    ...(t.reference_image_url ? [{ url: t.reference_image_url as string, caption: null, source: "template" }] : [])];
+  const { error } = await supabase.from("moodboards").insert({
+    wedding_id: weddingId, function_id: functionId, theme: t.title as string, design_kind: t.design_kind as string, images,
+    palette: (t.palette ?? []) as string[], description: [t.area, t.description].filter(Boolean).join(": ") || null, template_id: t.id as string, status: "generated",
+  });
+  revalidatePath(`/team/weddings/${weddingId}`);
+  return done(error);
+}

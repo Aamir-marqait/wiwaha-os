@@ -1,7 +1,9 @@
 import { Badge, Card, PageTitle, buttonClass } from "@wiwaha/ui";
 import Link from "next/link";
+import { formatDateIST, todayIST } from "@wiwaha/db";
 import { requireSection } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
+import { type EventOption, UseTemplate } from "../decor-forms";
 import { DecorTabs } from "../tabs";
 
 export const metadata = { title: "Décor templates" };
@@ -11,7 +13,14 @@ export default async function DecorTemplatesPage() {
   const viewer = await requireSection("decor");
   const canEdit = ["owner", "event_manager"].includes(viewer.profile.role);
   const supabase = await createClient();
-  const { data } = await supabase.from("decor_templates").select("*").order("area").order("sort").order("title");
+  const [{ data }, weddings] = await Promise.all([
+    supabase.from("decor_templates").select("*").order("area").order("sort").order("title"),
+    supabase.from("weddings").select("id, title, event_start, functions:event_functions(id, name, date)").gte("event_end", todayIST()).neq("status", "cancelled").order("event_start"),
+  ]);
+  const events: EventOption[] = (weddings.data ?? []).map((w) => ({
+    id: w.id as string, title: w.title as string, dates: formatDateIST(w.event_start as string, { day: "numeric", month: "short" }),
+    functions: ((w.functions ?? []) as { id: string; name: string; date: string }[]).sort((a, b) => a.date.localeCompare(b.date)).map((f) => ({ id: f.id, name: f.name })),
+  }));
   const byArea = new Map<string, NonNullable<typeof data>>();
   for (const t of data ?? []) byArea.set(t.area as string, [...(byArea.get(t.area as string) ?? []), t]);
   return (
@@ -29,12 +38,13 @@ export default async function DecorTemplatesPage() {
                 return (
                   <li key={t.id as string}>
                     <Card className={`h-full overflow-hidden ${t.active ? "" : "opacity-60"}`}>
-                      {photos.length ? <div className="grid h-36 grid-cols-3 gap-0.5">{photos.slice(0, 3).map((u) => <img key={u} src={u} alt="" className="size-full object-cover" />)}</div> : null}
+                      {photos.length ? <div className="grid h-36 grid-cols-3 gap-0.5">{photos.slice(0, 3).map((u) => <img key={u} src={u} alt="" loading="lazy" className="size-full object-cover" />)}</div> : null}
                       <div className="space-y-1 p-4">
                         <div className="flex items-start justify-between gap-2"><p className="font-medium">{t.title as string}</p><Badge tone={t.design_kind === "custom" ? "burgundy" : "neutral"}>{t.design_kind as string}</Badge></div>
                         {t.function_type ? <p className="text-xs capitalize text-ink-soft">{t.function_type as string}</p> : null}
                         {t.description ? <p className="text-sm">{t.description as string}</p> : null}
                         {((t.palette ?? []) as string[]).length ? <p className="flex gap-1 pt-1">{((t.palette ?? []) as string[]).map((c) => <span key={c} className="size-4 rounded-full border border-line" style={{ background: c }} />)}</p> : null}
+                        {canEdit && t.active ? <div className="pt-2"><UseTemplate templateId={t.id as string} events={events} /></div> : null}
                       </div>
                     </Card>
                   </li>
