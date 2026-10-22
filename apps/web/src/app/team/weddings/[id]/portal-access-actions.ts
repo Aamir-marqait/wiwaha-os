@@ -1,7 +1,6 @@
 "use server";
 import { randomInt } from "node:crypto";
 import { normalisePhone } from "@wiwaha/db";
-import { revalidatePath } from "next/cache";
 import { requireStaff } from "@/lib/auth";
 import { env } from "@/lib/env";
 import { phoneLoginEmail } from "@/lib/phone-login";
@@ -21,7 +20,7 @@ function rights(role: Role) {
 export interface LoginResult { error?: string; pin?: string; phone?: string; name?: string; url?: string }
 
 /** A portal login for one family member: their phone number and a new 6-digit PIN, shown once to share. */
-export async function createFamilyLogin(weddingId: string, input: { name: string; phone: string; role: string }): Promise<LoginResult> {
+export async function createFamilyLogin(weddingId: string, input: { name: string; phone: string; role: string; contactId?: string | null }): Promise<LoginResult> {
   await requireStaff(STAFF);
   const team = await createClient("team");
   const { data: w } = await team.from("weddings").select("id").eq("id", weddingId).maybeSingle();
@@ -36,7 +35,7 @@ export async function createFamilyLogin(weddingId: string, input: { name: string
   const pin = newPin();
   const { data: existing } = await admin.from("profiles").select("id").eq("email", email).maybeSingle();
   const { error: mErr } = await admin.from("wedding_members").upsert(
-    { wedding_id: weddingId, email, display_name: name.split(" ")[0], member_role: role, login_phone: e164, user_id: existing?.id ?? null, ...rights(role) },
+    { wedding_id: weddingId, email, display_name: name.split(" ")[0], member_role: role, login_phone: e164, user_id: existing?.id ?? null, ...(input.contactId ? { contact_id: input.contactId } : {}), ...rights(role) },
     { onConflict: "wedding_id,email" },
   );
   if (mErr) return { error: mErr.message };
@@ -44,7 +43,7 @@ export async function createFamilyLogin(weddingId: string, input: { name: string
     ? await admin.auth.admin.updateUserById(existing.id as string, { password: pin })
     : await admin.auth.admin.createUser({ email, password: pin, email_confirm: true, user_metadata: { full_name: name, phone: e164 } });
   if (res.error) return { error: res.error.message };
-  revalidatePath(`/team/weddings/${weddingId}`);
+  // No revalidate here: the PIN stays on screen until "Done" refreshes the list.
   return { pin, phone: e164, name, url: `${env.appUrl()}/portal/login` };
 }
 

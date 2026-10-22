@@ -31,15 +31,15 @@ function Invite({ r, couple, onClose }: { r: LoginResult; couple: string; onClos
 }
 
 /** One-tap login for a family contact we already have, or a new person. */
-export function CreateLogin({ weddingId, couple, preset }: { weddingId: string; couple: string; preset?: { name: string; phone: string; role: string } }) {
+export function CreateLogin({ weddingId, couple, preset, label = "Create login" }: { weddingId: string; couple: string; preset?: { name: string; phone: string; role: string; contactId?: string | null }; label?: string }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [v, setV] = useState(preset ?? { name: "", phone: "", role: "couple" });
   const [res, setRes] = useState<LoginResult | null>(null);
   const [pending, start] = useTransition();
-  const make = () => start(async () => { const r = await createFamilyLogin(weddingId, v); setRes(r); if (!r.error) router.refresh(); });
-  if (res?.pin) return <Invite r={res} couple={couple} onClose={() => { setRes(null); setOpen(false); }} />;
-  if (preset && !open) return <button type="button" disabled={pending} onClick={make} className={buttonClass("secondary", "sm")}>{pending ? "Creating…" : "Create login"}</button>;
+  const make = () => start(async () => setRes(await createFamilyLogin(weddingId, v)));
+  if (res?.pin) return <Invite r={res} couple={couple} onClose={() => { setRes(null); setOpen(false); router.refresh(); }} />;
+  if (preset && !open) return <span className="flex flex-col items-end gap-1"><button type="button" disabled={pending} onClick={make} className={buttonClass("secondary", "sm")}>{pending ? "Creating…" : label}</button>{res?.error ? <span role="alert" className="text-xs text-burgundy-700">{res.error}</span> : null}</span>;
   if (!open) return <button type="button" onClick={() => setOpen(true)} className={buttonClass("secondary", "sm")}>+ Add a family login</button>;
   return (
     <form className="space-y-2" onSubmit={(e) => { e.preventDefault(); make(); }}>

@@ -50,7 +50,7 @@ export default async function SpacesPage() {
         {bare.map((s) => (
           <li key={s.id as string}>
             <Card className="h-full overflow-hidden">
-              <div className="grid h-44 place-items-center bg-ivory-100 text-sm text-ink-soft">No photos yet</div>
+              <div className="grid h-20 place-items-center bg-ivory-100 text-sm text-ink-soft">No photos yet</div>
               <div className="space-y-2 p-4">
                 <div className="flex items-start justify-between gap-2"><p className="font-serif text-lg font-semibold">{s.name as string}</p><Badge tone="gold">Needs photos</Badge></div>
                 <p className="text-xs text-ink-soft">Bookable · seats {s.capacity_seated as number}{s.capacity_floating ? ` · ${s.capacity_floating as number} standing` : ""}</p>
@@ -69,7 +69,7 @@ export default async function SpacesPage() {
             <li key={a.id as string}>
               <Link href={`/team/decor/areas/${a.id as string}`} className="block h-full">
                 <Card className={`h-full overflow-hidden transition-shadow hover:shadow-md ${a.active ? "" : "opacity-60"}`}>
-                  {main ? <img src={main.thumb_url ?? main.url} alt={a.name as string} loading="lazy" className="h-44 w-full object-cover" /> : <div className="grid h-44 place-items-center bg-ivory-100 text-sm text-ink-soft">No photos yet</div>}
+                  {main ? <img src={main.thumb_url ?? main.url} alt={a.name as string} loading="lazy" className="h-44 w-full object-cover" /> : <div className="grid h-20 place-items-center bg-ivory-100 text-sm text-ink-soft">No photos yet</div>}
                   {extra.length ? <div className="grid grid-cols-3 gap-0.5">{extra.map((p) => <img key={p.url} src={p.thumb_url ?? p.url} alt="" loading="lazy" className="h-16 w-full object-cover" />)}</div> : null}
                   <div className="space-y-1.5 p-4">
                     <div className="flex items-start justify-between gap-2">
