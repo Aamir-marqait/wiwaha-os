@@ -13,6 +13,7 @@ import { FamilyForm, FunctionsEditor } from "./family-forms";
 import { AiMoodboards } from "./ai-moodboards";
 import { CostingCard } from "./costing";
 import { DecorStockCard } from "./decor-stock";
+import { PortalAccessCard } from "./portal-access";
 import { startPortalPreview } from "@/app/team/clients/preview-actions";
 import { googleCalendarLink } from "@/lib/calendar-links";
 import { env } from "@/lib/env";
@@ -102,7 +103,7 @@ export default async function WeddingRoom({ params, searchParams }: { params: Pr
       {tab === "venue" ? <div className="space-y-5"><OperationsPanels supabase={supabase} weddingId={id} role={role} eventEnded={eventEnded} show={["rooms", "run_of_show", "inspection"]} /></div> : null}
       {tab === "vendors" ? <div className="space-y-5"><PlanningPanels supabase={supabase} weddingId={id} role={role} show={["vendors"]} /></div> : null}
       {tab === "payments" ? <Payments supabase={supabase} w={w} id={id} role={role} eventEnded={eventEnded} /> : null}
-      {tab === "family" ? <Family supabase={supabase} id={id} canEdit={canEdit} /> : null}
+      {tab === "family" ? <Family supabase={supabase} id={id} canEdit={canEdit} title={w.title as string} /> : null}
     </>
   );
 }
@@ -121,6 +122,7 @@ async function Overview({ supabase, w, id, role, canEdit }: { supabase: Supa; w:
   return (
     <div className="grid gap-5 *:min-w-0 lg:grid-cols-[1.4fr_1fr]">
       <div className="space-y-5">
+        <PortalAccessCard supabase={supabase} weddingId={id} couple={w.title as string} canEdit={["owner", "sales", "event_manager"].includes(role)} />
         <Lifecycle supabase={supabase} w={{ id, lead_id: (w.lead_id as string | null) ?? null, event_start: w.event_start as string, event_end: w.event_end as string, whatsapp_group_url: (w.whatsapp_group_url as string | null) ?? null }} />
         <Card>
           <CardHeader title="Planning stages" subtitle="What the couple sees in their portal. Each opens on its date, never before its payment." />
@@ -226,7 +228,7 @@ async function Payments({ supabase, w, id, role, eventEnded }: { supabase: Supa;
   );
 }
 
-async function Family({ supabase, id, canEdit }: { supabase: Supa; id: string; canEdit: boolean }) {
+async function Family({ supabase, id, canEdit, title }: { supabase: Supa; id: string; canEdit: boolean; title: string }) {
   const [members, family] = await Promise.all([
     supabase.from("wedding_members").select("*").eq("wedding_id", id).order("created_at"),
     supabase.from("wedding_contacts").select("contact_id, relation, is_key_contact, contact:contacts(full_name, phone_e164, email)").eq("wedding_id", id),
@@ -248,24 +250,7 @@ async function Family({ supabase, id, canEdit }: { supabase: Supa; id: string; c
         </ul>
         {canEdit ? <div className="border-t border-line/70 px-4 py-3"><FamilyForm weddingId={id} /></div> : null}
       </Card>
-      <Card>
-        <CardHeader title="Portal logins" subtitle="Who can sign in to the couple's portal" action={<Link href="/team/clients" className="text-sm text-sage-700 underline">Sign-in links</Link>} />
-        <ul className="divide-y divide-line/70">
-          {(members.data ?? []).length === 0 ? <li className="px-4 py-3 text-sm text-ink-soft">No portal logins yet.</li> : null}
-          {(members.data ?? []).map((mm) => (
-            <li key={mm.id as string} className="px-4 py-3">
-              <p className="text-sm font-medium">{mm.display_name as string} <span className="text-xs font-normal capitalize text-ink-soft">· {String(mm.member_role)}</span></p>
-              <p className="text-xs text-ink-soft">{mm.email as string}{mm.accepted_at ? "" : " · not signed in yet"}</p>
-              <p className="mt-1 flex flex-wrap gap-1">
-                {mm.can_start_stages ? <Badge>starts stages</Badge> : null}
-                {mm.can_edit_brief ? <Badge>edits brief</Badge> : null}
-                {mm.can_approve ? <Badge>approves</Badge> : null}
-                {mm.can_view_payments ? <Badge>sees payments</Badge> : null}
-              </p>
-            </li>
-          ))}
-        </ul>
-      </Card>
+      <PortalAccessCard supabase={supabase} weddingId={id} couple={title} canEdit={canEdit} />
     </div>
   );
 }

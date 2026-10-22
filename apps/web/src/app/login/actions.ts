@@ -2,6 +2,7 @@
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { env } from "@/lib/env";
+import { phoneLoginEmail } from "@/lib/phone-login";
 import { createClient } from "@/lib/supabase/server";
 
 export interface AuthState {
@@ -43,4 +44,18 @@ export async function signIn(_prev: AuthState, form: FormData): Promise<AuthStat
   const { error } = await supabase.auth.signInWithPassword({ email, password });
   if (error) return { error: "That email and password don't match." };
   redirect(safeNext(next, surface));
+}
+
+/** Families: phone number and the 6-digit PIN from their event manager (D44). */
+export async function signInWithPhone(_prev: AuthState, form: FormData): Promise<AuthState> {
+  const phone = String(form.get("phone") ?? "");
+  const pin = String(form.get("pin") ?? "").replace(/\s/g, "");
+  const next = String(form.get("next") ?? "") || undefined;
+  const email = phoneLoginEmail(phone);
+  if (!email) return { error: "Please enter the mobile number your event manager has, with the country code if outside India." };
+  if (!/^\d{6}$/.test(pin)) return { error: "The PIN is the 6 digits your event manager shared." };
+  const supabase = await createClient("portal");
+  const { error } = await supabase.auth.signInWithPassword({ email, password: pin });
+  if (error) return { error: "That number and PIN don't match. Ask your event manager for a new PIN if you've lost it." };
+  redirect(safeNext(next, "portal"));
 }

@@ -63,3 +63,9 @@ select
 from public.leads l
 group by coalesce(l.heard_about, l.source::text);
 grant select on public.sales_funnel to authenticated;
+
+-- ---------------------------------------------------------------------------
+-- Families sign in with their phone number and a PIN (D44): the number is kept
+-- on the membership so the team can see and share it.
+-- ---------------------------------------------------------------------------
+alter table public.wedding_members add column login_phone text;
