@@ -1,6 +1,6 @@
 "use server";
 import { redirect } from "next/navigation";
-import { requireSection } from "@/lib/auth";
+import { requireAnySection } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 const KIND: Record<string, string> = { outdoor: "lawn", indoor: "hall", semi_open: "other" };
@@ -11,7 +11,7 @@ const KIND: Record<string, string> = { outdoor: "lawn", indoor: "hall", semi_ope
  * (plain photos) and the Content studio (every photo) find them (D42).
  */
 export async function openSpacePhotos(spaceId: string): Promise<{ error?: string }> {
-  await requireSection("decor", ["owner", "event_manager", "staff"]);
+  await requireAnySection(["venue", "decor"], ["owner", "event_manager", "staff"]);
   const db = createAdminClient("system");
   const { data: space } = await db.from("spaces").select("id, name, kind, description, sort").eq("id", spaceId).maybeSingle();
   if (!space) return { error: "Space not found." };

@@ -89,7 +89,7 @@ export default async function WeddingRoom({ params, searchParams }: { params: Pr
           <AiMoodboards supabase={supabase} weddingId={id} canEdit={role === "owner" || (role === "event_manager" && w.event_manager_id === viewer.userId)} />
           <PlanningPanels supabase={supabase} weddingId={id} role={role} show={["decor"]} />
           <DecorStockCard supabase={supabase} weddingId={id} showMoney={["owner", "accounts", "event_manager"].includes(role)} canEdit={["owner", "event_manager", "staff", "accounts"].includes(role)} />
-          <p className="text-sm text-ink-soft">AI moodboards dress the plain photos in <Link href="/team/decor/areas" className="text-sage-700 underline">venue areas</Link>, guided by the <Link href="/team/decor/templates" className="text-sage-700 underline">décor templates by area</Link>.</p>
+          <p className="text-sm text-ink-soft">AI moodboards dress the plain photos in <Link href="/team/spaces" className="text-sage-700 underline">Spaces</Link>, guided by the <Link href="/team/decor/templates" className="text-sage-700 underline">décor templates by area</Link>.</p>
         </div>
       ) : null}
       {tab === "entertainment" ? <SelectionsPanel supabase={supabase} weddingId={id} vertical="entertainment" canEdit={canVertical} /> : null}

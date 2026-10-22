@@ -3,16 +3,15 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { MediaCard, type MediaCardData } from "@/components/media-card";
 import { MediaUploader } from "@/components/media-uploader";
-import { requireSection } from "@/lib/auth";
+import { requireAnySection } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
-import { DecorTabs } from "../../tabs";
 import { AreaForm } from "../area-form";
 
-export const metadata = { title: "Venue area" };
+export const metadata = { title: "Space" };
 
 export default async function AreaPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const viewer = await requireSection("decor");
+  const viewer = await requireAnySection(["venue", "decor"]);
   const canEdit = ["owner", "event_manager", "staff"].includes(viewer.profile.role);
   const supabase = await createClient();
   const [{ data: a }, photos, spaces, areas, templates] = await Promise.all([
@@ -29,8 +28,7 @@ export default async function AreaPage({ params }: { params: Promise<{ id: strin
   const areaOptions = (areas.data ?? []).map((x) => ({ id: x.id as string, name: x.name as string }));
   return (
     <>
-      <PageTitle title={a.name as string} subtitle={<span className="flex flex-wrap gap-3">{a.space_id ? <Link href="/team/catalogue/spaces" className="underline">← Spaces</Link> : null}<Link href="/team/decor/areas" className="underline">← Venue areas</Link></span>} />
-      <DecorTabs active="areas" />
+      <PageTitle title={a.name as string} subtitle={<Link href="/team/spaces" className="underline">← All spaces</Link>} />
       <div className="grid gap-5 *:min-w-0 lg:grid-cols-[1fr_22rem]">
         <div className="space-y-5">
           <Card className="space-y-3 p-4">
@@ -53,7 +51,7 @@ export default async function AreaPage({ params }: { params: Promise<{ id: strin
         <div className="space-y-5">
           {canEdit ? (
             <Card className="p-4">
-              <h2 className="mb-2 font-serif text-lg font-semibold">About this area</h2>
+              <h2 className="mb-2 font-serif text-lg font-semibold">About this space</h2>
               <AreaForm id={id} spaces={(spaces.data ?? []).map((s) => ({ id: s.id as string, name: s.name as string }))} initial={{ name: a.name as string, kind: a.kind as string, description: (a.description as string | null) ?? "", suits: (a.suits as string[]) ?? [], spaceId: (a.space_id as string | null) ?? null, sort: String(a.sort), active: a.active as boolean }} />
             </Card>
           ) : null}

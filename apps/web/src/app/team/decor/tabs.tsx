@@ -2,7 +2,6 @@ import { cn } from "@wiwaha/ui";
 import Link from "next/link";
 
 const TABS = [
-  { href: "/team/decor/areas", key: "areas", label: "Venue areas" },
   { href: "/team/decor", key: "stock", label: "Stock" },
   { href: "/team/decor/templates", key: "templates", label: "Templates by area" },
   { href: "/team/decor/assignments", key: "assignments", label: "Assigned to events" },
