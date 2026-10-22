@@ -24,7 +24,7 @@ export async function PortalAccessCard({ supabase, weddingId, couple, canEdit }:
   });
   const url = `${env.appUrl()}/portal/login`;
   return (
-    <Card>
+    <Card id="portal">
       <CardHeader title="Couple's portal" subtitle="Families sign in with their mobile number and a PIN. Planning opens 90 days before; until then they can share ideas." />
       <div className="space-y-3 px-4 pb-4 sm:px-5">
         <CopyField label="Portal link" value={url} />
