@@ -40,7 +40,7 @@ function Chips({ list, value, onChange, multi = true, max }: { list: Choice[]; v
 function Section({ n, title, help, children }: { n: number; title: string; help?: string; children: React.ReactNode }) {
   return (
     <section className="space-y-1 rounded-2xl border border-line bg-white p-4 sm:p-5">
-      <h3 className="font-serif text-xl font-semibold"><span className="mr-2 text-gold-600">{n}.</span>{title}</h3>
+      <h3 className="font-serif text-xl font-semibold">{n ? <span className="mr-2 text-gold-600">{n}.</span> : null}{title}</h3>
       {help ? <p className="text-sm text-ink-soft">{help}</p> : null}
       {children}
     </section>
@@ -66,14 +66,8 @@ export function DecorQuestionnaire({ weddingId, initial, choices, areas, functio
   return (
     <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); save(true); }}>
       <fieldset disabled={!editable || pending} className="space-y-4">
-        <Section n={++n} title="Your traditions" help="So the décor feels like home to both families.">
-          <Chips list={choices.traditions} value={a.traditions} onChange={(v) => set("traditions", v)} />
-          <label className="mt-3 block text-sm">Anything specific? <input value={a.tradition_note ?? ""} onChange={(e) => set("tradition_note", e.target.value)} placeholder="e.g. Kashi yatra, banana leaves at the mantap, a Christian blessing after the muhurtham" className={input} /></label>
-        </Section>
         <Section n={++n} title="The look">
           <Chips list={choices.styles} value={a.style ? [a.style] : []} multi={false} onChange={(v) => set("style", v[0])} />
-          <p className="mt-3 text-sm">How full should it feel?</p>
-          <Chips list={choices.feels} value={a.feel ? [a.feel] : []} multi={false} onChange={(v) => set("feel", v[0])} />
         </Section>
         <Section n={++n} title="Colours" help="Pick up to three colour stories.">
           <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3">
@@ -92,15 +86,6 @@ export function DecorQuestionnaire({ weddingId, initial, choices, areas, functio
         <Section n={++n} title="Flowers and greens">
           <Chips list={choices.flowers} value={a.flowers} onChange={(v) => set("flowers", v)} />
         </Section>
-        <Section n={++n} title="Traditional touches">
-          <Chips list={choices.elements} value={a.elements} onChange={(v) => set("elements", v)} />
-          {a.elements.includes("name_board") ? <label className="mt-3 block text-sm">What should the name board say? <input value={a.name_board_text ?? ""} onChange={(e) => set("name_board_text", e.target.value)} placeholder="e.g. Ananya weds Rohan" className={input} /></label> : null}
-        </Section>
-        {hasWedding ? (
-          <Section n={++n} title="The mandap">
-            <Chips list={choices.mandaps} value={a.mandap_style ? [a.mandap_style] : []} multi={false} onChange={(v) => set("mandap_style", v[0])} />
-          </Section>
-        ) : null}
         {functions.map((f) => {
           const fa = a.functions[f.id] ?? { areas: [], lighting: [] };
           return (
@@ -118,19 +103,45 @@ export function DecorQuestionnaire({ weddingId, initial, choices, areas, functio
               </div>
               <p className="mt-3 text-sm">Mood</p>
               <Chips list={choices.moods} value={fa.mood ? [fa.mood] : []} multi={false} onChange={(v) => setFn(f.id, { mood: v[0] })} />
-              <p className="mt-3 text-sm">Guest seating</p>
-              <Chips list={choices.seating} value={fa.seating ? [fa.seating] : []} multi={false} onChange={(v) => setFn(f.id, { seating: v[0] })} />
-              <p className="mt-3 text-sm">Lighting</p>
-              <Chips list={choices.lighting} value={fa.lighting} onChange={(v) => setFn(f.id, { lighting: v })} />
-              <label className="mt-3 block text-sm">Must-haves for the {f.name.toLowerCase()} <input value={fa.must_haves ?? ""} onChange={(e) => setFn(f.id, { must_haves: e.target.value })} placeholder="e.g. a swing for the bride, a dhol entry" className={input} /></label>
+              <details className="mt-3 text-sm">
+                <summary className="cursor-pointer text-sage-700">More about this function (optional)</summary>
+                <p className="mt-3 text-sm">Guest seating</p>
+                <Chips list={choices.seating} value={fa.seating ? [fa.seating] : []} multi={false} onChange={(v) => setFn(f.id, { seating: v[0] })} />
+                <p className="mt-3 text-sm">Lighting</p>
+                <Chips list={choices.lighting} value={fa.lighting} onChange={(v) => setFn(f.id, { lighting: v })} />
+                <label className="mt-3 block text-sm">Must-haves for the {f.name.toLowerCase()} <input value={fa.must_haves ?? ""} onChange={(e) => setFn(f.id, { must_haves: e.target.value })} placeholder="e.g. a swing for the bride, a dhol entry" className={input} /></label>
+              </details>
             </Section>
           );
         })}
-        <Section n={++n} title="Anything else">
+        <details className="rounded-2xl border border-line bg-white p-4 sm:p-5">
+          <summary className="cursor-pointer font-serif text-xl font-semibold">Add more detail <span className="font-sans text-sm font-normal text-ink-soft">(optional)</span></summary>
+          <div className="mt-4 space-y-4">
+        <Section n={0} title="Your traditions" help="So the décor feels like home to both families.">
+          <Chips list={choices.traditions} value={a.traditions} onChange={(v) => set("traditions", v)} />
+          <label className="mt-3 block text-sm">Anything specific? <input value={a.tradition_note ?? ""} onChange={(e) => set("tradition_note", e.target.value)} placeholder="e.g. Kashi yatra, banana leaves at the mantap, a Christian blessing after the muhurtham" className={input} /></label>
+        </Section>
+            <section className="space-y-1 rounded-2xl border border-line bg-white p-4 sm:p-5">
+              <h3 className="font-serif text-xl font-semibold">Feel</h3>
+          <p className="text-sm">How full should it feel?</p>
+          <Chips list={choices.feels} value={a.feel ? [a.feel] : []} multi={false} onChange={(v) => set("feel", v[0])} />
+            </section>
+        <Section n={0} title="Traditional touches">
+          <Chips list={choices.elements} value={a.elements} onChange={(v) => set("elements", v)} />
+          {a.elements.includes("name_board") ? <label className="mt-3 block text-sm">What should the name board say? <input value={a.name_board_text ?? ""} onChange={(e) => set("name_board_text", e.target.value)} placeholder="e.g. Ananya weds Rohan" className={input} /></label> : null}
+        </Section>
+        {hasWedding ? (
+          <Section n={0} title="The mandap">
+            <Chips list={choices.mandaps} value={a.mandap_style ? [a.mandap_style] : []} multi={false} onChange={(v) => set("mandap_style", v[0])} />
+          </Section>
+        ) : null}
+        <Section n={0} title="Anything else">
           <label className="block text-sm">Inspiration (Pinterest or Instagram links, or describe it) <textarea rows={2} value={a.inspiration ?? ""} onChange={(e) => set("inspiration", e.target.value)} className={input} /></label>
           <label className="mt-3 block text-sm">Please avoid <input value={a.avoid ?? ""} onChange={(e) => set("avoid", e.target.value)} className={input} /></label>
           <label className="mt-3 block text-sm">Notes for our décor team <textarea rows={2} value={a.notes ?? ""} onChange={(e) => set("notes", e.target.value)} className={input} /></label>
         </Section>
+          </div>
+        </details>
       </fieldset>
       {editable ? (
         <div className="sticky bottom-20 z-10 flex flex-wrap items-center gap-2 rounded-2xl border border-line bg-ivory-50/95 p-3 backdrop-blur sm:bottom-4">

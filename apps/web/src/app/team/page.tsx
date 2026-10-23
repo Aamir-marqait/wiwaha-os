@@ -46,7 +46,8 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
   const soon = new Date(Date.now() + 2 * 86_400_000).toISOString();
   const none = Promise.resolve({ data: [] as never[] });
 
-  const [leads, visits, followUps, weddings, payments, notes, queue, guestAsks, spend] = await Promise.all([
+  const seesActivity = ["owner", "sales", "event_manager", "accounts"].includes(role);
+  const [leads, visits, followUps, weddings, payments, notes, queue, guestAsks, spend, approvals, tasks, activity, briefs, unsharedBoards] = await Promise.all([
     seesSales ? supabase.from("leads").select("status, source, heard_about, created_at").order("created_at", { ascending: false }).limit(3000) : none,
     seesSales ? supabase.from("visits").select("id, scheduled_at, status, attendees, lead:leads(id, contact:contacts(full_name))").gte("scheduled_at", monthStart).lt("scheduled_at", `${addDays(today, 8)}T00:00:00+05:30`).order("scheduled_at") : none,
     seesSales ? supabase.from("visits").select("id, follow_up_due_at, lead:leads(id, contact:contacts(full_name, phone_e164))").eq("follow_up_outcome", "pending").not("follow_up_due_at", "is", null).lte("follow_up_due_at", soon).order("follow_up_due_at").limit(6) : none,
@@ -56,6 +57,11 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
     supabase.from("human_queue").select("id, title, detail, created_at, lead_id").neq("status", "done").order("created_at", { ascending: false }).limit(4),
     ["owner", "event_manager"].includes(role) ? supabase.from("guest_requests").select("id", { count: "exact", head: true }).eq("status", "new") : Promise.resolve({ count: 0 }),
     seesSpend ? aiSpend().catch(() => null) : Promise.resolve(null),
+    supabase.from("approvals").select("id, title, kind, priority, wedding_id, lead_id, created_at", { count: "exact" }).eq("status", "pending").order("priority").order("created_at", { ascending: false }).limit(5),
+    supabase.from("tasks").select("id, title, due_at, status, priority, wedding_id", { count: "exact" }).in("status", ["todo", "in_progress", "blocked"]).not("due_at", "is", null).lte("due_at", new Date(Date.now() + 7 * 86_400_000).toISOString()).order("due_at").limit(5),
+    seesActivity ? supabase.from("agent_actions").select("id, agent_key, action, status, lead_id, wedding_id, created_at").in("status", ["ok", "gated", "escalated"]).order("created_at", { ascending: false }).limit(8) : none,
+    seesWeddings ? supabase.from("decor_briefs").select("wedding_id, status, sent_at, submitted_at, generated_at, wedding:weddings(title)").order("updated_at", { ascending: false }).limit(30) : none,
+    seesWeddings ? supabase.from("moodboards").select("wedding_id").eq("source", "ai").is("shared_at", null) : none,
   ]);
 
   // Sales: pipeline by stage, this month's enquiries, where they come from (90 days).
@@ -86,6 +92,25 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
   const due = (payments.data ?? []) as { amount_paise: number; due_on: string; status: string }[];
   const dueTotal = due.reduce((s, p) => s + Number(p.amount_paise), 0);
   const overdue = due.filter((p) => p.status === "overdue" || p.due_on < today).length;
+
+  // Moodboards: where each couple's board is (waiting for them, being made, ready for us to share, shared).
+  const unsharedByWedding = new Set(((unsharedBoards.data ?? []) as { wedding_id: string }[]).map((b) => b.wedding_id));
+  const boardRows = ((briefs.data ?? []) as { wedding_id: string; status: string; sent_at: string | null; submitted_at: string | null; generated_at: string | null; wedding: { title: string } | { title: string }[] | null }[]).map((b) => {
+    const toShare = b.status === "ready" && unsharedByWedding.has(b.wedding_id);
+    const state = b.status === "open" ? { label: "Waiting for the couple", tone: "text-ink-soft", at: b.sent_at }
+      : b.status === "submitted" || b.status === "generating" ? { label: "Being made", tone: "text-gold-700", at: b.submitted_at }
+      : toShare ? { label: "Ready: share with the couple", tone: "text-burgundy-700", at: b.generated_at }
+      : { label: "Shared with the couple", tone: "text-sage-700", at: b.generated_at };
+    return { id: b.wedding_id, title: one(b.wedding)?.title ?? "Wedding", rank: toShare ? 0 : b.status === "open" ? 2 : b.status === "ready" ? 3 : 1, ...state };
+  }).sort((a, b) => a.rank - b.rank);
+  const shownBoards = boardRows.filter((b) => b.rank < 3).slice(0, 6);
+
+  const pendingApprovals = (approvals.data ?? []) as { id: string; title: string; kind: string; priority: number; wedding_id: string | null; lead_id: string | null; created_at: string }[];
+  const approvalCount = "count" in approvals ? approvals.count ?? pendingApprovals.length : pendingApprovals.length;
+  const openTasks = (tasks.data ?? []) as { id: string; title: string; due_at: string; status: string; priority: string; wedding_id: string | null }[];
+  const taskCount = "count" in tasks ? tasks.count ?? openTasks.length : openTasks.length;
+  const recentActions = (activity.data ?? []) as { id: string; agent_key: string; action: string; status: string; lead_id: string | null; wedding_id: string | null; created_at: string }[];
+  const words = (k: string) => k.replace(/_/g, " ").replace(/^./, (c) => c.toUpperCase());
 
   const attention = [
     ...((queue.data ?? []) as { id: string; title: string; detail: string | null; created_at: string; lead_id: string | null }[]).map((q) => ({ id: `q${q.id}`, title: q.title, body: q.detail, link: q.lead_id ? `/team/leads/${q.lead_id}` : null, at: q.created_at, note: null as string | null })),
@@ -166,6 +191,44 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
               {next90.length === 0 ? <li className="px-5 py-4 text-sm text-ink-soft">No weddings in the next 90 days.</li> : null}
               {next90.slice(0, 6).map((w) => (
                 <li key={w.id}><Link href={`/team/weddings/${w.id}`} className="flex items-center justify-between gap-2 px-4 py-3 hover:bg-ivory-50 sm:px-5"><span className="text-sm font-medium">{w.title}</span><span className="shrink-0 text-xs text-ink-soft">{formatDateIST(w.event_start, { day: "numeric", month: "short" })} · {relativeFromNow(`${w.event_start}T06:00:00+05:30`)}</span></Link></li>
+              ))}
+            </ul>
+          </Card>
+        ) : null}
+
+        {seesWeddings && shownBoards.length ? (
+          <Card>
+            <CardHeader title="Moodboards" subtitle="From the couple's form to the finished boards" />
+            <ul className="divide-y divide-line/70">
+              {shownBoards.map((b) => (
+                <li key={b.id}><Link href={`/team/weddings/${b.id}?tab=decor`} className="flex items-center justify-between gap-2 px-4 py-3 hover:bg-ivory-50 sm:px-5"><span className="min-w-0"><span className="block truncate text-sm font-medium">{b.title}</span><span className={`block text-xs ${b.tone}`}>{b.label}</span></span>{b.at ? <span className="shrink-0 text-xs text-ink-soft">{relativeFromNow(b.at)}</span> : null}</Link></li>
+              ))}
+            </ul>
+          </Card>
+        ) : null}
+
+        {approvalCount || taskCount ? (
+          <Card>
+            <CardHeader title="Still to do" subtitle={`${approvalCount} waiting for your OK · ${taskCount} task${taskCount === 1 ? "" : "s"} due within a week`} action={<Link href="/team/approvals" className="text-sm text-sage-700 underline">Approvals</Link>} />
+            <ul className="divide-y divide-line/70">
+              {pendingApprovals.map((a) => (
+                <li key={a.id}><Link href={a.wedding_id ? `/team/weddings/${a.wedding_id}` : a.lead_id ? `/team/leads/${a.lead_id}` : "/team/approvals"} className="flex items-center justify-between gap-2 px-4 py-3 hover:bg-ivory-50 sm:px-5"><span className="line-clamp-1 text-sm font-medium">{a.title}</span><span className="shrink-0 text-xs text-ink-soft">{words(a.kind)}</span></Link></li>
+              ))}
+              {openTasks.map((t) => {
+                const late = Date.parse(t.due_at) < Date.now();
+                return <li key={t.id}><Link href="/team/tasks" className="flex items-center justify-between gap-2 px-4 py-3 hover:bg-ivory-50 sm:px-5"><span className="line-clamp-1 text-sm">{t.title}</span><span className={`shrink-0 text-xs ${late ? "text-burgundy-700" : "text-ink-soft"}`}>{late ? "Overdue · " : "Due "}{relativeFromNow(t.due_at)}</span></Link></li>;
+              })}
+            </ul>
+          </Card>
+        ) : null}
+
+        {seesActivity ? (
+          <Card>
+            <CardHeader title="Recently done" subtitle="What the assistants have handled" action={<Link href="/team/settings/activity" className="text-sm text-sage-700 underline">Full log</Link>} />
+            <ul className="divide-y divide-line/70">
+              {recentActions.length === 0 ? <li className="px-5 py-4 text-sm text-ink-soft">Nothing yet.</li> : null}
+              {recentActions.map((a) => (
+                <li key={a.id}><Link href={a.wedding_id ? `/team/weddings/${a.wedding_id}` : a.lead_id ? `/team/leads/${a.lead_id}` : "/team/settings/activity"} className="flex items-center justify-between gap-2 px-4 py-2.5 hover:bg-ivory-50 sm:px-5"><span className="min-w-0"><span className="block truncate text-sm">{words(a.action)}</span><span className="block text-xs text-ink-soft">{words(a.agent_key)}{a.status === "gated" ? " · waiting for approval" : a.status === "escalated" ? " · passed to the team" : ""}</span></span><span className="shrink-0 text-xs text-ink-soft">{relativeFromNow(a.created_at)}</span></Link></li>
               ))}
             </ul>
           </Card>
