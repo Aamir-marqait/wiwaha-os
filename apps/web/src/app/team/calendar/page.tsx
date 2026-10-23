@@ -4,11 +4,8 @@ import { PolicyBook, type PolicyRow } from "@wiwaha/policy";
 import Link from "next/link";
 import { ActionButton } from "@/components/action-button";
 import { relativeFromNow } from "@/components/time";
-import { CopyField } from "@/components/copy-field";
 import { requireSection } from "@/lib/auth";
-import { feedUrl } from "@/lib/calendar-feed";
 import { createClient } from "@/lib/supabase/server";
-import { OPEN_STAGES, stageOf } from "@/lib/pipeline";
 import { releaseEntry } from "../leads/actions";
 import { confirmEntry } from "./actions";
 import { HoldPanel } from "./hold-panel";
@@ -21,6 +18,7 @@ const CELL: Record<CalendarStatus, string> = {
   confirmed: "bg-[var(--cal-confirmed)] text-[var(--cal-confirmed-ink)]",
   released: "",
 };
+const VISIT = "bg-[#dbe7f5] text-[#25476f]";
 const LABEL: Record<CalendarStatus, string> = { enquiry: "Enquiry", held: "Held", confirmed: "Confirmed", released: "Released" };
 
 function monthBounds(month: string): { from: string; to: string; days: string[] } {
@@ -37,60 +35,59 @@ function shiftMonth(month: string, delta: number): string {
   return d.toISOString().slice(0, 7);
 }
 
-export default async function CalendarPage({ searchParams }: { searchParams: Promise<{ month?: string; view?: string }> }) {
+export default async function CalendarPage({ searchParams }: { searchParams: Promise<{ month?: string; view?: string; pick?: string; date?: string; entry?: string }> }) {
   const viewer = await requireSection("venue");
   const sp = await searchParams;
   const today = todayIST();
   const month = sp.month && /^\d{4}-\d{2}$/.test(sp.month) ? sp.month : today.slice(0, 7);
-  const view = sp.view === "rooms" ? "rooms" : sp.view === "leads" ? "leads" : "spaces";
+  const view = sp.view === "rooms" ? "rooms" : "spaces";
   const { from, to, days } = monthBounds(month);
   const supabase = await createClient();
 
   const seesLeads = ["owner", "sales", "event_manager"].includes(viewer.profile.role);
   const none = Promise.resolve({ data: [] as Record<string, unknown>[] });
-  const [avail, holds, spaces, rooms, policies, visits, wanted] = await Promise.all([
+  const [avail, holds, spaces, rooms, visits] = await Promise.all([
     supabase.rpc("availability", { p_from: from, p_to: to }),
     supabase.from("calendar_entries").select("id, label, starts_on, ends_on, expires_at, resource_kind, space:spaces(name), room:rooms(number)").eq("status", "held").gt("expires_at", new Date().toISOString()).order("expires_at").limit(20),
     supabase.from("spaces").select("id, name").eq("active", true).order("sort"),
     supabase.from("rooms").select("id, number").eq("active", true).order("sort"),
-    supabase.from("policies").select("key, topic, title, rule_text, value, version, client_visible, needs_confirmation, sort"),
-    view === "leads" && seesLeads ? supabase.from("visits").select("id, scheduled_at, status, visit_number, lead:leads(id, contact:contacts(full_name))").gte("scheduled_at", `${from}T00:00:00+05:30`).lte("scheduled_at", `${to}T23:59:59+05:30`).neq("status", "cancelled").order("scheduled_at") : none,
-    view === "leads" && seesLeads ? supabase.from("leads").select("id, status, date_wanted, guest_count, contact:contacts(full_name)").gte("date_wanted", from).lte("date_wanted", to).order("date_wanted") : none,
+    seesLeads ? supabase.from("visits").select("id, scheduled_at, visit_number, lead:leads(id, contact:contacts(full_name))").gte("scheduled_at", `${from}T00:00:00+05:30`).lte("scheduled_at", `${to}T23:59:59+05:30`).neq("status", "cancelled").order("scheduled_at") : none,
   ]);
-  type LeadDay = { key: string; time: string | null; kind: "visit" | "wanted"; leadId: string; name: string; note: string };
-  const leadDays = new Map<string, LeadDay[]>();
+  type Visit = { leadId: string; name: string; time: string };
+  const visitDays = new Map<string, Visit[]>();
   const one = <T,>(x: T | T[] | null | undefined): T | null => (Array.isArray(x) ? (x[0] ?? null) : (x ?? null));
   for (const v of (visits.data ?? []) as Record<string, unknown>[]) {
     const lead = one(v.lead as { id: string; contact: { full_name: string } | { full_name: string }[] | null } | null);
     if (!lead) continue;
     const at = String(v.scheduled_at);
     const day = new Date(at).toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" });
-    leadDays.set(day, [...(leadDays.get(day) ?? []), { key: `v${String(v.id)}`, time: new Date(at).toLocaleTimeString("en-IN", { timeZone: "Asia/Kolkata", hour: "numeric", minute: "2-digit" }), kind: "visit", leadId: lead.id, name: one(lead.contact)?.full_name ?? "Lead", note: `Site visit ${Number(v.visit_number) > 1 ? Number(v.visit_number) : ""}`.trim() }]);
-  }
-  for (const l of (wanted.data ?? []) as Record<string, unknown>[]) {
-    const stage = stageOf(String(l.status));
-    if (!OPEN_STAGES.includes(stage.key) && stage.key !== "won") continue;
-    const day = String(l.date_wanted);
-    leadDays.set(day, [...(leadDays.get(day) ?? []), { key: `l${String(l.id)}`, time: null, kind: "wanted", leadId: String(l.id), name: one(l.contact as { full_name: string } | null)?.full_name ?? "Lead", note: `Wants this date${l.guest_count ? ` · ${Number(l.guest_count)} guests` : ""} · ${stage.label}` }]);
+    visitDays.set(day, [...(visitDays.get(day) ?? []), { leadId: lead.id, name: one(lead.contact)?.full_name ?? "Lead", time: new Date(at).toLocaleTimeString("en-IN", { timeZone: "Asia/Kolkata", hour: "numeric", minute: "2-digit" }) }]);
   }
   const rows = ((avail.data ?? []) as AvailabilityRow[]).filter((r) => r.resource_kind === (view === "rooms" ? "room" : "space"));
-  const book = PolicyBook.fromRows((policies.data ?? []) as PolicyRow[]);
   const canHold = ["owner", "sales", "event_manager"].includes(viewer.profile.role);
   const canConfirm = ["owner", "sales"].includes(viewer.profile.role);
 
   // Group by resource for the grid, and by day for the phone agenda.
   const byResource = new Map<string, { name: string; capacity: number; cells: Map<string, AvailabilityRow> }>();
   const byDay = new Map<string, AvailabilityRow[]>();
+  const entryDays = new Map<string, AvailabilityRow[]>();
   for (const r of rows) {
     const res = byResource.get(r.resource_id) ?? { name: r.resource_name, capacity: r.capacity, cells: new Map() };
     res.cells.set(r.day, r);
     byResource.set(r.resource_id, res);
     if (r.status) byDay.set(r.day, [...(byDay.get(r.day) ?? []), r]);
+    if (r.entry_id) entryDays.set(r.entry_id, [...(entryDays.get(r.entry_id) ?? []), r]);
   }
+  const base = `/team/calendar?month=${month}&view=${view}`;
+  const kind = view === "rooms" ? "room" : "space";
+  const pickedEntry = sp.entry ? entryDays.get(sp.entry) : undefined;
+  const picked = pickedEntry?.[0];
+  const pickedDays = (pickedEntry ?? []).map((r) => r.day).sort();
+  const prefill = !picked && sp.pick ? { resource: sp.pick, date: sp.date && /^\d{4}-\d{2}-\d{2}$/.test(sp.date) ? sp.date : "" } : null;
 
   return (
     <>
-      <PageTitle title="Calendar" subtitle="Spaces and rooms: held and confirmed dates block everyone. Leads: site visits and the dates families asked for." />
+      <PageTitle title="Calendar" subtitle="Tap a day on a space or room to book it, or tap a booking to see it. Spaces, rooms and site visits all show here." />
 
       <div className="mb-4 flex flex-wrap items-center gap-2">
         <div className="flex items-center gap-1 rounded-full bg-white p-1 ring-1 ring-line">
@@ -99,37 +96,19 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
           <Link href={`/team/calendar?month=${shiftMonth(month, 1)}&view=${view}`} className="rounded-full px-3 py-1 text-sm hover:bg-ivory-100" aria-label="Next month">→</Link>
         </div>
         <div className="flex gap-1 rounded-full bg-white p-1 ring-1 ring-line">
-          {(seesLeads ? (["spaces", "rooms", "leads"] as const) : (["spaces", "rooms"] as const)).map((v) => (
+          {(["spaces", "rooms"] as const).map((v) => (
             <Link key={v} href={`/team/calendar?month=${month}&view=${v}`} className={cn("rounded-full px-3 py-1 text-sm capitalize", v === view ? "bg-sage-700 text-white" : "hover:bg-ivory-100")}>{v}</Link>
           ))}
         </div>
         <div className="flex flex-wrap gap-3 text-xs text-ink-soft sm:ml-auto">
           {(["enquiry", "held", "confirmed"] as const).map((s) => <span key={s} className="flex items-center gap-1.5"><span className={cn("inline-block size-3 rounded", CELL[s])} />{LABEL[s]}</span>)}
+          {seesLeads ? <span className="flex items-center gap-1.5"><span className={cn("inline-block size-3 rounded", VISIT)} />Site visit</span> : null}
         </div>
       </div>
 
       <div className="grid items-start gap-5 xl:grid-cols-[1fr_300px]">
-        {view === "leads" ? (
-          <Card className="min-w-0 self-start overflow-hidden">
-            <CardHeader title="Leads this month" subtitle="Site visits, and the dates open leads have asked for." />
-            <ul className="divide-y divide-line/70">
-              {leadDays.size === 0 ? <li className="px-4 py-6 text-center text-sm text-ink-soft">No visits or wanted dates this month.</li> : null}
-              {[...leadDays.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([day, list]) => (
-                <li key={day} className="px-4 py-3 sm:px-5">
-                  <p className="text-sm font-semibold">{formatDateIST(day, { weekday: "short", day: "numeric", month: "short" })}</p>
-                  <ul className="mt-1.5 space-y-1">
-                    {list.map((e) => (
-                      <li key={e.key}><Link href={`/team/leads/${e.leadId}`} className="flex items-center gap-2 text-sm hover:underline"><span className={cn("inline-block size-2.5 shrink-0 rounded-full", e.kind === "visit" ? "bg-sage-600" : "bg-gold-400")} /><span className="font-medium">{e.name}</span><span className="text-xs text-ink-soft">{e.time ? `${e.time} · ` : ""}{e.note}</span></Link></li>
-                    ))}
-                  </ul>
-                </li>
-              ))}
-            </ul>
-            <p className="flex gap-4 border-t border-line/70 px-4 py-2 text-xs text-ink-soft sm:px-5"><span className="flex items-center gap-1.5"><span className="inline-block size-2.5 rounded-full bg-sage-600" />Site visit</span><span className="flex items-center gap-1.5"><span className="inline-block size-2.5 rounded-full bg-gold-400" />Date asked for</span></p>
-          </Card>
-        ) : (
         <Card className="min-w-0 self-start overflow-hidden">
-          {/* Grid: tablets and up */}
+          {/* Grid: tablets and up. Every cell is a tap target. */}
           <div className="hidden overflow-x-auto sm:block">
             <table className="w-full border-separate border-spacing-0 text-xs">
               <thead>
@@ -142,6 +121,19 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
                 </tr>
               </thead>
               <tbody>
+                {seesLeads ? (
+                  <tr>
+                    <td className="sticky left-0 z-10 border-t border-line bg-white px-3 py-1.5"><span className="font-medium text-ink">Site visits</span></td>
+                    {days.map((d) => {
+                      const v = visitDays.get(d);
+                      return (
+                        <td key={d} className="border-t border-l border-line/60 p-0.5">
+                          {v ? <Link href={`/team/leads/${v[0]!.leadId}`} title={v.map((x) => `${x.time} ${x.name}`).join("\n")} className={cn("block h-7 rounded text-center text-[10px] leading-7", VISIT)}>{v.length}</Link> : <div className="h-7" />}
+                        </td>
+                      );
+                    })}
+                  </tr>
+                ) : null}
                 {[...byResource.entries()].map(([id, res]) => (
                   <tr key={id}>
                     <td className="sticky left-0 z-10 border-t border-line bg-white px-3 py-1.5"><span className="font-medium text-ink">{res.name}</span><span className="ml-1 text-[10px] text-ink-soft">{res.capacity}</span></td>
@@ -149,7 +141,11 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
                       const c = res.cells.get(d);
                       return (
                         <td key={d} className={cn("border-t border-l border-line/60 p-0.5", d === today ? "bg-sage-50" : "")}>
-                          {c?.status ? <div title={`${c.label ?? LABEL[c.status]} · ${LABEL[c.status]}${c.expires_at ? ` · expires ${relativeFromNow(c.expires_at)}` : ""}`} className={cn("h-7 truncate rounded px-0.5 text-center text-[9px] leading-7", CELL[c.status])}>{c.status === "confirmed" ? "●" : c.status === "held" ? "H" : "?"}</div> : <div className="h-7" />}
+                          {c?.status ? (
+                            <Link href={`${base}&entry=${c.entry_id ?? ""}`} title={`${c.label ?? LABEL[c.status]} · ${LABEL[c.status]}${c.expires_at ? ` · expires ${relativeFromNow(c.expires_at)}` : ""}`} className={cn("block h-7 truncate rounded px-0.5 text-center text-[9px] leading-7", CELL[c.status])}>{c.status === "confirmed" ? "●" : c.status === "held" ? "H" : "?"}</Link>
+                          ) : canConfirm ? (
+                            <Link href={`${base}&pick=${kind}:${id}&date=${d}`} aria-label={`Book ${res.name} on ${d}`} className={cn("block h-7 rounded hover:bg-sage-100", prefill?.resource === `${kind}:${id}` && prefill.date === d ? "bg-sage-200 ring-1 ring-sage-600" : "")} />
+                          ) : <div className="h-7" />}
                         </td>
                       );
                     })}
@@ -158,26 +154,40 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
               </tbody>
             </table>
           </div>
-          {/* Agenda: phones */}
+          {/* Agenda: phones. Book from the panel below. */}
           <ul className="divide-y divide-line/70 sm:hidden">
-            {byDay.size === 0 ? <li className="px-4 py-6 text-center text-sm text-ink-soft">Every {view === "rooms" ? "room" : "space"} is free this month.</li> : null}
-            {[...byDay.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([day, entries]) => (
+            {byDay.size === 0 && visitDays.size === 0 ? <li className="px-4 py-6 text-center text-sm text-ink-soft">Every {view === "rooms" ? "room" : "space"} is free this month.</li> : null}
+            {[...new Set([...byDay.keys(), ...visitDays.keys()])].sort().map((day) => (
               <li key={day} className="px-4 py-3">
                 <p className="text-sm font-semibold">{formatDateIST(day, { weekday: "short", day: "numeric", month: "short" })}</p>
                 <ul className="mt-1.5 flex flex-wrap gap-1.5">
-                  {entries.map((e) => <li key={`${e.resource_id}`} className={cn("rounded-full px-2.5 py-1 text-xs", CELL[e.status!])}>{e.resource_name}{e.label ? ` · ${e.label}` : ""}</li>)}
+                  {(byDay.get(day) ?? []).map((e) => <li key={`${e.resource_id}`}><Link href={`${base}&entry=${e.entry_id ?? ""}`} className={cn("block rounded-full px-2.5 py-1 text-xs", CELL[e.status!])}>{e.resource_name}{e.label ? ` · ${e.label}` : ""}</Link></li>)}
+                  {(visitDays.get(day) ?? []).map((v) => <li key={`${v.leadId}${v.time}`}><Link href={`/team/leads/${v.leadId}`} className={cn("block rounded-full px-2.5 py-1 text-xs", VISIT)}>{v.time} visit · {v.name}</Link></li>)}
                 </ul>
               </li>
             ))}
           </ul>
         </Card>
-        )}
 
         <div className="space-y-5">
+          {picked ? (
+            <Card>
+              <CardHeader title={picked.label ?? LABEL[picked.status!]} subtitle={`${picked.resource_name} · ${LABEL[picked.status!]}`} action={<Link href={base} className="text-sm text-sage-700 underline">Close</Link>} />
+              <div className="space-y-3 p-4 text-sm">
+                <p className="text-ink-soft">{formatDateIST(pickedDays[0]!)}{pickedDays.length > 1 ? ` – ${formatDateIST(pickedDays[pickedDays.length - 1]!)}` : ""}{picked.expires_at ? ` · expires ${relativeFromNow(picked.expires_at)}` : ""}</p>
+                {canHold ? (
+                  <div className="flex flex-wrap gap-2">
+                    {canConfirm && picked.status !== "confirmed" ? <ActionButton action={confirmEntry.bind(null, picked.entry_id!)} variant="primary" confirm="Confirm this booking? Only do this once the deposit is in.">Confirm</ActionButton> : null}
+                    <ActionButton action={releaseEntry.bind(null, picked.entry_id!, base)} variant="ghost" confirm="Free these dates?">Free these dates</ActionButton>
+                  </div>
+                ) : null}
+              </div>
+            </Card>
+          ) : null}
           {canConfirm ? (
             <Card>
-              <CardHeader title="Book a date" subtitle="Blocks the space or room straight away" />
-              <div className="p-4"><HoldPanel spaces={(spaces.data ?? []) as { id: string; name: string }[]} rooms={(rooms.data ?? []) as { id: string; number: string }[]} /></div>
+              <CardHeader title="Book a date" subtitle="Tap a day on the calendar, or fill this in. It blocks straight away." />
+              <div className="p-4"><HoldPanel key={`${prefill?.resource}${prefill?.date}`} defaults={prefill} spaces={(spaces.data ?? []) as { id: string; name: string }[]} rooms={(rooms.data ?? []) as { id: string; number: string }[]} /></div>
             </Card>
           ) : null}
           {(holds.data ?? []).length ? (
@@ -206,16 +216,6 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
           ) : null}
         </div>
       </div>
-      {canHold ? (
-        <Card className="mt-5">
-          <CardHeader title="See bookings in Google Calendar or iCloud" subtitle="Subscribe once and bookings and holds appear on your phone, refreshed every hour. Google: Other calendars → + → From URL. iPhone: Settings → Calendar → Accounts → Add subscribed calendar." />
-          <div className="space-y-2 p-4">
-            <CopyField label="All spaces" value={feedUrl("all")} />
-            {(spaces.data ?? []).map((sp) => <CopyField key={sp.id as string} label={sp.name as string} value={feedUrl(sp.id as string)} />)}
-            <p className="pt-1 text-xs text-ink-soft">Treat these links like a password: anyone with one can see the bookings. Read-only; changes are made here.</p>
-          </div>
-        </Card>
-      ) : null}
     </>
   );
 }

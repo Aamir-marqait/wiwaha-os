@@ -4,9 +4,8 @@ import { requireSection } from "@/lib/auth";
 import { CONDITION_LABELS, CONDITION_TONE, isCondition, pretty } from "@/lib/decor";
 import { createClient } from "@/lib/supabase/server";
 import { type EventOption, ItemActions, ItemForm, QuantityStepper } from "./decor-forms";
-import { DecorTabs } from "./tabs";
 
-export const metadata = { title: "Décor stock" };
+export const metadata = { title: "Inventory" };
 
 /** Every piece of décor we own: photographed, counted, its condition, and what's promised to events. */
 export default async function DecorStockPage({ searchParams }: { searchParams: Promise<{ q?: string }> }) {
@@ -36,8 +35,7 @@ export default async function DecorStockPage({ searchParams }: { searchParams: P
 
   return (
     <>
-      <PageTitle title="Décor" subtitle="Photograph every piece we own, keep count and condition, and assign pieces to an event and the area they'll dress." />
-      <DecorTabs active="stock" />
+      <PageTitle title="Inventory" subtitle="Everything we own for décor: a photo, how many, its condition and where it's kept. Assign pieces to an event and the area they'll dress." />
       {canEdit ? (
         <details className="mb-5 rounded-2xl border border-line bg-white p-4 [&_summary]:cursor-pointer">
           <summary className="font-medium text-sage-800">+ Add a piece</summary>
@@ -45,7 +43,7 @@ export default async function DecorStockPage({ searchParams }: { searchParams: P
         </details>
       ) : null}
       <form className="mb-4"><input name="q" defaultValue={q} placeholder="Search by name, type or where it's stored" className="h-10 w-full rounded-xl border border-line bg-white px-3 text-sm" /></form>
-      {list.length === 0 ? <Card className="p-5 text-sm text-ink-soft">{term ? "Nothing matches." : "No décor recorded yet. Add the first piece above."}</Card> : null}
+      {list.length === 0 ? <Card className="p-5 text-sm text-ink-soft">{term ? "Nothing matches." : "Nothing in the inventory yet. Add the first piece above."}</Card> : null}
       <ul className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         {list.map((i) => {
           const photos = ((i.photos ?? []) as { url: string }[]).map((p) => p.url);

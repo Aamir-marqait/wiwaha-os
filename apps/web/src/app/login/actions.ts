@@ -1,7 +1,9 @@
 "use server";
 import { redirect } from "next/navigation";
 import { z } from "zod";
+import type { AppRole } from "@wiwaha/db";
 import { env } from "@/lib/env";
+import { isStaff } from "@/lib/auth";
 import { phoneLoginEmail } from "@/lib/phone-login";
 import { createClient } from "@/lib/supabase/server";
 
@@ -43,6 +45,15 @@ export async function signIn(_prev: AuthState, form: FormData): Promise<AuthStat
   if (!password) return { error: "Please enter your password" };
   const { error } = await supabase.auth.signInWithPassword({ email, password });
   if (error) return { error: "That email and password don't match." };
+  // The team door is for the team only: a family member who lands here is signed straight back out.
+  if (surface === "team") {
+    const { data: u } = await supabase.auth.getUser();
+    const { data: p } = u.user ? await supabase.from("profiles").select("role, active").eq("id", u.user.id).maybeSingle() : { data: null };
+    if (!p || !p.active || !isStaff(p.role as AppRole)) {
+      await supabase.auth.signOut();
+      return { error: "That email and password don't match." };
+    }
+  }
   redirect(safeNext(next, surface));
 }
 

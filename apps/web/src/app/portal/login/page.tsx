@@ -17,7 +17,6 @@ export default async function PortalLogin({ searchParams }: { searchParams: Prom
         <h1 className="text-center font-serif text-2xl font-semibold text-ink">Client login</h1>
         <p className="mb-6 mt-1 text-center text-sm text-ink-soft">Use your mobile number and the PIN your event manager shared with you.</p>
         <PhoneOrEmailLogin next={next} />
-        <p className="mt-6 text-center text-xs text-ink-soft">Wiwaha team? <a href="/login" className="text-sage-700 underline">Team login</a></p>
       </div>
     </main>
   );

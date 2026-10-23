@@ -55,3 +55,31 @@ export function PhotoField({ label, value, multiple, onChange }: { label: string
     </div>
   );
 }
+
+/** One document (PDF) uploaded to the media bucket; value is its link. */
+export function FileField({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const add = async (f: File | undefined) => {
+    if (!f) return;
+    if (f.type !== "application/pdf") { setError("Choose a PDF."); return; }
+    if (f.size > 40 * 1024 * 1024) { setError("PDFs must be under 40 MB."); return; }
+    setBusy(true); setError(null);
+    const supabase = createClient();
+    const path = `documents/${crypto.randomUUID()}.pdf`;
+    const { error: up } = await supabase.storage.from("media").upload(path, f, { contentType: "application/pdf" });
+    if (up) setError(up.message); else onChange(supabase.storage.from("media").getPublicUrl(path).data.publicUrl);
+    setBusy(false);
+  };
+  return (
+    <div className="sm:col-span-2">
+      <p className="text-xs font-medium uppercase tracking-wide text-ink-soft">{label}</p>
+      {value ? <p className="mt-1 flex flex-wrap items-center gap-2 text-sm"><a href={value} target="_blank" rel="noreferrer" className="text-sage-700 underline">Open the PDF</a><button type="button" onClick={() => onChange("")} className="text-xs text-burgundy-700 underline">Remove</button></p> : null}
+      <label className="mt-2 inline-flex cursor-pointer items-center gap-2 rounded-full bg-sage-100 px-3 py-1.5 text-sm font-medium text-sage-800">
+        <input type="file" accept="application/pdf" className="sr-only" disabled={busy} onChange={(e) => void add(e.target.files?.[0])} />
+        {busy ? "Uploading…" : value ? "Replace PDF" : "Upload PDF"}
+      </label>
+      {error ? <p role="alert" className="mt-1 text-xs text-burgundy-700">{error}</p> : null}
+    </div>
+  );
+}

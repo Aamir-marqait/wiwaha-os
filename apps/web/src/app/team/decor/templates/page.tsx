@@ -4,7 +4,6 @@ import { formatDateIST, todayIST } from "@wiwaha/db";
 import { requireSection } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { type EventOption, UseTemplate } from "../decor-forms";
-import { DecorTabs } from "../tabs";
 
 export const metadata = { title: "Décor templates" };
 
@@ -25,8 +24,7 @@ export default async function DecorTemplatesPage() {
   for (const t of data ?? []) byArea.set(t.area as string, [...(byArea.get(t.area as string) ?? []), t]);
   return (
     <>
-      <PageTitle title="Décor" subtitle="Templates by area: how each spot looks, and what we've done there. Moodboards start from these." action={canEdit ? <Link href="/team/catalogue/decor_templates" className={buttonClass("primary", "sm")}>Add or edit templates</Link> : undefined} />
-      <DecorTabs active="templates" />
+      <PageTitle title="Templates" subtitle="How each spot looks and what we've done there: name a template, add photos and a PDF. Moodboards start from these." action={canEdit ? <Link href="/team/catalogue/decor_templates" className={buttonClass("primary", "sm")}>Add or edit templates</Link> : undefined} />
       {byArea.size === 0 ? <Card className="p-5 text-sm text-ink-soft">No templates yet. Add one per area: main door entry, lobby, staircase, mandap and so on.</Card> : null}
       <div className="space-y-6">
         {[...byArea.entries()].map(([area, list]) => (
@@ -43,7 +41,9 @@ export default async function DecorTemplatesPage() {
                         <div className="flex items-start justify-between gap-2"><p className="font-medium">{t.title as string}</p><Badge tone={t.design_kind === "custom" ? "burgundy" : "neutral"}>{t.design_kind as string}</Badge></div>
                         {t.function_type ? <p className="text-xs capitalize text-ink-soft">{t.function_type as string}</p> : null}
                         {t.description ? <p className="text-sm">{t.description as string}</p> : null}
+                        {t.document_url ? <a href={t.document_url as string} target="_blank" rel="noreferrer" className="inline-block text-sm text-sage-700 underline">Open the PDF</a> : null}
                         {((t.palette ?? []) as string[]).length ? <p className="flex gap-1 pt-1">{((t.palette ?? []) as string[]).map((c) => <span key={c} className="size-4 rounded-full border border-line" style={{ background: c }} />)}</p> : null}
+                        {canEdit ? <p className="pt-1"><Link href="/team/catalogue/decor_templates" className="text-xs text-sage-700 underline">Edit or delete</Link></p> : null}
                         {canEdit && t.active ? <div className="pt-2"><UseTemplate templateId={t.id as string} events={events} /></div> : null}
                       </div>
                     </Card>

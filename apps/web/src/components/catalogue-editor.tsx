@@ -2,8 +2,8 @@
 import { ActionButton } from "./action-button";
 import { Badge, buttonClass, Card, cn } from "@wiwaha/ui";
 import { useState, useTransition } from "react";
-import { saveCatalogueRow } from "@/app/team/catalogue/actions";
-import { PhotoField } from "./photo-field";
+import { deleteCatalogueRow, saveCatalogueRow } from "@/app/team/catalogue/actions";
+import { FileField, PhotoField } from "./photo-field";
 import { toValues, type CatalogueSpec, type CatalogueValues, type FieldSpec } from "@/lib/catalogue";
 
 const input = "mt-1 block h-10 w-full rounded-xl border border-line bg-white px-3 text-sm normal-case tracking-normal";
@@ -17,12 +17,24 @@ function display(f: FieldSpec, v: string | boolean): string {
   if (f.kind === "percent") return `${v}% GST`;
   if (f.kind === "select") return pretty(String(v));
   if (f.kind === "image") return "photo";
+  if (f.kind === "file") return "document attached";
   if (f.kind === "tags") return String(v);
   if (f.kind === "images") { const n = String(v).split(/\s+/).filter(Boolean).length; return n ? `${n} photo${n === 1 ? "" : "s"}` : ""; }
   return String(v);
 }
 
 export type RefOptions = Record<string, { id: string; label: string }[]>;
+
+function DeleteRow({ spec, id, onDone }: { spec: CatalogueSpec; id: string; onDone?: () => void }) {
+  const [pending, start] = useTransition();
+  const [error, setError] = useState<string | null>(null);
+  return (
+    <span className="inline-flex items-center gap-2">
+      <button type="button" disabled={pending} onClick={() => { if (window.confirm(`Delete this ${spec.singular}? This can't be undone.`)) start(async () => { const r = await deleteCatalogueRow(spec.key, id); if (r.error) setError(r.error); else onDone?.(); }); }} className={buttonClass("ghost", "sm", "text-burgundy-700")}>{pending ? "Deleting…" : "Delete"}</button>
+      {error ? <span role="alert" className="max-w-56 text-xs text-burgundy-700">{error}</span> : null}
+    </span>
+  );
+}
 
 function RowForm({ spec, initial, id, onDone, refs }: { spec: CatalogueSpec; initial: CatalogueValues; id: string | null; onDone: () => void; refs: RefOptions }) {
   const [v, setV] = useState<CatalogueValues>(initial);
@@ -36,6 +48,8 @@ function RowForm({ spec, initial, id, onDone, refs }: { spec: CatalogueSpec; ini
           <label key={f.key} className="flex items-center gap-2 self-end pb-2 text-sm"><input type="checkbox" checked={v[f.key] === true} onChange={(e) => set(f.key, e.target.checked)} /> {f.label}</label>
         ) : f.kind === "image" || f.kind === "images" ? (
           <PhotoField key={f.key} label={f.label} value={String(v[f.key] ?? "")} multiple={f.kind === "images"} onChange={(x) => set(f.key, x)} />
+        ) : f.kind === "file" ? (
+          <FileField key={f.key} label={f.label} value={String(v[f.key] ?? "")} onChange={(x) => set(f.key, x)} />
         ) : f.kind === "textarea" ? (
           <label key={f.key} className={cn(label, "sm:col-span-2")}>{f.label}<textarea value={String(v[f.key] ?? "")} onChange={(e) => set(f.key, e.target.value)} rows={2} className="mt-1 block w-full rounded-xl border border-line bg-white px-3 py-2 text-sm normal-case tracking-normal" /></label>
         ) : f.kind === "ref" ? (
@@ -55,6 +69,7 @@ function RowForm({ spec, initial, id, onDone, refs }: { spec: CatalogueSpec; ini
       <div className="flex items-center gap-2">
         <button disabled={pending} className={buttonClass("primary", "md")}>{pending ? "Saving…" : id ? "Save changes" : `Add ${spec.singular}`}</button>
         <button type="button" onClick={onDone} className={buttonClass("ghost", "md")}>Cancel</button>
+        {id ? <DeleteRow spec={spec} id={id} onDone={onDone} /> : null}
         {error ? <span role="alert" className="text-sm text-burgundy-700">{error}</span> : null}
       </div>
     </form>

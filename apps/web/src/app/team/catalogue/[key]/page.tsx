@@ -12,6 +12,13 @@ export async function generateMetadata({ params }: { params: Promise<{ key: stri
   return { title: CATALOGUES[key]?.title ?? "List" };
 }
 
+/** Where "back" goes: the page the list is edited from, not the long Lists index. */
+const BACK: Record<string, [string, string]> = {
+  maintenance: ["/team/estate", "Estate upkeep"], inventory: ["/team/estate", "Estate upkeep"],
+  spaces: ["/team/spaces", "Spaces"], rooms: ["/team/catalogue/rooms", "Rooms"],
+  decor_templates: ["/team/decor/templates", "Templates"], vendors: ["/team/vendors", "Vendors"],
+};
+
 export default async function CataloguePage({ params }: { params: Promise<{ key: string }> }) {
   const { key } = await params;
   const spec = CATALOGUES[key];
@@ -43,7 +50,7 @@ export default async function CataloguePage({ params }: { params: Promise<{ key:
   }
   return (
     <>
-      <Link href="/team/settings/lists" className="text-sm text-sage-700 hover:underline">← All lists</Link>
+      <Link href={(BACK[key] ?? ["/team/settings/lists"])[0]} className="text-sm text-sage-700 hover:underline">← {(BACK[key] ?? ["", "All lists"])[1]}</Link>
       <PageTitle title={spec.title} subtitle={spec.description} />
       <CatalogueEditor spec={spec} rows={(data ?? []) as Record<string, unknown>[]} canEdit={spec.editRoles.includes(viewer.profile.role)} refs={refs} thumbs={thumbs} notes={notes} rowAction={photos ? { label: "Photos", action: openSpacePhotos } : undefined} />
     </>

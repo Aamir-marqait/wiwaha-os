@@ -6,12 +6,13 @@ import { after } from "next/server";
 import { agentDeps } from "@/lib/agents";
 import { requireStaff } from "@/lib/auth";
 import { friendlyError } from "@/lib/errors";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 
 type Result = { error?: string };
 const EDITORS = ["owner", "sales", "event_manager", "staff"] as const;
 const isLook = (v: unknown): v is MediaLook => typeof v === "string" && (MEDIA_LOOKS as readonly string[]).includes(v);
-const refresh = () => { revalidatePath("/team/studio", "layout"); revalidatePath("/team/decor", "layout"); revalidatePath("/team/spaces"); };
+const refresh = () => { revalidatePath("/team/studio", "layout"); revalidatePath("/team/decor", "layout"); revalidatePath("/team/spaces"); revalidatePath("/team/calendar"); };
 
 export interface UploadedMedia {
   path: string; url: string; kind: "image" | "video"; contentType: string; bytes: number;
@@ -124,6 +125,16 @@ export async function saveArea(id: string | null, a: AreaInput): Promise<Result 
   };
   const supabase = await createClient("team");
   const { data, error } = id ? await supabase.from("venue_areas").update(row).eq("id", id).select("id").single() : await supabase.from("venue_areas").insert(row).select("id").single();
+  // A space and the area that dresses it are one place: renaming either renames the other, everywhere.
+  if (!error && row.space_id) await createAdminClient("system").from("spaces").update({ name: row.name }).eq("id", row.space_id);
   refresh();
   return error ? { error: error.code === "23505" ? "There's already an area with that name." : friendlyError(error) } : { id: data?.id as string };
+}
+
+/** Removes an area. Photos stay in the library; templates and moodboards that used it keep their own copy of the name. */
+export async function deleteArea(id: string): Promise<Result> {
+  await requireStaff(["owner", "event_manager", "staff"]);
+  const { error } = await createAdminClient("system").from("venue_areas").delete().eq("id", id);
+  refresh();
+  return error ? { error: error.code === "23503" ? "This area is used elsewhere. Switch it off (untick In use) instead." : friendlyError(error) } : {};
 }

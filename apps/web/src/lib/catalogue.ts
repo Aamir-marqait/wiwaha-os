@@ -6,7 +6,7 @@ import type { AppRole } from "@wiwaha/db";
  * (`components/catalogue-editor.tsx`) renders each from this spec; the
  * database's row-level security decides who may write.
  */
-export type FieldKind = "text" | "textarea" | "number" | "rupees" | "percent" | "date" | "select" | "checkbox" | "image" | "images" | "ref" | "tags";
+export type FieldKind = "text" | "textarea" | "number" | "rupees" | "percent" | "date" | "select" | "checkbox" | "image" | "images" | "file" | "ref" | "tags";
 export interface FieldSpec {
   key: string;
   label: string;
@@ -107,6 +107,7 @@ export const CATALOGUES: Record<string, CatalogueSpec> = {
       { key: "design_kind", label: "Standard or custom", kind: "select", options: ["standard", "custom"], required: true, initial: "standard" },
       { key: "reference_image_url", label: "The area as it is", kind: "image" },
       { key: "examples", label: "Photos of our work here", kind: "images" },
+      { key: "document_url", label: "PDF or document", kind: "file" },
       { key: "sort", label: "Order", kind: "number", initial: 100 },
       { key: "active", label: "Active", kind: "checkbox", initial: true },
       { key: "description", label: "Description", kind: "textarea" },
@@ -295,6 +296,7 @@ export function toRow(spec: CatalogueSpec, values: CatalogueValues): { row: Reco
         break;
       }
       case "image":
+      case "file":
         if (!/^https:\/\/\S+$/.test(s)) return { error: `${f.label} must be an https link or an uploaded photo.` };
         row[f.key] = s;
         break;

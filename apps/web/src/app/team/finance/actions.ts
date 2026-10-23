@@ -15,3 +15,12 @@ export async function addCost(input: { weddingId: string; category: string; rupe
   revalidatePath("/team/finance");
   return error ? { error: friendlyError(error) } : { ok: "Cost recorded." };
 }
+
+export async function deleteCost(id: string): Promise<{ error?: string }> {
+  await requireStaff(["owner", "accounts"]);
+  const supabase = await createClient();
+  const { data, error } = await supabase.from("cost_entries").delete().eq("id", id).select("id");
+  revalidatePath("/team/finance");
+  if (error) return { error: friendlyError(error) };
+  return data?.length ? {} : { error: "Couldn't delete it." };
+}

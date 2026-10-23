@@ -3,7 +3,7 @@ import { buttonClass } from "@wiwaha/ui";
 import { useMemo, useState, useTransition } from "react";
 import { PhotoField } from "@/components/photo-field";
 import { CONDITION_LABELS, CONDITIONS, DECOR_CATEGORIES, pretty } from "@/lib/decor";
-import { assignDecor, type DecorInput, saveDecorItem, setAssignmentStatus, setDecorQuantity, applyTemplate } from "./actions";
+import { assignDecor, deleteDecorItem, type DecorInput, saveDecorItem, setAssignmentStatus, setDecorQuantity, applyTemplate } from "./actions";
 
 const field = "mt-1 block h-10 w-full rounded-xl border border-line bg-white px-3 text-sm normal-case tracking-normal";
 const label = "block text-xs font-medium uppercase tracking-wide text-ink-soft";
@@ -102,6 +102,7 @@ export function ItemActions({ id, initial, max, events, areas, canEdit }: { id: 
         <div className="flex gap-2">
           <button type="button" onClick={() => setMode("assign")} className={buttonClass("primary", "sm")}>Assign to event</button>
           <button type="button" onClick={() => setMode("edit")} className={buttonClass("secondary", "sm")}>Edit</button>
+          <DeleteItem id={id} />
         </div>
       ) : mode === "edit" ? <ItemForm id={id} initial={initial} onDone={() => setMode("none")} /> : <AssignForm itemId={id} max={max} events={events} areas={areas} onDone={() => setMode("none")} />}
     </div>
@@ -143,5 +144,16 @@ export function UseTemplate({ templateId, events }: { templateId: string; events
       </div>
       {fns.length === 0 ? <p className="text-xs text-ink-soft">This event has no functions yet.</p> : null}
     </form>
+  );
+}
+
+function DeleteItem({ id }: { id: string }) {
+  const [pending, start] = useTransition();
+  const [error, setError] = useState<string | null>(null);
+  return (
+    <span className="inline-flex items-center gap-1">
+      <button type="button" disabled={pending} onClick={() => { if (window.confirm("Delete this piece from the inventory?")) start(async () => setError((await deleteDecorItem(id)).error ?? null)); }} className={buttonClass("ghost", "sm", "text-burgundy-700")}>{pending ? "…" : "Delete"}</button>
+      {error ? <span role="alert" className="text-xs text-burgundy-700">{error}</span> : null}
+    </span>
   );
 }

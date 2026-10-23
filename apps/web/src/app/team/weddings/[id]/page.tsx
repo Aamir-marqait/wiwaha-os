@@ -34,17 +34,17 @@ const TABS = [
   { key: "entertainment", label: "Entertainment" },
   { key: "fnb", label: "Food & beverage" },
   { key: "venue", label: "Venue & rooms" },
-  { key: "extras", label: "Extras" },
+  { key: "extras", label: "Add-on services" },
   { key: "vendors", label: "Vendors" },
   { key: "payments", label: "Payments" },
   { key: "family", label: "Family" },
 ] as const;
 type Tab = (typeof TABS)[number]["key"];
 
-export default async function WeddingRoom({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ existing?: string; note?: string; tab?: string }> }) {
+export default async function WeddingRoom({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ existing?: string; note?: string; tab?: string; from?: string }> }) {
   const viewer = await requireStaff(["owner", "sales", "event_manager", "accounts", "staff"]);
   const { id } = await params;
-  const { existing, note, tab: rawTab } = await searchParams;
+  const { existing, note, tab: rawTab, from } = await searchParams;
   const tab: Tab = TABS.some((t) => t.key === rawTab) ? (rawTab as Tab) : "overview";
   const role = viewer.profile.role;
   const supabase = await createClient();
@@ -57,7 +57,7 @@ export default async function WeddingRoom({ params, searchParams }: { params: Pr
 
   return (
     <>
-      <Link href="/team/weddings" className="text-sm text-sage-700 hover:underline">← Weddings</Link>
+      <Link href={from === "moodboards" ? "/team/decor/moodboards" : "/team/weddings"} className="text-sm text-sage-700 hover:underline">← {from === "moodboards" ? "Moodboards created" : "Weddings"}</Link>
       {existing ? <p className="mt-3 rounded-xl bg-gold-100 px-4 py-2 text-sm text-gold-700">This family was already booked (same phone number), so you&rsquo;re looking at their existing Wedding Room instead of a duplicate.</p> : null}
       {note ? <p className="mt-3 rounded-xl bg-burgundy-50 px-4 py-2 text-sm text-burgundy-700">{note}</p> : null}
       <div className="mb-4 mt-3">
@@ -74,7 +74,7 @@ export default async function WeddingRoom({ params, searchParams }: { params: Pr
         <ul className="flex gap-1.5">
           {TABS.map((t) => (
             <li key={t.key} className="shrink-0">
-              <Link href={`/team/weddings/${id}${t.key === "overview" ? "" : `?tab=${t.key}`}`} aria-current={t.key === tab ? "page" : undefined}
+              <Link href={`/team/weddings/${id}${t.key === "overview" ? (from ? `?from=${from}` : "") : `?tab=${t.key}${from ? `&from=${from}` : ""}`}`} aria-current={t.key === tab ? "page" : undefined}
                 className={cn("block rounded-full px-3 py-1.5 text-sm", t.key === tab ? "bg-sage-700 font-medium text-white" : "bg-ivory-200 text-ink hover:bg-ivory-100")}>
                 {t.label}
               </Link>
@@ -112,16 +112,43 @@ type Supa = Awaited<ReturnType<typeof createClient>>;
 type WeddingRow = Record<string, unknown> & { id: string };
 
 async function Overview({ supabase, w, id, role, canEdit }: { supabase: Supa; w: WeddingRow; id: string; role: string; canEdit: boolean }) {
-  const [stages, functions, messages, tasks, spaces] = await Promise.all([
+  const [stages, functions, messages, tasks, spaces, booked] = await Promise.all([
     supabase.from("wedding_stages").select("*").eq("wedding_id", id).order("sort"),
     supabase.from("event_functions").select("*, space:spaces(name)").eq("wedding_id", id).order("date").order("start_time"),
     supabase.from("messages").select("*").eq("wedding_id", id).order("created_at", { ascending: false }).limit(20),
     supabase.from("tasks").select("id, title, due_at, status, priority, owner:profiles!tasks_owner_id_fkey(full_name)").eq("wedding_id", id).order("due_at"),
     supabase.from("spaces").select("id, name").eq("active", true).order("sort"),
+    supabase.from("calendar_entries").select("id, status, starts_on, ends_on, resource_kind, space:spaces(name), room:rooms(number)").eq("wedding_id", id).in("status", ["held", "confirmed"]).order("starts_on"),
   ]);
+  const one = <T,>(x: T | T[] | null | undefined): T | null => (Array.isArray(x) ? (x[0] ?? null) : (x ?? null));
+  const single = (w.event_start as string) === (w.event_end as string);
+  const days = Array.from(new Set((functions.data ?? []).map((f) => f.date as string))).length;
   return (
     <div className="grid gap-5 *:min-w-0 lg:grid-cols-[1.4fr_1fr]">
       <div className="space-y-5">
+        <Card>
+          <CardHeader title="Dates and bookings" subtitle={single ? `One day: ${formatDateIST(w.event_start as string, { weekday: "long", day: "numeric", month: "long", year: "numeric" })}` : `${formatDateIST(w.event_start as string, { day: "numeric", month: "short" })} to ${formatDateIST(w.event_end as string, { day: "numeric", month: "short", year: "numeric" })}${days ? ` · events on ${days} day${days === 1 ? "" : "s"}` : ""}`} />
+          <ul className="divide-y divide-line/70">
+            {(functions.data ?? []).length === 0 ? <li className="px-5 py-4 text-sm text-ink-soft">No functions added yet. Add them under Functions below.</li> : null}
+            {(functions.data ?? []).map((f) => (
+              <li key={f.id as string} className="flex flex-wrap items-baseline justify-between gap-x-3 px-4 py-2.5 text-sm sm:px-5">
+                <span><span className="font-medium">{f.name as string}</span> <span className="text-ink-soft">· {formatDateIST(f.date as string, { weekday: "short", day: "numeric", month: "short" })}{f.start_time ? `, ${String(f.start_time).slice(0, 5)}` : ""}</span></span>
+                <span className="text-xs text-ink-soft">{one(f.space as { name: string } | { name: string }[] | null)?.name ?? "Space not chosen"}{f.guest_count ? ` · ${f.guest_count as number} guests` : ""}</span>
+              </li>
+            ))}
+          </ul>
+          <div className="border-t border-line/70 px-4 py-3 text-sm sm:px-5">
+            <p className="mb-1 text-xs font-medium uppercase tracking-wide text-ink-soft">Booked on the calendar</p>
+            {(booked.data ?? []).length === 0 ? <p className="text-ink-soft">No spaces or rooms blocked yet. Book them from the <Link href="/team/calendar" className="text-sage-700 underline">Calendar</Link>.</p> : (
+              <ul className="space-y-0.5">
+                {(booked.data ?? []).map((b) => {
+                  const sp = one(b.space as { name: string } | { name: string }[] | null); const rm = one(b.room as { number: string } | { number: string }[] | null);
+                  return <li key={b.id as string}>{sp?.name ?? (rm ? `Room ${rm.number}` : "Booked")} <span className="text-ink-soft">· {formatDateIST(b.starts_on as string, { day: "numeric", month: "short" })}{b.ends_on !== b.starts_on ? ` – ${formatDateIST(b.ends_on as string, { day: "numeric", month: "short" })}` : ""} · {b.status as string}</span></li>;
+                })}
+              </ul>
+            )}
+          </div>
+        </Card>
         <PortalAccessCard supabase={supabase} weddingId={id} couple={w.title as string} canEdit={["owner", "sales", "event_manager"].includes(role)} />
         <Lifecycle supabase={supabase} w={{ id, lead_id: (w.lead_id as string | null) ?? null, event_start: w.event_start as string, event_end: w.event_end as string, whatsapp_group_url: (w.whatsapp_group_url as string | null) ?? null }} />
         <Card>

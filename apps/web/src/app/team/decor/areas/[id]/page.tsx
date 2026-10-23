@@ -6,6 +6,7 @@ import { MediaUploader } from "@/components/media-uploader";
 import { requireAnySection } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { AreaForm } from "../area-form";
+import { DeleteArea } from "./delete-area";
 
 export const metadata = { title: "Space" };
 
@@ -53,6 +54,7 @@ export default async function AreaPage({ params }: { params: Promise<{ id: strin
             <Card className="p-4">
               <h2 className="mb-2 font-serif text-lg font-semibold">About this space</h2>
               <AreaForm id={id} spaces={(spaces.data ?? []).map((s) => ({ id: s.id as string, name: s.name as string }))} initial={{ name: a.name as string, kind: a.kind as string, description: (a.description as string | null) ?? "", suits: (a.suits as string[]) ?? [], spaceId: (a.space_id as string | null) ?? null, sort: String(a.sort), active: a.active as boolean }} />
+              <div className="mt-3 border-t border-line/70 pt-3"><DeleteArea id={id} /></div>
             </Card>
           ) : null}
           <Card className="p-4 text-sm">

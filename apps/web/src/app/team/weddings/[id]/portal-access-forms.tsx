@@ -9,7 +9,7 @@ const field = "mt-1 block h-10 w-full rounded-xl border border-line bg-white px-
 const label = "block text-xs font-medium uppercase tracking-wide text-ink-soft";
 
 function inviteText(r: LoginResult, couple: string) {
-  return `Namaste ${r.name?.split(" ")[0] ?? ""}! Your Wiwaha wedding portal for ${couple} is ready.\n\n${r.url}\nMobile number: ${r.phone}\nPIN: ${r.pin}\n\nWarmly,\nTeam Wiwaha`;
+  return `Namaste ${r.name?.split(" ")[0] ?? ""}! 🌸\n\nWe're so happy to be part of the celebration of ${couple}. Your Wiwaha wedding portal is ready.\n\n🔗 Open it here: ${r.url}\n📱 Mobile number: ${r.phone}\n🔑 PIN: ${r.pin}\n\nShare your ideas for the day whenever you like. When planning opens, 90 days before the wedding, everything you need will be waiting for you there. You can share this login with your family.\n\nWith warm wishes,\nTeam Wiwaha`;
 }
 
 /** The PIN, shown once, with the invite to copy or open in your own WhatsApp. */
