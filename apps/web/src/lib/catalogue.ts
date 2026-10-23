@@ -46,6 +46,17 @@ const EXTRAS = ["makeup", "mehendi_artist", "hair_styling", "laundry", "welcome_
 export const DECOR_AREAS = ["Directional boards", "Main door entry", "View cutter", "Lobby", "Staircase", "Mandap", "Stage", "Dining", "Lawn", "Poolside", "Haldi setup", "Mehendi setup", "Sangeet stage", "Photo corner", "Other"] as const;
 
 export const CATALOGUES: Record<string, CatalogueSpec> = {
+  lead_sources: {
+    key: "lead_sources", table: "lead_sources", title: "How people hear about us", singular: "option",
+    description: "The choices for \"How did you hear about Wiwaha?\" on the website form and on each lead. Sales numbers and the dashboard count leads by these.",
+    editRoles: ["owner", "sales"], viewRoles: ["owner", "sales", "event_manager"],
+    order: [{ column: "sort" }, { column: "label" }],
+    fields: [
+      { key: "label", label: "Option", kind: "text", required: true, primary: true },
+      { key: "sort", label: "Order", kind: "number", initial: 100 },
+      { key: "active", label: "Shown", kind: "checkbox", initial: true },
+    ],
+  },
   entertainment: {
     key: "entertainment", table: "service_options", title: "Entertainment", singular: "act",
     description: "Artists and acts we can offer: DJs, bands, dhol, anchors and more. Couples only ever pick from this list. The price to the client and our cost feed Prashanth's costing.",
@@ -171,7 +182,7 @@ export const CATALOGUES: Record<string, CatalogueSpec> = {
   },
   spaces: {
     key: "spaces", table: "spaces", title: "Spaces", singular: "space",
-    description: "The lawns, halls and courtyards on the calendar. Capacity decides which spaces agents suggest.",
+    description: "The lawns, halls and courtyards on the calendar. Capacity decides which spaces agents suggest. Photos: add plain photos (no décor, a few angles) for AI moodboards, and event photos for the Content studio.",
     editRoles: ["owner"], viewRoles: ROLES,
     order: [{ column: "sort" }],
     fields: [

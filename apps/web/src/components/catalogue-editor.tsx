@@ -1,4 +1,5 @@
 "use client";
+import { ActionButton } from "./action-button";
 import { Badge, buttonClass, Card, cn } from "@wiwaha/ui";
 import { useState, useTransition } from "react";
 import { saveCatalogueRow } from "@/app/team/catalogue/actions";
@@ -61,7 +62,13 @@ function RowForm({ spec, initial, id, onDone, refs }: { spec: CatalogueSpec; ini
 }
 
 /** List + add + edit for one reference list (see lib/catalogue.ts). */
-export function CatalogueEditor({ spec, rows, canEdit, refs = {} }: { spec: CatalogueSpec; rows: Record<string, unknown>[]; canEdit: boolean; refs?: RefOptions }) {
+export function CatalogueEditor({ spec, rows, canEdit, refs = {}, thumbs = {}, notes = {}, rowAction }: {
+  spec: CatalogueSpec; rows: Record<string, unknown>[]; canEdit: boolean; refs?: RefOptions;
+  /** A picture per row (e.g. a space's main photo) and a short note under it. */
+  thumbs?: Record<string, string>; notes?: Record<string, string>;
+  /** One extra button per row, e.g. "Photos" on spaces. */
+  rowAction?: { label: string; action: (id: string) => Promise<{ error?: string } | void> };
+}) {
   const [editing, setEditing] = useState<string | "new" | null>(null);
   const primary = spec.fields.find((f) => f.primary) ?? spec.fields[0]!;
   return (
@@ -80,12 +87,16 @@ export function CatalogueEditor({ spec, rows, canEdit, refs = {} }: { spec: Cata
               <Card className={cn("p-4", inactive && "opacity-60")}>
                 {editing === id ? <RowForm spec={spec} initial={values} id={id} onDone={() => setEditing(null)} refs={refs} /> : (
                   <div className="flex items-start justify-between gap-3">
-                    {(() => { const img = spec.fields.find((f) => f.kind === "image"); const u = img ? String(values[img.key] ?? "") : ""; return u ? <img src={u} alt="" className="size-14 shrink-0 rounded-lg border border-line object-cover" /> : null; })()}
+                    {(() => { const img = spec.fields.find((f) => f.kind === "image"); const u = thumbs[id] ?? (img ? String(values[img.key] ?? "") : ""); return u ? <img src={u} alt="" className="size-14 shrink-0 rounded-lg border border-line object-cover" /> : null; })()}
                     <div className="min-w-0 flex-1">
                       <p className="font-medium">{String(values[primary.key] ?? "")} {inactive ? <Badge>inactive</Badge> : null}</p>
+                      {notes[id] ? <p className="mt-0.5 text-xs text-sage-700">{notes[id]}</p> : null}
                       <p className="mt-0.5 text-sm text-ink-soft">{spec.fields.filter((f) => f !== primary && f.key !== "active" && f.kind !== "textarea").map((f) => (f.kind === "ref" ? (refs[f.key] ?? []).find((o) => o.id === values[f.key])?.label ?? "" : display(f, values[f.key]!))).filter(Boolean).join(" · ")}</p>
                     </div>
-                    {canEdit ? <button onClick={() => setEditing(id)} className={buttonClass("secondary", "sm")}>Edit</button> : null}
+                    <div className="flex shrink-0 flex-wrap justify-end gap-1.5">
+                      {rowAction ? <ActionButton action={rowAction.action.bind(null, id)} pendingLabel="Opening…">{rowAction.label}</ActionButton> : null}
+                      {canEdit ? <button onClick={() => setEditing(id)} className={buttonClass("secondary", "sm")}>Edit</button> : null}
+                    </div>
                   </div>
                 )}
               </Card>

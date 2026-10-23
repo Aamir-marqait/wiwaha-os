@@ -88,7 +88,7 @@ export async function AiMoodboards({ supabase, weddingId, canEdit }: { supabase:
                   <li key={s.id} className="grid gap-3 px-4 py-4 sm:grid-cols-2 sm:px-5">
                     <figure className="space-y-1">
                       <figcaption className="text-xs font-medium uppercase tracking-wide text-ink-soft">The space: {s.area_name}</figcaption>
-                      {s.base_url ? <img src={s.base_url} alt={`${s.area_name} as it is`} loading="lazy" className="aspect-[4/3] w-full rounded-xl object-cover" /> : <div className="grid aspect-[4/3] place-items-center rounded-xl bg-ivory-100 p-3 text-center text-xs text-ink-soft">No plain photo. <Link href="/team/decor/areas" className="underline">Add one</Link></div>}
+                      {s.base_url ? <img src={s.base_url} alt={`${s.area_name} as it is`} loading="lazy" className="aspect-[4/3] w-full rounded-xl object-cover" /> : <div className="grid aspect-[4/3] place-items-center rounded-xl bg-ivory-100 p-3 text-center text-xs text-ink-soft">No plain photo. <Link href="/team/spaces" className="underline">Add one</Link></div>}
                     </figure>
                     <figure className="space-y-1">
                       <figcaption className="flex flex-wrap items-center gap-1.5 text-xs font-medium uppercase tracking-wide text-ink-soft">{s.element} <Badge tone={st.tone}>{st.label}</Badge>{s.edited_url ? <Badge tone="gold">Edited</Badge> : s.engine === "reference" && s.result_url ? <Badge>Template photo</Badge> : s.result_url ? <Badge>AI preview</Badge> : null}</figcaption>

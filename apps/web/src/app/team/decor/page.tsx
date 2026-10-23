@@ -1,10 +1,9 @@
 import { Badge, Card, PageTitle } from "@wiwaha/ui";
 import { formatDateIST, todayIST } from "@wiwaha/db";
 import { requireSection } from "@/lib/auth";
-import { DECOR_AREAS } from "@/lib/catalogue";
 import { CONDITION_LABELS, CONDITION_TONE, isCondition, pretty } from "@/lib/decor";
 import { createClient } from "@/lib/supabase/server";
-import { type EventOption, ItemActions, ItemForm } from "./decor-forms";
+import { type EventOption, ItemActions, ItemForm, QuantityStepper } from "./decor-forms";
 import { DecorTabs } from "./tabs";
 
 export const metadata = { title: "Décor stock" };
@@ -16,11 +15,13 @@ export default async function DecorStockPage({ searchParams }: { searchParams: P
   const canEdit = ["owner", "event_manager", "staff"].includes(viewer.profile.role);
   const supabase = await createClient();
   const today = todayIST();
-  const [items, promised, weddings] = await Promise.all([
+  const [items, promised, weddings, venueAreas] = await Promise.all([
     supabase.from("decor_items").select("*").order("active", { ascending: false }).order("category").order("name"),
     supabase.from("decor_assignments").select("decor_item_id, quantity, wedding:weddings(event_end)").in("status", ["planned", "set_up"]),
     supabase.from("weddings").select("id, title, event_start, event_end, functions:event_functions(id, name, date)").gte("event_end", today).neq("status", "cancelled").order("event_start"),
+    supabase.from("venue_areas").select("name").eq("active", true).order("sort"),
   ]);
+  const areas = [...(venueAreas.data ?? []).map((a) => a.name as string), "Other"];
   const out = new Map<string, number>();
   for (const a of promised.data ?? []) {
     const w = (Array.isArray(a.wedding) ? a.wedding[0] : a.wedding) as { event_end: string } | null;
@@ -54,17 +55,22 @@ export default async function DecorStockPage({ searchParams }: { searchParams: P
           return (
             <li key={i.id as string}>
               <Card className={`h-full overflow-hidden ${i.active ? "" : "opacity-60"}`}>
-                {photos.length ? (
-                  <div className={`grid h-40 gap-0.5 ${photos.length > 1 ? "grid-cols-2" : "grid-cols-1"}`}>{photos.slice(0, 2).map((u) => <img key={u} src={u} alt={i.name as string} className="size-full object-cover" />)}</div>
-                ) : <div className="grid h-24 place-items-center bg-ivory-100 text-xs text-ink-soft">No photo yet</div>}
+                {photos[0] ? (
+                  <a href={photos[0]} target="_blank" rel="noreferrer" className="block bg-ivory-100"><img src={photos[0]} alt={i.name as string} loading="lazy" className="aspect-[4/3] w-full object-cover" /></a>
+                ) : <div className="grid aspect-[4/3] place-items-center bg-ivory-100 text-sm text-ink-soft">No photo yet. Edit to add one.</div>}
+                {photos.length > 1 ? <div className="grid grid-cols-4 gap-0.5">{photos.slice(1, 5).map((u) => <a key={u} href={u} target="_blank" rel="noreferrer"><img src={u} alt="" loading="lazy" className="aspect-square w-full object-cover" /></a>)}</div> : null}
                 <div className="space-y-2 p-4">
                   <div className="flex items-start justify-between gap-2">
                     <p className="font-serif text-lg font-semibold">{i.name as string}</p>
                     <Badge tone={CONDITION_TONE[cond]}>{CONDITION_LABELS[cond]}</Badge>
                   </div>
-                  <p className="text-sm text-ink-soft">{pretty(i.category as string)} · {i.quantity as number} owned{busy ? ` · ${busy} promised to upcoming events` : ""}{i.location ? ` · ${i.location as string}` : ""}</p>
+                  <p className="text-sm text-ink-soft">{pretty(i.category as string)}{i.location ? ` · ${i.location as string}` : ""}</p>
+                  <div className="flex items-end justify-between gap-3 rounded-xl bg-ivory-50 p-2 ring-1 ring-line/70">
+                    <div><p className="text-xs uppercase tracking-wide text-ink-soft">We own</p><QuantityStepper id={i.id as string} initial={Number(i.quantity)} canEdit={canEdit} /></div>
+                    {busy ? <p className="text-right text-xs text-ink-soft">{busy} promised to<br />upcoming events</p> : null}
+                  </div>
                   {i.notes ? <p className="text-xs italic text-ink-soft">{i.notes as string}</p> : null}
-                  <ItemActions id={i.id as string} canEdit={canEdit} max={Number(i.quantity)} events={events} areas={[...DECOR_AREAS]}
+                  <ItemActions id={i.id as string} canEdit={canEdit} max={Number(i.quantity)} events={events} areas={areas}
                     initial={{ name: i.name as string, category: i.category as string, photos: photos.join("\n"), quantity: String(i.quantity), condition: cond, location: (i.location as string | null) ?? "", notes: (i.notes as string | null) ?? "", active: i.active as boolean, unitCost: i.unit_cost_paise != null ? String(Number(i.unit_cost_paise) / 100) : "", useCost: i.use_cost_paise != null ? String(Number(i.use_cost_paise) / 100) : "" }} />
                 </div>
               </Card>

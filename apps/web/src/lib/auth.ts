@@ -47,6 +47,14 @@ export async function requireSection(section: Section, roles?: readonly AppRole[
   return viewer;
 }
 
+/** Any one of these sections will do (Spaces sits in both Venue and Décor). */
+export async function requireAnySection(sections: readonly Section[], roles?: readonly AppRole[]): Promise<Viewer> {
+  const viewer = await requireStaff(roles);
+  const mine = viewerSections(viewer);
+  if (!sections.some((s) => mine.includes(s))) redirect(`/team?denied=${encodeURIComponent(SECTION_LABELS[sections[0] ?? "venue"])}`);
+  return viewer;
+}
+
 export async function requireClient(): Promise<Viewer> {
   const viewer = await getViewer();
   if (!viewer) redirect("/portal/login");

@@ -18,10 +18,10 @@ export function AreaForm({ id, initial, spaces, onDone }: { id: string | null; i
   return (
     <form className="space-y-3" onSubmit={(e) => { e.preventDefault(); start(async () => { const r = await saveArea(id, v); if (r.error) setError(r.error); else { setError(null); if (!id && r.id) router.push(`/team/decor/areas/${r.id}`); else { router.refresh(); onDone?.(); } } }); }}>
       <div className="grid gap-3 sm:grid-cols-2">
-        <label className={label}>Name *<input value={v.name} required onChange={(e) => setV({ ...v, name: e.target.value })} placeholder="e.g. Lobby pathway" className={field} /></label>
+        <label className={label}>Name *<input value={v.name} required onChange={(e) => setV({ ...v, name: e.target.value })} placeholder="e.g. Main lawn, Lobby pathway" className={field} /></label>
         <label className={label}>Kind<select value={v.kind} onChange={(e) => setV({ ...v, kind: e.target.value })} className={field}>{KINDS.map(([k, l]) => <option key={k} value={k}>{l}</option>)}</select></label>
         <label className={`${label} sm:col-span-2`}>What it's like<textarea rows={2} value={v.description} onChange={(e) => setV({ ...v, description: e.target.value })} placeholder="Floors, walls, pillars, light. The Design assistant reads this." className={field} /></label>
-        <label className={label}>Part of space (optional)<select value={v.spaceId ?? ""} onChange={(e) => setV({ ...v, spaceId: e.target.value || null })} className={field}><option value="">None</option>{spaces.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}</select></label>
+        <label className={label}>Bookable space it belongs to<select value={v.spaceId ?? ""} onChange={(e) => setV({ ...v, spaceId: e.target.value || null })} className={field}><option value="">Not booked on its own</option>{spaces.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}</select></label>
         <label className={label}>Order<input value={v.sort} inputMode="numeric" onChange={(e) => setV({ ...v, sort: e.target.value })} className={field} /></label>
       </div>
       <fieldset>
@@ -35,7 +35,7 @@ export function AreaForm({ id, initial, spaces, onDone }: { id: string | null; i
       </fieldset>
       {id ? <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={v.active} onChange={(e) => setV({ ...v, active: e.target.checked })} /> In use</label> : null}
       <div className="flex items-center gap-2">
-        <button disabled={pending} className={buttonClass("primary", "md")}>{pending ? "Saving…" : id ? "Save area" : "Add area"}</button>
+        <button disabled={pending} className={buttonClass("primary", "md")}>{pending ? "Saving…" : id ? "Save" : "Add space"}</button>
         {onDone ? <button type="button" onClick={onDone} className={buttonClass("ghost", "md")}>Cancel</button> : null}
         {error ? <span role="alert" className="text-sm text-burgundy-700">{error}</span> : null}
       </div>

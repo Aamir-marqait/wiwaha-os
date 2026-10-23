@@ -1,12 +1,12 @@
 import { after, NextResponse, type NextRequest } from "next/server";
 import { runRouting } from "@/lib/agents";
-import { ingestLead, leadInputSchema, toIngestPayload } from "@/lib/leads";
+import { ingestLead, leadInputSchema, saveHeardAbout, toIngestPayload } from "@/lib/leads";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 /**
  * Public website enquiry endpoint. Accepts JSON or form posts, so the Wiwaha
  * website can post directly. De-duplicates by phone, then Lead Desk scores
- * the lead and drafts a reply into the approval queue (after the response).
+ * the lead (after the response). Embedded on the Wiwaha website as /enquire?embed=1.
  */
 const ALLOWED_ORIGINS = (process.env.LEAD_FORM_ALLOWED_ORIGINS ?? "").split(",").map((s) => s.trim()).filter(Boolean);
 
@@ -43,6 +43,7 @@ export async function POST(req: NextRequest) {
     const fwd = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim();
     const db = createAdminClient("public");
     const result = await ingestLead(db, { ...toIngestPayload(parsed.data, "website"), source_detail: fwd ? `Website form (${fwd})` : "Website form" });
+    await saveHeardAbout(db, result.lead_id, parsed.data.heard_about);
     // The Chief of Staff routes the queued 'new_lead' task to Lead Desk.
     after(async () => {
       await runRouting();

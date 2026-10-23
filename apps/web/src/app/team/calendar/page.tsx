@@ -8,6 +8,7 @@ import { CopyField } from "@/components/copy-field";
 import { requireSection } from "@/lib/auth";
 import { feedUrl } from "@/lib/calendar-feed";
 import { createClient } from "@/lib/supabase/server";
+import { OPEN_STAGES, stageOf } from "@/lib/pipeline";
 import { releaseEntry } from "../leads/actions";
 import { confirmEntry } from "./actions";
 import { HoldPanel } from "./hold-panel";
@@ -41,17 +42,37 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
   const sp = await searchParams;
   const today = todayIST();
   const month = sp.month && /^\d{4}-\d{2}$/.test(sp.month) ? sp.month : today.slice(0, 7);
-  const view = sp.view === "rooms" ? "rooms" : "spaces";
+  const view = sp.view === "rooms" ? "rooms" : sp.view === "leads" ? "leads" : "spaces";
   const { from, to, days } = monthBounds(month);
   const supabase = await createClient();
 
-  const [avail, holds, spaces, rooms, policies] = await Promise.all([
+  const seesLeads = ["owner", "sales", "event_manager"].includes(viewer.profile.role);
+  const none = Promise.resolve({ data: [] as Record<string, unknown>[] });
+  const [avail, holds, spaces, rooms, policies, visits, wanted] = await Promise.all([
     supabase.rpc("availability", { p_from: from, p_to: to }),
     supabase.from("calendar_entries").select("id, label, starts_on, ends_on, expires_at, resource_kind, space:spaces(name), room:rooms(number)").eq("status", "held").gt("expires_at", new Date().toISOString()).order("expires_at").limit(20),
     supabase.from("spaces").select("id, name").eq("active", true).order("sort"),
     supabase.from("rooms").select("id, number").eq("active", true).order("sort"),
     supabase.from("policies").select("key, topic, title, rule_text, value, version, client_visible, needs_confirmation, sort"),
+    view === "leads" && seesLeads ? supabase.from("visits").select("id, scheduled_at, status, visit_number, lead:leads(id, contact:contacts(full_name))").gte("scheduled_at", `${from}T00:00:00+05:30`).lte("scheduled_at", `${to}T23:59:59+05:30`).neq("status", "cancelled").order("scheduled_at") : none,
+    view === "leads" && seesLeads ? supabase.from("leads").select("id, status, date_wanted, guest_count, contact:contacts(full_name)").gte("date_wanted", from).lte("date_wanted", to).order("date_wanted") : none,
   ]);
+  type LeadDay = { key: string; time: string | null; kind: "visit" | "wanted"; leadId: string; name: string; note: string };
+  const leadDays = new Map<string, LeadDay[]>();
+  const one = <T,>(x: T | T[] | null | undefined): T | null => (Array.isArray(x) ? (x[0] ?? null) : (x ?? null));
+  for (const v of (visits.data ?? []) as Record<string, unknown>[]) {
+    const lead = one(v.lead as { id: string; contact: { full_name: string } | { full_name: string }[] | null } | null);
+    if (!lead) continue;
+    const at = String(v.scheduled_at);
+    const day = new Date(at).toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" });
+    leadDays.set(day, [...(leadDays.get(day) ?? []), { key: `v${String(v.id)}`, time: new Date(at).toLocaleTimeString("en-IN", { timeZone: "Asia/Kolkata", hour: "numeric", minute: "2-digit" }), kind: "visit", leadId: lead.id, name: one(lead.contact)?.full_name ?? "Lead", note: `Site visit ${Number(v.visit_number) > 1 ? Number(v.visit_number) : ""}`.trim() }]);
+  }
+  for (const l of (wanted.data ?? []) as Record<string, unknown>[]) {
+    const stage = stageOf(String(l.status));
+    if (!OPEN_STAGES.includes(stage.key) && stage.key !== "won") continue;
+    const day = String(l.date_wanted);
+    leadDays.set(day, [...(leadDays.get(day) ?? []), { key: `l${String(l.id)}`, time: null, kind: "wanted", leadId: String(l.id), name: one(l.contact as { full_name: string } | null)?.full_name ?? "Lead", note: `Wants this date${l.guest_count ? ` · ${Number(l.guest_count)} guests` : ""} · ${stage.label}` }]);
+  }
   const rows = ((avail.data ?? []) as AvailabilityRow[]).filter((r) => r.resource_kind === (view === "rooms" ? "room" : "space"));
   const book = PolicyBook.fromRows((policies.data ?? []) as PolicyRow[]);
   const holdHours = book.has("holds.soft_hold") ? book.get("holds.soft_hold").hours : 72;
@@ -70,7 +91,7 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
 
   return (
     <>
-      <PageTitle title="Availability calendar" subtitle="The single source of truth. Held and confirmed dates block everyone." />
+      <PageTitle title="Calendar" subtitle="Spaces and rooms: held and confirmed dates block everyone. Leads: site visits and the dates families asked for." />
 
       <div className="mb-4 flex flex-wrap items-center gap-2">
         <div className="flex items-center gap-1 rounded-full bg-white p-1 ring-1 ring-line">
@@ -79,7 +100,7 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
           <Link href={`/team/calendar?month=${shiftMonth(month, 1)}&view=${view}`} className="rounded-full px-3 py-1 text-sm hover:bg-ivory-100" aria-label="Next month">→</Link>
         </div>
         <div className="flex gap-1 rounded-full bg-white p-1 ring-1 ring-line">
-          {(["spaces", "rooms"] as const).map((v) => (
+          {(seesLeads ? (["spaces", "rooms", "leads"] as const) : (["spaces", "rooms"] as const)).map((v) => (
             <Link key={v} href={`/team/calendar?month=${month}&view=${v}`} className={cn("rounded-full px-3 py-1 text-sm capitalize", v === view ? "bg-sage-700 text-white" : "hover:bg-ivory-100")}>{v}</Link>
           ))}
         </div>
@@ -89,6 +110,25 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
       </div>
 
       <div className="grid items-start gap-5 xl:grid-cols-[1fr_300px]">
+        {view === "leads" ? (
+          <Card className="min-w-0 self-start overflow-hidden">
+            <CardHeader title="Leads this month" subtitle="Site visits, and the dates open leads have asked for." />
+            <ul className="divide-y divide-line/70">
+              {leadDays.size === 0 ? <li className="px-4 py-6 text-center text-sm text-ink-soft">No visits or wanted dates this month.</li> : null}
+              {[...leadDays.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([day, list]) => (
+                <li key={day} className="px-4 py-3 sm:px-5">
+                  <p className="text-sm font-semibold">{formatDateIST(day, { weekday: "short", day: "numeric", month: "short" })}</p>
+                  <ul className="mt-1.5 space-y-1">
+                    {list.map((e) => (
+                      <li key={e.key}><Link href={`/team/leads/${e.leadId}`} className="flex items-center gap-2 text-sm hover:underline"><span className={cn("inline-block size-2.5 shrink-0 rounded-full", e.kind === "visit" ? "bg-sage-600" : "bg-gold-400")} /><span className="font-medium">{e.name}</span><span className="text-xs text-ink-soft">{e.time ? `${e.time} · ` : ""}{e.note}</span></Link></li>
+                    ))}
+                  </ul>
+                </li>
+              ))}
+            </ul>
+            <p className="flex gap-4 border-t border-line/70 px-4 py-2 text-xs text-ink-soft sm:px-5"><span className="flex items-center gap-1.5"><span className="inline-block size-2.5 rounded-full bg-sage-600" />Site visit</span><span className="flex items-center gap-1.5"><span className="inline-block size-2.5 rounded-full bg-gold-400" />Date asked for</span></p>
+          </Card>
+        ) : (
         <Card className="min-w-0 self-start overflow-hidden">
           {/* Grid: tablets and up */}
           <div className="hidden overflow-x-auto sm:block">
@@ -132,6 +172,7 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
             ))}
           </ul>
         </Card>
+        )}
 
         <div className="space-y-5">
           {canHold ? (

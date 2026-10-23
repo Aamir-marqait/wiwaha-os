@@ -24,6 +24,8 @@ export const STAFF = {
 export function testWorld(opts: { llm?: LlmClient; now?: Date; seed?: Record<string, Row[]> } = {}) {
   const now = opts.now ?? T_NOW;
   const store = new MemoryAgentStore();
+  // Scenario tests predate D44 and exercise WhatsApp drafts; "off" has its own test.
+  store.setPolicy("messaging.channels", { whatsapp: true, email: true });
   const db = new MemoryDb({
     profiles: Object.values(STAFF).map((p) => ({ ...p })),
     spaces: [

@@ -5,13 +5,13 @@ import { createManualLead, type FormState } from "../actions";
 
 const field = "mt-1 block h-11 w-full rounded-xl border border-line bg-white px-3 text-base outline-none focus:border-sage-500 focus:ring-2 focus:ring-sage-200";
 
-export function NewLeadForm() {
+export function NewLeadForm({ heardOptions }: { heardOptions: string[] }) {
   const [state, action, pending] = useActionState<FormState, FormData>(createManualLead, {});
   return (
     <form action={action} className="space-y-4">
       <div className="grid gap-4 sm:grid-cols-2">
         <label className="block"><span className="text-sm font-medium">Name *</span><input name="full_name" required className={field} /></label>
-        <label className="block"><span className="text-sm font-medium">Source</span>
+        <label className="block"><span className="text-sm font-medium">How they reached us</span>
           <select name="source" defaultValue="phone" className={field}>
             <option value="phone">Phone call</option><option value="walk_in">Walk-in</option><option value="referral">Referral</option>
             <option value="whatsapp">WhatsApp</option><option value="instagram">Instagram</option><option value="wedmegood">WedMeGood</option>
@@ -29,8 +29,11 @@ export function NewLeadForm() {
         <label className="block"><span className="text-sm font-medium">Budget (₹ lakh)</span><input name="budget_lakhs" type="number" min={0} step="0.5" className={field} /></label>
       </div>
       <div className="grid gap-4 sm:grid-cols-2">
+        <label className="block"><span className="text-sm font-medium">How did they hear about Wiwaha?</span>
+          <select name="heard_about" defaultValue="" className={field}><option value="">Not asked</option>{heardOptions.map((o) => <option key={o} value={o}>{o}</option>)}</select>
+        </label>
         <label className="block"><span className="text-sm font-medium">City</span><input name="city" className={field} /></label>
-        <label className="block"><span className="text-sm font-medium">Source detail</span><input name="source_detail" placeholder="e.g. referred by the Sharmas" className={field} /></label>
+        <label className="block sm:col-span-2"><span className="text-sm font-medium">Notes on the source</span><input name="source_detail" placeholder="e.g. referred by the Sharmas" className={field} /></label>
       </div>
       <label className="block"><span className="text-sm font-medium">What did they ask?</span><textarea name="message" rows={3} className={`${field} h-auto py-2`} /></label>
       <div className="flex flex-wrap gap-4 text-sm">

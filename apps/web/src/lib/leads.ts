@@ -23,6 +23,7 @@ export const leadInputSchema = z
     message: optionalText(2000),
     source: z.enum(LEAD_SOURCES as unknown as [LeadSource, ...LeadSource[]]).optional(),
     source_detail: optionalText(200),
+    heard_about: optionalText(80),
     consent_whatsapp: boolish,
     consent_email: boolish,
   })
@@ -50,6 +51,12 @@ export function toIngestPayload(input: LeadInput, source: LeadSource) {
     consent_whatsapp: input.consent_whatsapp ?? false,
     consent_email: input.consent_email ?? false,
   };
+}
+
+/** "How did you hear about us": kept on the lead the first time it's given (D44). */
+export async function saveHeardAbout(db: SupabaseClient, leadId: string, label: string | undefined): Promise<void> {
+  if (!label) return;
+  await db.from("leads").update({ heard_about: label.slice(0, 80) }).eq("id", leadId).is("heard_about", null);
 }
 
 /** Calls the de-duplicating intake function in the database. */

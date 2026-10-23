@@ -6,11 +6,11 @@ const STATUS: Record<LeadStatus, { label: string; tone: "sage" | "gold" | "burgu
   contacted: { label: "Contacted", tone: "neutral" },
   visit_booked: { label: "Visit booked", tone: "sage" },
   visited: { label: "Visited", tone: "sage" },
-  follow_up_done: { label: "Followed up", tone: "neutral" },
+  follow_up_done: { label: "Visited", tone: "sage" },
   negotiating: { label: "Negotiating", tone: "gold" },
   won: { label: "Booked", tone: "solid" },
   lost: { label: "Lost", tone: "burgundy" },
-  no_response: { label: "No response", tone: "neutral" },
+  no_response: { label: "Lost", tone: "burgundy" },
 };
 
 export function LeadStatusBadge({ status }: { status: LeadStatus }) {

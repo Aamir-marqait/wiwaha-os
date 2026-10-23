@@ -48,10 +48,19 @@ Sign in at **/portal/login** as Ananya ("Use a password instead"). Her stage car
 4. **Calendar**: next week's plan, made automatically.
 
 ## 9. The money and the day-to-day (3 min, D42)
-1. **Today**: follow-up calls due (one call after each visit), guest requests, alerts, and AI credits.
-2. A lead → Status → Lost: it asks why. **Sales numbers** shows why leads didn't book.
+1. **Dashboard**: the numbers, the pipeline and where leads come from; anything that needs attention.
+2. A lead → **Lost**: it asks why. **Sales numbers** shows why leads didn't book.
 3. Wedding Room → **Décor**: add a rented chandelier and a bought uruli; mark the uruli arrived: it joins the stock, and both costs land in **Finance**.
 4. **Payments** tab: the receipt for the advance (method, schedule, balance); **Prepare invoices now** drafts the final and GST invoices for approval.
 5. **See the portal as the couple**, then Back to the Wedding Room.
 6. Open the guest page (Links), request an airport pickup: it shows on Arjun's Today.
 
+
+## 10. The simpler flow (4 min, D44)
+1. Open `/enquire` on a phone, fill only name and phone, choose "How did you hear about Wiwaha?": it lands in **Leads** with that answer.
+2. Open the lead: tap the stages (instant), book a visit, then **Book the wedding**. You land in the Wedding Room.
+3. **Couple's portal** card (top of Overview): **Create login** for Ananya's number, copy the invite (link, number, PIN) or open it in WhatsApp. On another phone, sign in at `/portal/login` with the number and PIN.
+4. **Venue → Spaces**: every lawn, hall and corner with photos; **Add photos** on one that has none.
+5. **Décor stock**: tap + / − on a piece; **Templates by area → Use for an event**.
+6. **Finance → Add a cost**: Ads & marketing, "Meta ads", ₹15,000: the month's costs show ad spend per enquiry.
+7. **Calendar → Leads**: visits and the dates families asked for. **Estate**: "Done today" on a maintenance job.

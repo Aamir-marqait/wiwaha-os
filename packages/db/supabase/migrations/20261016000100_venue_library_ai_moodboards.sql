@@ -13,28 +13,35 @@
 -- ---------------------------------------------------------------------------
 -- Venue areas: the physical spaces décor is planned for.
 -- ---------------------------------------------------------------------------
-create type public.venue_area_kind as enum ('entrance', 'pathway', 'lawn', 'hall', 'poolside', 'amphitheatre', 'courtyard', 'rooms', 'other');
+-- Guarded so a rerun is harmless: on staging this section went in by hand on
+-- 2026-10-19 before the rest of the file (the deploy token was missing).
+do $v$
+begin
+  if to_regclass('public.venue_areas') is null then
+    create type public.venue_area_kind as enum ('entrance', 'pathway', 'lawn', 'hall', 'poolside', 'amphitheatre', 'courtyard', 'rooms', 'other');
 
-create table public.venue_areas (
-  id uuid primary key default gen_random_uuid(),
-  name text not null unique check (length(btrim(name)) between 2 and 80),
-  kind public.venue_area_kind not null default 'other',
-  description text,                                   -- what the space is like, read by the Design assistant
-  space_id uuid references public.spaces(id) on delete set null,   -- the bookable space it belongs to, if any
-  suits public.function_type[] not null default '{}', -- functions this area usually hosts
-  sort integer not null default 100,
-  active boolean not null default true,
-  created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now()
-);
-create trigger venue_areas_touch before update on public.venue_areas
-  for each row execute function app.touch_updated_at();
-alter table public.venue_areas enable row level security;
--- Families pick areas in the décor questionnaire, so anyone signed in can read them.
-create policy venue_areas_read on public.venue_areas for select using (auth.uid() is not null);
-create policy venue_areas_write on public.venue_areas for all
-  using (app.has_role('owner', 'event_manager', 'staff')) with check (app.has_role('owner', 'event_manager', 'staff'));
-select app.enable_audit('public.venue_areas');
+    create table public.venue_areas (
+      id uuid primary key default gen_random_uuid(),
+      name text not null unique check (length(btrim(name)) between 2 and 80),
+      kind public.venue_area_kind not null default 'other',
+      description text,                                   -- what the space is like, read by the Design assistant
+      space_id uuid references public.spaces(id) on delete set null,   -- the bookable space it belongs to, if any
+      suits public.function_type[] not null default '{}', -- functions this area usually hosts
+      sort integer not null default 100,
+      active boolean not null default true,
+      created_at timestamptz not null default now(),
+      updated_at timestamptz not null default now()
+    );
+    create trigger venue_areas_touch before update on public.venue_areas
+      for each row execute function app.touch_updated_at();
+    alter table public.venue_areas enable row level security;
+    -- Families pick areas in the décor questionnaire, so anyone signed in can read them.
+    create policy venue_areas_read on public.venue_areas for select using (auth.uid() is not null);
+    create policy venue_areas_write on public.venue_areas for all
+      using (app.has_role('owner', 'event_manager', 'staff')) with check (app.has_role('owner', 'event_manager', 'staff'));
+    perform app.enable_audit('public.venue_areas');
+  end if;
+end $v$;
 
 -- The estate's real spaces, as they appear in the team's own moodboards.
 insert into public.venue_areas (name, kind, description, suits, sort) values
@@ -50,7 +57,7 @@ on conflict (name) do nothing;
 
 -- Area-wise décor templates can name the physical area they were made for;
 -- the Design assistant uses their photos as style references for that area.
-alter table public.decor_templates add column venue_area_id uuid references public.venue_areas(id) on delete set null;
+alter table public.decor_templates add column if not exists venue_area_id uuid references public.venue_areas(id) on delete set null;
 
 -- ---------------------------------------------------------------------------
 -- The media library: the estate's own photos and clips. Used for the décor

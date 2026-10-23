@@ -11,7 +11,7 @@ import { createClient } from "@/lib/supabase/server";
 type Result = { error?: string };
 const EDITORS = ["owner", "sales", "event_manager", "staff"] as const;
 const isLook = (v: unknown): v is MediaLook => typeof v === "string" && (MEDIA_LOOKS as readonly string[]).includes(v);
-const refresh = () => { revalidatePath("/team/studio", "layout"); revalidatePath("/team/decor", "layout"); };
+const refresh = () => { revalidatePath("/team/studio", "layout"); revalidatePath("/team/decor", "layout"); revalidatePath("/team/spaces"); };
 
 export interface UploadedMedia {
   path: string; url: string; kind: "image" | "video"; contentType: string; bytes: number;

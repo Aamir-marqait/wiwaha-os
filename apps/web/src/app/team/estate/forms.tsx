@@ -3,15 +3,20 @@ import { buttonClass } from "@wiwaha/ui";
 import { useState, useTransition } from "react";
 import { recordReading, setStock } from "./actions";
 
+/** − 24 + : saved as you tap. */
 export function StockForm({ itemId, quantity }: { itemId: string; quantity: number }) {
-  const [pending, start] = useTransition();
-  const [msg, setMsg] = useState<string | null>(null);
+  const [n, setN] = useState(quantity);
+  const [error, setError] = useState<string | null>(null);
+  const [, start] = useTransition();
+  const change = (x: number) => { const v = Math.max(0, x); setN(v); start(async () => setError((await setStock(itemId, v)).error ?? null)); };
+  const btn = "grid size-9 place-items-center rounded-lg bg-ivory-200 text-lg font-semibold text-sage-800 hover:bg-ivory-100 disabled:opacity-40";
   return (
-    <form className="flex items-center gap-1" onSubmit={(e) => { e.preventDefault(); const q = Number(new FormData(e.currentTarget).get("q")); start(async () => { const r = await setStock(itemId, q); setMsg(r.error ?? r.ok ?? null); }); }}>
-      <input name="q" type="number" min={0} defaultValue={quantity} aria-label="Quantity" className="h-8 w-20 rounded-lg border border-line px-2 text-sm" />
-      <button disabled={pending} className={buttonClass("secondary", "sm")}>{pending ? "…" : "Update"}</button>
-      {msg ? <span className="text-xs text-ink-soft">{msg}</span> : null}
-    </form>
+    <span className="flex shrink-0 items-center gap-1">
+      <button type="button" aria-label="One less" disabled={n <= 0} onClick={() => change(n - 1)} className={btn}>−</button>
+      <input aria-label="Quantity" value={String(n)} inputMode="numeric" onChange={(e) => setN(Number(e.target.value.replace(/\D/g, "")) || 0)} onBlur={() => change(n)} className="h-9 w-14 rounded-lg border border-line text-center text-sm font-semibold" />
+      <button type="button" aria-label="One more" onClick={() => change(n + 1)} className={btn}>+</button>
+      {error ? <span role="alert" className="text-xs text-burgundy-700">{error}</span> : null}
+    </span>
   );
 }
 
