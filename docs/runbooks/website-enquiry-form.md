@@ -4,25 +4,11 @@ Every enquiry from the form lands in **Leads** at once (source "Website form", p
 
 ## The link
 
-`https://wiwaha-os.vercel.app/enquire`. Use it on Instagram, WhatsApp replies, Google Business and anywhere a plain link works.
+The form lives on the Wiwaha website: `https://www.wiwahabypraman.com/enquire`. Use it on Instagram, WhatsApp replies, Google Business and anywhere a plain link works. The "Make an Enquiry" and "Request a Callback" buttons on the website open the same form in a pop-up.
 
-## On the website (embedded)
+How it reaches the OS: the website form posts to the website's `/api/enquire`, which forwards to this app's `/api/leads`. Set `WIWAHA_OS_URL` in the website's Vercel project if the OS is not at `https://wiwaha-os.vercel.app`.
 
-Paste this where the form should appear:
-
-```html
-<iframe id="wiwaha-enquiry" src="https://wiwaha-os.vercel.app/enquire?embed=1"
-  title="Enquire about Wiwaha" style="width:100%;border:0;min-height:760px" loading="lazy"></iframe>
-<script>
-  // Optional: the form tells the page its height (no inner scrollbar) and when it's sent.
-  window.addEventListener("message", function (e) {
-    if (e.origin !== "https://wiwaha-os.vercel.app") return;
-    var f = document.getElementById("wiwaha-enquiry");
-    if (e.data && e.data.type === "wiwaha-enquiry-height") f.style.height = e.data.height + "px";
-    if (e.data && e.data.type === "wiwaha-enquiry-sent") { /* e.g. fire a Meta/Google conversion event */ }
-  });
-</script>
-```
+Fallback: `https://wiwaha-os.vercel.app/enquire` still works (and `?embed=1` for an iframe), but share the website link.
 
 ## Fields
 
