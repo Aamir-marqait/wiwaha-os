@@ -4,6 +4,7 @@ import Link from "next/link";
 import { requireSection } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { FORMAT_LABELS, STATUS_LABELS, StudioTabs } from "../tabs";
+import { MakeAll } from "./make-all";
 import { PlanForm } from "./plan-form";
 
 export const metadata = { title: "Content calendar" };
@@ -20,14 +21,15 @@ export default async function StudioCalendar() {
     supabase.from("studio_items").select("id, title, content_type, status, scheduled_for, pillar").gte("scheduled_for", addDays(today, -7)).lte("scheduled_for", addDays(today, 42)).neq("status", "discarded").order("scheduled_for"),
   ]);
   const pillars = (((brand?.profile ?? {}) as { pillars?: string[] }).pillars ?? []);
+  const waiting = (items ?? []).filter((i) => i.status === "draft").length;
   const byDay = new Map<string, NonNullable<typeof items>>();
   for (const i of items ?? []) byDay.set(i.scheduled_for as string, [...(byDay.get(i.scheduled_for as string) ?? []), i]);
   return (
     <>
-      <PageTitle title="Calendar" subtitle="Plan a week or four. The strategist gives every slot a pillar, an angle and a hook; the scriptwriter writes each one for you to approve. Next week is planned automatically every week." />
+      <PageTitle title="Calendar" subtitle="Three steps: choose how many posts, the studio writes a script for each, then turn the scripts into content." />
       <StudioTabs active="calendar" />
       <div className="grid gap-5 *:min-w-0 lg:grid-cols-[1fr_1.2fr]">
-        <Card className="p-4 sm:p-5"><h2 className="mb-3 font-serif text-xl font-semibold">Plan posts</h2><PlanForm pillars={pillars} nextMonday={nextMonday} /></Card>
+        <Card className="p-4 sm:p-5"><h2 className="mb-3 font-serif text-xl font-semibold">1 · How many posts?</h2><PlanForm pillars={pillars} nextMonday={nextMonday} /></Card>
         <div className="space-y-5">
           {(plans ?? []).map((p) => (
             <Card key={p.id as string} className="p-4 text-sm">
@@ -36,7 +38,8 @@ export default async function StudioCalendar() {
             </Card>
           ))}
           <Card>
-            <CardHeader title="Coming up" />
+            <CardHeader title="2 · Scripts, then 3 · content" subtitle="Open a script to read or change it. Or make them all at once." />
+            {waiting > 0 ? <div className="border-b border-line/70 px-4 py-3 sm:px-5"><MakeAll waiting={waiting} /></div> : null}
             <ul className="divide-y divide-line/70">
               {byDay.size === 0 ? <li className="px-5 py-4 text-sm text-ink-soft">Nothing scheduled yet.</li> : null}
               {[...byDay.entries()].map(([d, list]) => (

@@ -81,6 +81,17 @@ export async function setDeckPdf(weddingId: string, moodboardId: string, url: st
   return done(weddingId, error);
 }
 
+/** Delete one moodboard (its pictures go with it). */
+export async function deleteMoodboard(weddingId: string, moodboardId: string): Promise<Result> {
+  await requireStaff(DECOR);
+  const supabase = await createClient("team");
+  const { data, error } = await supabase.from("moodboards").delete().eq("id", moodboardId).eq("wedding_id", weddingId).select("id");
+  if (error) return done(weddingId, error);
+  if (!data?.length) return { error: "Couldn't delete it." };
+  revalidatePath("/team/decor/moodboards");
+  return done(weddingId);
+}
+
 /**
  * Share the AI boards with the couple. If the Design assistant asked for a
  * review, this approves that request (which also messages the couple).

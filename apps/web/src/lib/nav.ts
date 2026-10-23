@@ -30,9 +30,9 @@ const GROUPS: NavGroup[] = [
     { href: "/team/weddings", label: "Weddings", icon: Gem },
   ] },
   { section: "decor", title: SECTION_LABELS.decor, items: [
-    { href: "/team/decor", label: "Décor stock", icon: Flower2, exact: true },
-    { href: "/team/decor/templates", label: "Templates by area", icon: LayoutTemplate },
-    { href: "/team/decor/assignments", label: "Assigned to events", icon: Sparkles },
+    { href: "/team/decor", label: "Inventory", icon: Flower2, exact: true },
+    { href: "/team/decor/templates", label: "Templates", icon: LayoutTemplate },
+    { href: "/team/decor/assignments", label: "Assignments", icon: Sparkles },
     { href: "/team/decor/moodboards", label: "Moodboards created", icon: Palette },
   ] },
   { section: "vendors", title: SECTION_LABELS.vendors, items: [
@@ -40,7 +40,6 @@ const GROUPS: NavGroup[] = [
   ] },
   { section: "accounts", title: SECTION_LABELS.accounts, items: [
     { href: "/team/finance", label: "Finance", icon: IndianRupee },
-    { href: "/team/owner", label: "Owner numbers", icon: BarChart3, roles: ["owner"] },
   ] },
   { section: "client", title: SECTION_LABELS.client, items: [
     { href: "/team/clients", label: "Client portal", icon: Users },

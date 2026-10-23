@@ -43,6 +43,17 @@ export async function saveDecorItem(id: string | null, d: DecorInput): Promise<R
   return done(error);
 }
 
+/** Remove a piece from the inventory. Pieces already promised to an event can't go; cancel those assignments first. */
+export async function deleteDecorItem(id: string): Promise<Result> {
+  await requireSection("decor", EDITORS);
+  const supabase = await createClient("team");
+  const { count } = await supabase.from("decor_assignments").select("id", { count: "exact", head: true }).eq("decor_item_id", id).in("status", ["planned", "set_up"]);
+  if (count) return { error: "It's assigned to an event right now. Cancel or return those first." };
+  const { error } = await supabase.from("decor_items").delete().eq("id", id);
+  if (error?.code === "23503") return { error: "It has past assignments, so it can't be deleted. Untick Active to hide it instead." };
+  return done(error);
+}
+
 export interface AssignInput { itemId: string; weddingId: string; functionId: string; area: string; quantity: string; notes: string }
 
 /** Promise pieces to an event and the area they'll dress. The database refuses more than we have free on those dates. */

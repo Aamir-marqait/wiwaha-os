@@ -34,7 +34,7 @@ export default async function DecorPage() {
   const slides = (slideRows ?? []) as Slide[];
   const redos = Number((policy?.value as { redos_per_slide?: number } | null)?.redos_per_slide ?? 3);
   const answers = parseDecorAnswers(brief?.answers ?? {});
-  const editable = !!me?.can_edit_brief && (!brief || brief.status === "open");
+  const editable = !!me?.can_fill_decor && (!brief || brief.status === "open");
   const photoFor = (areaId: string) => (photos ?? []).filter((p) => p.venue_area_id === areaId).sort((a, b) => Number(b.is_primary) - Number(a.is_primary))[0]?.url as string | undefined;
   const byFn = new Map<string, Board[]>();
   for (const b of boards) byFn.set(b.function_id, [...(byFn.get(b.function_id) ?? []), b]);
@@ -56,7 +56,7 @@ export default async function DecorPage() {
             functions={(fns ?? []).map((f) => ({ id: f.id as string, name: f.name as string, type: f.type as string, dateLabel: formatDateIST(f.date as string, { weekday: "short", day: "numeric", month: "short" }) }))}
             labels={{ save: t.save, saving: t.saving, send: t.decor_q_send, sending: t.decor_q_sending }}
           />
-          {!me?.can_edit_brief ? <p className="text-sm text-ink-soft">The couple fills this in; you can see their answers here.</p> : null}
+          {!me?.can_fill_decor ? <p className="text-sm text-ink-soft">The couple fills this in; you can see their answers here.</p> : null}
         </section>
       ) : boards.length === 0 || (aiIds.length === 0 && brief?.status !== "ready") ? (
         <Card className="p-5 text-sm">{t.decor_preparing}</Card>

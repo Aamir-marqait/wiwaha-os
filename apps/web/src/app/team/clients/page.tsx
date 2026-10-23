@@ -1,57 +1,65 @@
-import { Badge, buttonClass, Card, CardHeader, PageTitle } from "@wiwaha/ui";
-import { formatDateIST, todayIST } from "@wiwaha/db";
+import { buttonClass, Card, CardHeader, PageTitle } from "@wiwaha/ui";
+import { addDays, formatDateIST, todayIST } from "@wiwaha/db";
 import Link from "next/link";
-import { requireSection } from "@/lib/auth";
 import { ActionButton } from "@/components/action-button";
+import { CopyField } from "@/components/copy-field";
+import { requireSection } from "@/lib/auth";
+import { env } from "@/lib/env";
 import { createClient } from "@/lib/supabase/server";
-import { addDays } from "@wiwaha/db";
+import { CreateLogin, MemberActions } from "../weddings/[id]/portal-access-forms";
 import { extendPortal } from "./actions";
-import { LinkButton } from "./link-button";
 
 export const metadata = { title: "Client portal" };
 
 const one = <T,>(v: T | T[] | null): T | null => (Array.isArray(v) ? v[0] ?? null : v);
-const ROLE: Record<string, string> = { couple: "Couple", parent: "Parent", planner: "Planner", family: "Family" };
+type Member = { id: string; display_name: string; member_role: string; user_id: string | null; login_phone: string | null };
 
-/** Who can sign in to each couple's portal, and a link to send them. */
+/** One login per couple: create it, then copy the message with the link, number and PIN. */
 export default async function ClientsPage() {
   await requireSection("client");
   const supabase = await createClient();
   const today = todayIST();
   const [{ data: weddings }, { data: access }] = await Promise.all([
     supabase.from("weddings")
-      .select("id, title, code, event_start, event_end, portal_access_until, members:wedding_members(id, display_name, email, login_phone, member_role, user_id, contact:contacts(phone_e164))")
+      .select("id, title, event_start, event_end, portal_access_until, primary_contact:contacts!weddings_primary_contact_id_fkey(full_name, phone_e164), members:wedding_members(id, display_name, member_role, user_id, login_phone)")
       .gte("event_end", addDays(today, -30)).order("event_start"),
     supabase.from("policies").select("value").eq("key", "portal.access").maybeSingle(),
   ]);
   const closeDays = Number((access?.value as { close_days_after_event?: number } | null)?.close_days_after_event ?? 0);
+  const loginUrl = `${env.appUrl()}/portal/login`;
 
   return (
     <>
-      <PageTitle title="Client portal" subtitle="Families sign in at /portal/login with their mobile number and a PIN you share. Create logins on each wedding; they close after the wedding day (policy: Portal access)." />
+      <PageTitle title="Client portal" subtitle="One login for each couple. Create it, then copy the message with the link, mobile number and PIN and send it to them. It stays open until the wedding is over." />
+      <div className="mb-4 max-w-xl"><CopyField label="Portal link" value={loginUrl} /></div>
       {(weddings ?? []).length === 0 ? <Card className="p-5 text-sm text-ink-soft">No upcoming weddings.</Card> : null}
       <div className="grid gap-5 *:min-w-0 lg:grid-cols-2">
         {(weddings ?? []).map((w) => {
           const until = (w.portal_access_until as string | null) ?? addDays(w.event_end as string, closeDays);
           const closed = until < today;
-          const members = (w.members ?? []) as { id: string; display_name: string; email: string; member_role: string; user_id: string | null; login_phone: string | null; contact: { phone_e164: string | null } | { phone_e164: string | null }[] | null }[];
+          const members = (w.members ?? []) as Member[];
+          const shared = members.find((m) => m.login_phone && m.member_role === "couple") ?? members.find((m) => m.login_phone);
+          const contact = one(w.primary_contact as { full_name: string; phone_e164: string | null } | { full_name: string; phone_e164: string | null }[] | null);
+          const couple = w.title as string;
           return (
             <Card key={w.id as string}>
-              <CardHeader title={<Link href={`/team/weddings/${w.id as string}`} className="hover:underline">{w.title as string}</Link>} subtitle={`${formatDateIST(w.event_start as string)} · ${closed ? `portal closed after ${formatDateIST(until)}` : `logins work until the end of ${formatDateIST(until)}`}`}
-                action={<ActionButton action={extendPortal.bind(null, w.id as string, 7)} variant="ghost">{closed ? "Reopen for 7 days" : "Keep open 7 more days"}</ActionButton>} />
-              <ul className="divide-y divide-line/70">
-                {members.length === 0 ? <li className="px-4 py-3 text-sm text-ink-soft">No portal logins yet.</li> : null}
-                {members.map((m) => (
-                  <li key={m.id} className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 sm:px-5">
-                    <div className="min-w-0">
-                      <p className="text-sm font-medium">{m.display_name} <Badge tone="neutral">{ROLE[m.member_role] ?? m.member_role}</Badge></p>
-                      <p className="truncate text-xs text-ink-soft">{m.login_phone ? `Mobile ${m.login_phone} + PIN` : m.email}</p>
-                    </div>
-                    <LinkButton memberId={m.id} name={m.display_name} phone={one(m.contact)?.phone_e164 ?? null} />
-                  </li>
-                ))}
-              </ul>
-              <div className="border-t border-line/70 px-4 py-3 sm:px-5"><Link href={`/team/weddings/${w.id as string}#portal`} className={buttonClass("secondary", "sm")}>Create logins and PINs</Link></div>
+              <CardHeader title={<Link href={`/team/weddings/${w.id as string}`} className="hover:underline">{couple}</Link>} subtitle={`${formatDateIST(w.event_start as string)} · ${closed ? `closed after ${formatDateIST(until)}` : `open until the end of ${formatDateIST(until)}`}`}
+                action={<ActionButton action={extendPortal.bind(null, w.id as string, 7)} variant="ghost">{closed ? "Reopen 7 days" : "Keep open 7 more days"}</ActionButton>} />
+              <div className="space-y-2 px-4 py-3 sm:px-5">
+                {shared ? (
+                  <>
+                    <p className="text-sm">Mobile <strong>{shared.login_phone}</strong> <span className="text-xs text-ink-soft">· {shared.user_id ? "login ready" : "invited"}</span></p>
+                    <MemberActions memberId={shared.id} couple={couple} phone />
+                  </>
+                ) : (
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <p className="text-sm text-ink-soft">{contact?.phone_e164 ? `No login yet. Uses ${contact.full_name}'s number ${contact.phone_e164}.` : "No login yet."}</p>
+                    {contact?.phone_e164
+                      ? <CreateLogin weddingId={w.id as string} couple={couple} label="Create login" preset={{ name: contact.full_name, phone: contact.phone_e164, role: "couple" }} />
+                      : <Link href={`/team/weddings/${w.id as string}#portal`} className={buttonClass("secondary", "sm")}>Create login</Link>}
+                  </div>
+                )}
+              </div>
             </Card>
           );
         })}

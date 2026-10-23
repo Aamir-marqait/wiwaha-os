@@ -202,6 +202,24 @@ export async function sendOptions(weddingId: string, vertical: "entertainment" |
   return done(weddingId, e2);
 }
 
+/** The team assigns options straight to the wedding (no choosing by the couple): they go in as final. */
+export async function assignOptions(weddingId: string, vertical: "entertainment" | "extras", optionIds: string[], functionId: string | null, note: string): Promise<Result> {
+  const viewer = await requireStaff(["owner", "event_manager"]);
+  if (!optionIds.length) return { error: "Tick at least one option." };
+  const supabase = await createClient("team");
+  const { data: opts, error } = await supabase.from("service_options").select("id, name, description, image_url").eq("vertical", vertical).eq("active", true).in("id", optionIds.slice(0, 40));
+  if (error) return done(weddingId, error);
+  const now = new Date().toISOString();
+  const { data: rows, error: e2 } = await supabase.from("wedding_selections").insert((opts ?? []).map((o) => ({
+    wedding_id: weddingId, function_id: functionId || null, option_id: o.id, vertical, name: o.name, description: o.description, image_url: o.image_url,
+    status: "chosen", sent_at: now, sent_by: viewer.userId, chosen_at: now, staff_note: note.trim() || null,
+  }))).select("id");
+  if (e2) return done(weddingId, e2);
+  // Going to "final" (an update) is what tells the quote a choice was made.
+  const { error: e3 } = await supabase.from("wedding_selections").update({ status: "final", finalised_at: now, finalised_by: viewer.userId }).in("id", (rows ?? []).map((r) => r.id as string));
+  return done(weddingId, e3);
+}
+
 /** The couple chose it and it's confirmed: it becomes part of the plan (and later, the costing). */
 export async function finaliseSelection(weddingId: string, id: string): Promise<Result> {
   const viewer = await requireStaff(["owner", "event_manager"]);
@@ -210,11 +228,11 @@ export async function finaliseSelection(weddingId: string, id: string): Promise<
   return done(weddingId, error);
 }
 
-/** Take back an option that isn't final yet. */
+/** Take an option off the wedding. */
 export async function withdrawSelection(weddingId: string, id: string): Promise<Result> {
   await requireStaff(["owner", "event_manager"]);
   const supabase = await createClient("team");
-  const { error } = await supabase.from("wedding_selections").delete().eq("id", id).neq("status", "final");
+  const { error } = await supabase.from("wedding_selections").delete().eq("id", id);
   return done(weddingId, error);
 }
 

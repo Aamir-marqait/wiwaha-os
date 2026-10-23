@@ -17,12 +17,12 @@ export async function SelectionsPanel({ supabase, weddingId, vertical, canEdit }
     canEdit ? supabase.from("service_options").select("id, name, category").eq("vertical", vertical).eq("active", true).order("sort").order("name") : Promise.resolve({ data: [] }),
     canEdit ? supabase.from("event_functions").select("id, name").eq("wedding_id", weddingId).order("date") : Promise.resolve({ data: [] }),
   ]);
-  const title = vertical === "extras" ? "Extras" : "Entertainment";
+  const title = vertical === "extras" ? "Add-on services" : "Entertainment";
   return (
     <Card>
-      <CardHeader title={title} subtitle={vertical === "extras" ? "Add-on services sent to the couple: makeup, laundry, welcome drinks and more" : "Artists and acts sent to the couple to choose from"} />
+      <CardHeader title={title} subtitle={vertical === "extras" ? "Makeup, laundry, welcome drinks and more, assigned to this wedding by the team" : "Artists and acts assigned to this wedding by the team"} />
       <ul className="divide-y divide-line/70">
-        {(rows.data ?? []).length === 0 ? <li className="px-5 py-4 text-sm text-ink-soft">Nothing sent yet. Options go out when planning opens.</li> : null}
+        {(rows.data ?? []).length === 0 ? <li className="px-5 py-4 text-sm text-ink-soft">Nothing assigned yet.</li> : null}
         {(rows.data ?? []).map((r) => (
           <li key={r.id as string} className="flex items-start justify-between gap-2 px-4 py-3 sm:px-5">
             <div className="min-w-0">
@@ -31,9 +31,9 @@ export async function SelectionsPanel({ supabase, weddingId, vertical, canEdit }
               {r.client_note ? <p className="mt-1 text-xs italic">&ldquo;{r.client_note as string}&rdquo;</p> : null}
             </div>
             <span className="flex shrink-0 flex-col items-end gap-1">
-              <Badge tone={TONE[r.status as string] ?? "neutral"}>{LABEL[r.status as string] ?? (r.status as string)}</Badge>
+              <Badge tone={TONE[r.status as string] ?? "neutral"}>{r.status === "final" ? "assigned" : (LABEL[r.status as string] ?? (r.status as string))}</Badge>
               {canEdit && r.status === "chosen" ? <ActionButton action={finaliseSelection.bind(null, weddingId, r.id as string)} variant="primary">Make final</ActionButton> : null}
-              {canEdit && r.status !== "final" ? <ActionButton action={withdrawSelection.bind(null, weddingId, r.id as string)} variant="ghost" confirm="Take this option back? The couple won't see it any more.">Withdraw</ActionButton> : null}
+              {canEdit ? <ActionButton action={withdrawSelection.bind(null, weddingId, r.id as string)} variant="ghost" confirm="Remove this from the wedding?">Remove</ActionButton> : null}
             </span>
           </li>
         ))}

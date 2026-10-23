@@ -98,6 +98,23 @@ export async function approveItem(id: string): Promise<Result> {
   return done();
 }
 
+/** Calendar step 3: every written script that's waiting becomes content, as far as this month's renders go. */
+export async function approveAllScripts(): Promise<Result & { made?: number; left?: number }> {
+  const viewer = await requireSection("sales_marketing", ROLES);
+  const u = await usageThisMonth();
+  const room = u.allowance - u.used;
+  if (room <= 0) return { error: `This month's ${u.allowance} renders are used. Prashanth can raise the allowance in the policy book (Content Studio rules).` };
+  const supabase = await createClient("team");
+  const { data: items } = await supabase.from("studio_items").select("id").eq("status", "draft").not("script", "is", null).order("scheduled_for", { ascending: true, nullsFirst: false }).limit(room);
+  const ids = (items ?? []).map((i) => i.id as string);
+  if (!ids.length) return { error: "No scripts are waiting for approval." };
+  const { error } = await supabase.from("studio_items").update({ status: "approved", approved_by: viewer.userId, approved_at: new Date().toISOString(), error: null, progress: { stage: "queued" } }).in("id", ids).eq("status", "draft");
+  if (error) return done(error);
+  await supabase.from("studio_usage").insert(ids.map((id) => ({ item_id: id, kind: "generation", by_user: viewer.userId })));
+  after(() => kickMediaWorker());
+  return { ...done(), made: ids.length };
+}
+
 export async function discardItem(id: string): Promise<Result> {
   await requireSection("sales_marketing", ROLES);
   const supabase = await createClient("team");

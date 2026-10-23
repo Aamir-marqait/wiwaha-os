@@ -9,7 +9,7 @@ export const metadata: Metadata = { title: "Ideas" };
 
 /** Before planning opens: share ideas, and see that each one was noted. */
 export default async function IdeasPage() {
-  const { viewer, supabase, t, wedding } = await loadPortal();
+  const { viewer, supabase, t, wedding } = await loadPortal({ anytime: true });
   const { data: ideas } = await supabase.from("wedding_ideas").select("id, author_name, body, link_url, noted_at, created_at").eq("wedding_id", wedding!.id).order("created_at", { ascending: false });
   return (
     <PortalShell t={t} wedding={wedding!} first={viewer.profile.full_name.split(" ")[0] ?? ""} active="ideas">

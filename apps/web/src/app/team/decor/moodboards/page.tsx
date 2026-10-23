@@ -4,7 +4,6 @@ import Link from "next/link";
 import { relativeFromNow } from "@/components/time";
 import { requireSection } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
-import { DecorTabs } from "../tabs";
 
 export const metadata = { title: "Moodboards created" };
 const one = <T,>(v: T | T[] | null): T | null => (Array.isArray(v) ? v[0] ?? null : v);
@@ -22,8 +21,7 @@ export default async function MoodboardsCreatedPage() {
   const rows = briefs.data ?? [];
   return (
     <>
-      <PageTitle title="Décor" subtitle="Stock, templates by area, what goes to each event, and the moodboards made for each couple." />
-      <DecorTabs active="moodboards" />
+      <PageTitle title="Moodboards created" subtitle="Every couple's moodboards: waiting for their answers, made and ready for you to review, or shared with them." />
       <Card>
         <CardHeader title="Moodboards created" subtitle="Made from the couple's décor form, then shared with them from the Wedding Room (Décor tab)" />
         <ul className="divide-y divide-line/70">
@@ -34,11 +32,11 @@ export default async function MoodboardsCreatedPage() {
             const unshared = mine.filter((b) => !b.shared_at).length;
             const state = r.status === "open" ? { text: "Waiting for the couple", tone: "neutral" as const }
               : r.status !== "ready" ? { text: "Being made", tone: "gold" as const }
-              : unshared ? { text: "Ready to share", tone: "burgundy" as const }
+              : unshared ? { text: "Generated, not shared yet", tone: "burgundy" as const }
               : { text: "Shared with the couple", tone: "sage" as const };
             return (
               <li key={r.wedding_id as string}>
-                <Link href={`/team/weddings/${r.wedding_id as string}?tab=decor`} className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 hover:bg-ivory-50 sm:px-5">
+                <Link href={`/team/weddings/${r.wedding_id as string}?tab=decor&from=moodboards`} className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 hover:bg-ivory-50 sm:px-5">
                   <span className="min-w-0">
                     <span className="block text-sm font-medium">{w?.title ?? "Wedding"}</span>
                     <span className="block text-xs text-ink-soft">

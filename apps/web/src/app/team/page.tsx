@@ -8,7 +8,7 @@ import { requireStaff, viewerSections } from "@/lib/auth";
 import { aiSpend } from "@/lib/media/spend";
 import { STAGES, stageOf } from "@/lib/pipeline";
 import { createClient } from "@/lib/supabase/server";
-import { markNotificationRead } from "./actions";
+import { markNotificationRead, sendPlanningMessage } from "./actions";
 
 export const metadata = { title: "Dashboard" };
 
@@ -93,13 +93,22 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
   const dueTotal = due.reduce((s, p) => s + Number(p.amount_paise), 0);
   const overdue = due.filter((p) => p.status === "overdue" || p.due_on < today).length;
 
+  // Weddings that crossed 90 days: has the couple been told planning is open?
+  const openIds = allWeddings.filter((w) => w.event_start <= addDays(today, 90) && w.event_start >= today).map((w) => w.id);
+  const told = new Set<string>();
+  if (seesWeddings && openIds.length) {
+    const { data: sent } = await supabase.from("messages").select("wedding_id").in("wedding_id", openIds).eq("metadata->>kind", "planning_open");
+    for (const m of (sent ?? []) as { wedding_id: string }[]) told.add(m.wedding_id);
+  }
+  const toTell = allWeddings.filter((w) => openIds.includes(w.id) && !told.has(w.id));
+
   // Moodboards: where each couple's board is (waiting for them, being made, ready for us to share, shared).
   const unsharedByWedding = new Set(((unsharedBoards.data ?? []) as { wedding_id: string }[]).map((b) => b.wedding_id));
   const boardRows = ((briefs.data ?? []) as { wedding_id: string; status: string; sent_at: string | null; submitted_at: string | null; generated_at: string | null; wedding: { title: string } | { title: string }[] | null }[]).map((b) => {
     const toShare = b.status === "ready" && unsharedByWedding.has(b.wedding_id);
     const state = b.status === "open" ? { label: "Waiting for the couple", tone: "text-ink-soft", at: b.sent_at }
       : b.status === "submitted" || b.status === "generating" ? { label: "Being made", tone: "text-gold-700", at: b.submitted_at }
-      : toShare ? { label: "Ready: share with the couple", tone: "text-burgundy-700", at: b.generated_at }
+      : toShare ? { label: "Moodboard created: review it, then share it to their portal", tone: "text-burgundy-700", at: b.generated_at }
       : { label: "Shared with the couple", tone: "text-sage-700", at: b.generated_at };
     return { id: b.wedding_id, title: one(b.wedding)?.title ?? "Wedding", rank: toShare ? 0 : b.status === "open" ? 2 : b.status === "ready" ? 3 : 1, ...state };
   }).sort((a, b) => a.rank - b.rank);
@@ -196,6 +205,20 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
           </Card>
         ) : null}
 
+        {seesWeddings && toTell.length ? (
+          <Card className="border-gold-300">
+            <CardHeader title="Planning is open" subtitle="These weddings are now 90 days or less away. Tell the couple: the message points them to the décor form." />
+            <ul className="divide-y divide-line/70">
+              {toTell.slice(0, 6).map((w) => (
+                <li key={w.id} className="flex items-center justify-between gap-2 px-4 py-3 sm:px-5">
+                  <Link href={`/team/weddings/${w.id}`} className="min-w-0"><span className="block truncate text-sm font-medium hover:underline">{w.title}</span><span className="block text-xs text-ink-soft">{formatDateIST(w.event_start, { day: "numeric", month: "short" })} · {relativeFromNow(`${w.event_start}T06:00:00+05:30`)}</span></Link>
+                  <ActionButton action={sendPlanningMessage.bind(null, w.id)} variant="primary" pendingLabel="Sending…">Send message</ActionButton>
+                </li>
+              ))}
+            </ul>
+          </Card>
+        ) : null}
+
         {seesWeddings && shownBoards.length ? (
           <Card>
             <CardHeader title="Moodboards" subtitle="From the couple's form to the finished boards" />
@@ -255,7 +278,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
           <Card>
             <CardHeader title="Needs attention" subtitle="Guest requests, questions agents couldn't answer, and alerts" />
             <ul className="divide-y divide-line/70">
-              {guestCount ? <li className="px-4 py-3 text-sm sm:px-5"><Link href="/team/weddings" className="font-medium hover:underline">{guestCount} new guest request{guestCount === 1 ? "" : "s"}</Link><p className="text-xs text-ink-soft">Confirm them in each wedding&rsquo;s Extras tab.</p></li> : null}
+              {guestCount ? <li className="px-4 py-3 text-sm sm:px-5"><Link href="/team/weddings" className="font-medium hover:underline">{guestCount} new guest request{guestCount === 1 ? "" : "s"}</Link><p className="text-xs text-ink-soft">Confirm them in each wedding&rsquo;s Add-on services tab.</p></li> : null}
               {attention.map((a) => (
                 <li key={a.id} className="flex items-start justify-between gap-2 px-4 py-3 sm:px-5">
                   <div className="min-w-0"><p className="text-sm font-medium">{a.link ? <Link href={a.link} className="hover:underline">{a.title}</Link> : a.title}</p><p className="line-clamp-2 text-xs text-ink-soft">{a.body ? `${a.body} · ` : ""}{relativeFromNow(a.at)}</p></div>

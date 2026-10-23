@@ -4,7 +4,7 @@ import { Badge, Card, CardHeader, buttonClass } from "@wiwaha/ui";
 import Link from "next/link";
 import { ActionButton } from "@/components/action-button";
 import type { createClient } from "@/lib/supabase/server";
-import { makeMoodboardsNow, sendDecorQuestionnaire, shareMoodboards, startMoodboardsOver } from "./moodboard-actions";
+import { deleteMoodboard, makeMoodboardsNow, sendDecorQuestionnaire, shareMoodboards, startMoodboardsOver } from "./moodboard-actions";
 import { DeckUpload, SlideActions } from "./moodboard-forms";
 
 type Supa = Awaited<ReturnType<typeof createClient>>;
@@ -60,8 +60,8 @@ export async function AiMoodboards({ supabase, weddingId, canEdit }: { supabase:
 
       {(boards.data ?? []).length ? (
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <p className="text-sm text-ink-soft">{unshared.length ? `${unshared.length} board${unshared.length === 1 ? "" : "s"} not yet shared with the couple.` : "All boards are shared with the couple."} {busy ? "Pictures are still being made; this page updates when you reload it." : ""}</p>
-          {canEdit && unshared.length ? <ActionButton action={shareMoodboards.bind(null, weddingId)} variant="primary" pendingLabel="Sharing…">Share with the couple</ActionButton> : null}
+          <p className="text-sm text-ink-soft">{unshared.length ? `${unshared.length} moodboard${unshared.length === 1 ? "" : "s"} generated. The couple can't see ${unshared.length === 1 ? "it" : "them"} until you share ${unshared.length === 1 ? "it" : "them"}: look through, change what you need, upload a new PDF if you like, then share.` : "All moodboards are shared with the couple."} {busy ? "Pictures are still being made; this page updates when you reload it." : ""}</p>
+          {canEdit && unshared.length ? <ActionButton action={shareMoodboards.bind(null, weddingId)} variant="primary" pendingLabel="Sharing…">Share to the couple portal</ActionButton> : null}
         </div>
       ) : null}
 
@@ -72,11 +72,12 @@ export async function AiMoodboards({ supabase, weddingId, canEdit }: { supabase:
             <div className="flex h-2">{((b.palette ?? []) as string[]).map((c) => <span key={c} className="flex-1" style={{ background: c }} />)}</div>
             <CardHeader
               title={<span>{fnName.get(b.function_id as string) ?? "Function"}: {b.theme as string}</span>}
-              subtitle={<span className="flex flex-wrap items-center gap-1.5"><Badge tone={b.design_kind === "custom" ? "burgundy" : "neutral"}>{b.design_kind === "custom" ? "Custom" : "Standard"}</Badge><Badge tone={b.shared_at ? "solid" : "gold"}>{b.shared_at ? `Shared ${formatDateIST(b.shared_at as string, { day: "numeric", month: "short" })}` : "Not shared yet"}</Badge><span className="capitalize">{b.status as string}</span></span>}
+              subtitle={<span className="flex flex-wrap items-center gap-1.5"><Badge tone={b.design_kind === "custom" ? "burgundy" : "neutral"}>{b.design_kind === "custom" ? "Custom" : "Standard"}</Badge><Badge tone={b.shared_at ? "solid" : "gold"}>{b.shared_at ? `Shared ${formatDateIST(b.shared_at as string, { day: "numeric", month: "short" })}` : "Not shared with the couple"}</Badge><span className="capitalize">{b.status as string}</span></span>}
               action={<span className="flex flex-wrap justify-end gap-1.5">
                 <a href={`/api/moodboards/${b.id as string}/pdf`} className={buttonClass("secondary", "sm")}>Download PDF</a>
                 {b.deck_url ? <a href={b.deck_url as string} target="_blank" rel="noreferrer" className={buttonClass("ghost", "sm")}>Edited PDF</a> : null}
                 {canEdit ? <DeckUpload weddingId={weddingId} moodboardId={b.id as string} current={(b.deck_url as string | null) ?? null} /> : null}
+                {canEdit ? <ActionButton action={deleteMoodboard.bind(null, weddingId, b.id as string)} variant="ghost" confirm="Delete this moodboard and its pictures?">Delete</ActionButton> : null}
               </span>} />
             {b.description ? <p className="px-4 pb-2 text-sm text-ink-soft sm:px-5">{b.description as string}</p> : null}
             {b.client_feedback ? <p className="px-4 pb-2 text-sm italic sm:px-5">The couple said: &ldquo;{b.client_feedback as string}&rdquo;</p> : null}

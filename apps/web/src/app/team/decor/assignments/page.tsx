@@ -6,7 +6,6 @@ import { requireSection } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { setAssignmentStatus } from "../actions";
 import { ReturnForm } from "../decor-forms";
-import { DecorTabs } from "../tabs";
 
 export const metadata = { title: "Décor by event" };
 const one = <T,>(v: T | T[] | null): T | null => (Array.isArray(v) ? v[0] ?? null : v);
@@ -32,9 +31,8 @@ export default async function DecorAssignmentsPage() {
   const weddings = [...byWedding.values()].sort((a, b) => a.w.event_start.localeCompare(b.w.event_start));
   return (
     <>
-      <PageTitle title="Décor" subtitle="What's going to each event and where, then setting it up and bringing it back." />
-      <DecorTabs active="assignments" />
-      {weddings.length === 0 ? <Card className="p-5 text-sm text-ink-soft">Nothing assigned yet. Use “Assign to event” on any piece in Stock.</Card> : null}
+      <PageTitle title="Assignments" subtitle="How much inventory is assigned to which event and on what dates, then setting it up and bringing it back." />
+      {weddings.length === 0 ? <Card className="p-5 text-sm text-ink-soft">Nothing assigned yet. Assign pieces to an event from Inventory, or from the event's Décor tab.</Card> : null}
       <div className="grid gap-5 *:min-w-0 lg:grid-cols-2">
         {weddings.map(({ w, areas }) => (
           <Card key={w.id}>

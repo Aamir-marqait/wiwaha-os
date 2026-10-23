@@ -1,11 +1,10 @@
 import { Badge, Card, CardHeader, PageTitle, buttonClass } from "@wiwaha/ui";
 import Link from "next/link";
-import { addDays, formatDateIST, formatDateTimeIST, rupees, todayIST } from "@wiwaha/db";
+import { addDays, formatDateIST, rupees, todayIST } from "@wiwaha/db";
 import { ActionButton } from "@/components/action-button";
 import { requireSection } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
-import { markMaintenanceDone, markPurchase } from "./actions";
-import { ReadingForm, StockForm } from "./forms";
+import { deletePurchase, markMaintenanceDone, markPurchase } from "./actions";
 
 export const metadata = { title: "Estate" };
 
@@ -14,25 +13,20 @@ export default async function EstatePage() {
   const supabase = await createClient();
   const today = todayIST();
   const canEdit = viewer.profile.role !== "event_manager";
-  const [schedules, items, purchases, readings, weddings] = await Promise.all([
+  const [schedules, purchases] = await Promise.all([
     supabase.from("maintenance_schedules").select("*").eq("active", true).order("next_due_on"),
-    supabase.from("inventory_items").select("*").order("category").order("name"),
     supabase.from("purchase_requests").select("*").in("status", ["requested", "pending_approval", "approved", "ordered"]).order("created_at", { ascending: false }),
-    supabase.from("utility_readings").select("id, kind, reading, recorded_at, wedding:weddings(title)").order("recorded_at", { ascending: false }).limit(10),
-    supabase.from("weddings").select("id, title").eq("status", "active").order("event_start"),
   ]);
   const week = addDays(today, 7);
   const sched = schedules.data ?? [];
   const overdue = sched.filter((s) => s.next_due_on && (s.next_due_on as string) < today).length;
   const dueWeek = sched.filter((s) => s.next_due_on && (s.next_due_on as string) >= today && (s.next_due_on as string) <= week).length;
-  const stock = [...(items.data ?? [])].sort((a, b) => Number(Number(b.quantity) <= Number(b.reorder_level)) - Number(Number(a.quantity) <= Number(a.reorder_level)));
-  const low = stock.filter((i) => Number(i.quantity) <= Number(i.reorder_level)).length;
   const open = (purchases.data ?? []).length;
-  const tiles: [string, number, boolean][] = [["Overdue", overdue, overdue > 0], ["Due this week", dueWeek, false], ["Low stock", low, low > 0], ["Purchases open", open, false]];
+  const tiles: [string, number, boolean][] = [["Overdue", overdue, overdue > 0], ["Due this week", dueWeek, false], ["Purchases open", open, false]];
   return (
     <>
-      <PageTitle title="Estate" subtitle="The Estate agent raises maintenance tasks and low-stock purchase requests every morning." action={<span className="flex flex-wrap gap-2"><Link href="/team/catalogue/inventory" className={buttonClass("secondary", "sm")}>Add or edit stock items</Link><Link href="/team/catalogue/maintenance" className={buttonClass("secondary", "sm")}>Add or edit schedules</Link></span>} />
-      <div className="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <PageTitle title="Estate upkeep" subtitle="Recurring maintenance for the estate, and what needs buying." action={canEdit ? <Link href="/team/catalogue/maintenance" className={buttonClass("secondary", "sm")}>Add or edit maintenance</Link> : undefined} />
+      <div className="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-3">
         {tiles.map(([l, n, alert]) => <Card key={l} className={`p-4 ${alert ? "ring-1 ring-burgundy-300" : ""}`}><p className="text-xs uppercase tracking-wide text-ink-soft">{l}</p><p className={`text-2xl font-semibold ${alert ? "text-burgundy-700" : ""}`}>{n}</p></Card>)}
       </div>
       <div className="grid gap-5 *:min-w-0 lg:grid-cols-2">
@@ -65,37 +59,13 @@ export default async function EstatePage() {
                   <Badge tone={p.status === "pending_approval" ? "burgundy" : "gold"}>{String(p.status).replace(/_/g, " ")}</Badge>
                   {canEdit && ["requested", "approved"].includes(p.status as string) ? <ActionButton action={markPurchase.bind(null, p.id as string, "ordered")}>Ordered</ActionButton> : null}
                   {canEdit && p.status === "ordered" ? <ActionButton action={markPurchase.bind(null, p.id as string, "received")}>Received</ActionButton> : null}
+                  {canEdit ? <ActionButton action={deletePurchase.bind(null, p.id as string)} variant="ghost" confirm="Delete this purchase request?">Delete</ActionButton> : null}
                 </span>
               </li>
             ))}
           </ul>
         </Card>
 
-        <Card>
-          <CardHeader title="Inventory" subtitle="Furniture, linen, crockery, consumables" />
-          <ul className="divide-y divide-line/70">
-            {stock.map((i) => {
-              const low = Number(i.quantity) <= Number(i.reorder_level);
-              return (
-                <li key={i.id as string} className="flex items-center justify-between gap-2 px-4 py-2.5 sm:px-5">
-                  <div className="min-w-0"><p className="text-sm font-medium">{i.name as string} {low ? <Badge tone="burgundy">low</Badge> : null}</p><p className="text-xs text-ink-soft">{i.quantity as number} {i.unit as string} · reorder at {i.reorder_level as number} · {(i.location as string | null) ?? ""}</p></div>
-                  {canEdit ? <StockForm itemId={i.id as string} quantity={Number(i.quantity)} /> : null}
-                </li>
-              );
-            })}
-          </ul>
-        </Card>
-
-        <Card>
-          <CardHeader title="Utility and diesel readings" subtitle="Per event: start and end" />
-          {canEdit ? <div className="px-4 py-3 sm:px-5"><ReadingForm weddings={(weddings.data ?? []).map((w) => ({ id: w.id as string, title: w.title as string }))} /></div> : null}
-          <ul className="divide-y divide-line/70 border-t border-line/70">
-            {(readings.data ?? []).map((r) => {
-              const w = (Array.isArray(r.wedding) ? r.wedding[0] : r.wedding) as { title: string } | null;
-              return <li key={r.id as string} className="px-4 py-2 text-sm sm:px-5">{String(r.kind).replace("_", " ")}: <strong>{String(r.reading)}</strong> <span className="text-xs text-ink-soft">· {formatDateTimeIST(r.recorded_at as string)}{w ? ` · ${w.title}` : ""}</span></li>;
-            })}
-          </ul>
-        </Card>
       </div>
     </>
   );
