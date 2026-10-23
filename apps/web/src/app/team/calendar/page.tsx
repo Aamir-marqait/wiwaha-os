@@ -75,7 +75,6 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
   }
   const rows = ((avail.data ?? []) as AvailabilityRow[]).filter((r) => r.resource_kind === (view === "rooms" ? "room" : "space"));
   const book = PolicyBook.fromRows((policies.data ?? []) as PolicyRow[]);
-  const holdHours = book.has("holds.soft_hold") ? book.get("holds.soft_hold").hours : 72;
   const canHold = ["owner", "sales", "event_manager"].includes(viewer.profile.role);
   const canConfirm = ["owner", "sales"].includes(viewer.profile.role);
 
@@ -175,16 +174,16 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
         )}
 
         <div className="space-y-5">
-          {canHold ? (
+          {canConfirm ? (
             <Card>
-              <CardHeader title="Hold a date" subtitle={`Soft holds expire after ${holdHours} hours unless confirmed`} />
-              <div className="p-4"><HoldPanel spaces={(spaces.data ?? []) as { id: string; name: string }[]} rooms={(rooms.data ?? []) as { id: string; number: string }[]} holdHours={holdHours} /></div>
+              <CardHeader title="Book a date" subtitle="Blocks the space or room straight away" />
+              <div className="p-4"><HoldPanel spaces={(spaces.data ?? []) as { id: string; name: string }[]} rooms={(rooms.data ?? []) as { id: string; number: string }[]} /></div>
             </Card>
           ) : null}
+          {(holds.data ?? []).length ? (
           <Card>
-            <CardHeader title="Active holds" subtitle="Soonest to expire first" />
+            <CardHeader title="Waiting dates" subtitle="Older holds that haven't been confirmed yet" />
             <ul className="divide-y divide-line/70">
-              {(holds.data ?? []).length === 0 ? <li className="px-4 py-4 text-sm text-ink-soft">No active holds.</li> : null}
               {(holds.data ?? []).map((h) => {
                 const space = (Array.isArray(h.space) ? h.space[0] : h.space) as { name: string } | null;
                 const room = (Array.isArray(h.room) ? h.room[0] : h.room) as { number: string } | null;
@@ -204,6 +203,7 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
               })}
             </ul>
           </Card>
+          ) : null}
         </div>
       </div>
       {canHold ? (

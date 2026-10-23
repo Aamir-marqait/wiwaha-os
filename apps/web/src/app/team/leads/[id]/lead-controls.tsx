@@ -87,7 +87,7 @@ export function HeardAboutSelect({ leadId, value, options }: { leadId: string; v
   );
 }
 
-export function HoldForm({ leadId, label, defaultDate, spaces, holdHours }: { leadId: string; label: string; defaultDate: string | null; spaces: { id: string; name: string; capacity: number }[]; holdHours: number }) {
+export function HoldForm({ leadId, label, defaultDate, spaces }: { leadId: string; label: string; defaultDate: string | null; spaces: { id: string; name: string; capacity: number }[] }) {
   const [pending, start] = useTransition();
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   return (
@@ -98,7 +98,7 @@ export function HoldForm({ leadId, label, defaultDate, spaces, holdHours }: { le
         const f = new FormData(e.currentTarget);
         start(async () => {
           const r = await holdDateForLead(leadId, String(f.get("space")), String(f.get("starts_on")), String(f.get("ends_on") || f.get("starts_on")), label);
-          setMsg(r.error ? { ok: false, text: r.error } : { ok: true, text: `Held for ${holdHours} hours. It releases automatically if not confirmed.` });
+          setMsg(r.error ? { ok: false, text: r.error } : { ok: true, text: "Booked. The dates are blocked on the calendar." });
         });
       }}
     >
@@ -109,7 +109,7 @@ export function HoldForm({ leadId, label, defaultDate, spaces, holdHours }: { le
         <input name="starts_on" type="date" required defaultValue={defaultDate ?? ""} className="h-10 rounded-xl border border-line bg-white px-3 text-sm" aria-label="From" />
         <input name="ends_on" type="date" defaultValue={defaultDate ?? ""} className="h-10 rounded-xl border border-line bg-white px-3 text-sm" aria-label="To" />
       </div>
-      <button disabled={pending} className={buttonClass("gold", "sm", "w-full")}>{pending ? "Holding…" : `Place a ${holdHours}-hour soft hold`}</button>
+      <button disabled={pending} className={buttonClass("primary", "sm", "w-full")}>{pending ? "Booking…" : "Book these dates"}</button>
       {msg ? <p className={`text-xs ${msg.ok ? "text-sage-700" : "text-burgundy-700"}`}>{msg.text}</p> : null}
     </form>
   );

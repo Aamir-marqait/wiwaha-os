@@ -64,27 +64,29 @@ export default async function GuestPage({ params }: { params: Promise<{ token: s
           </section>
         ) : null}
 
-        {(options.data ?? []).length ? (
-          <section>
-            <h2 className="mb-1 font-serif text-2xl font-semibold">Services during your stay</h2>
-            <p className="mb-3 text-sm text-ink-soft">Ask for any of these and our team will confirm with you. You pay at the venue.</p>
-            <ul className="grid gap-3 sm:grid-cols-2">
+        <section>
+          <h2 className="mb-1 font-serif text-2xl font-semibold">Ask us for something</h2>
+          <p className="mb-3 text-sm text-ink-soft">Airport pickup or drop, a room request, or any question. Leave your name and number and our team will call you to confirm. If we can do it, we will.</p>
+          <Card className="p-4 sm:p-5">
+            <RequestForm token={token} options={(options.data ?? []).map((o) => ({ id: o.id as string, name: o.name as string }))} days={days} />
+          </Card>
+          {(options.data ?? []).length ? (
+            <ul className="mt-3 grid gap-3 sm:grid-cols-2">
               {(options.data ?? []).map((o) => (
                 <li key={o.id as string}>
                   <Card className="h-full overflow-hidden">
                     {o.image_url ? <img src={o.image_url as string} alt="" className="h-36 w-full object-cover" /> : null}
-                    <div className="space-y-2 p-4">
+                    <div className="space-y-1 p-4">
                       <p className="font-serif text-xl font-semibold">{o.name as string}</p>
                       {o.description ? <p className="text-sm">{o.description as string}</p> : null}
                       {o.rate_paise != null ? <p className="text-sm text-ink-soft">{rupees(Number(o.rate_paise))} {UNIT[o.unit as string] ?? (o.unit as string)}</p> : null}
-                      <RequestForm token={token} optionId={o.id as string} days={days} />
                     </div>
                   </Card>
                 </li>
               ))}
             </ul>
-          </section>
-        ) : null}
+          ) : null}
+        </section>
         <p className="pt-2 text-center text-xs text-ink-soft">Wiwaha by Praman · 15 km from Bengaluru airport</p>
       </div>
     </main>

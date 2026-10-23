@@ -1,5 +1,5 @@
 import type { AppRole } from "@wiwaha/db";
-import { BarChart3, BedDouble, CalendarDays, CheckCircle2, Clapperboard, ClipboardCheck, Flower2, Gem, Handshake, Inbox, IndianRupee, LayoutDashboard, LayoutTemplate, MapPin, Send, Settings, Sparkles, Sun, Trees, UserCog, Users } from "lucide-react";
+import { BarChart3, BedDouble, CalendarDays, Clapperboard, ClipboardCheck, Flower2, Gem, Handshake, Inbox, IndianRupee, LayoutDashboard, LayoutTemplate, MapPin, Palette, Send, Settings, Sparkles, Sun, Trees, UserCog, Users } from "lucide-react";
 import { type Section, SECTION_LABELS } from "./sections";
 
 export type Icon = typeof Sun;
@@ -33,6 +33,7 @@ const GROUPS: NavGroup[] = [
     { href: "/team/decor", label: "Décor stock", icon: Flower2, exact: true },
     { href: "/team/decor/templates", label: "Templates by area", icon: LayoutTemplate },
     { href: "/team/decor/assignments", label: "Assigned to events", icon: Sparkles },
+    { href: "/team/decor/moodboards", label: "Moodboards created", icon: Palette },
   ] },
   { section: "vendors", title: SECTION_LABELS.vendors, items: [
     { href: "/team/vendors", label: "Vendors", icon: Handshake },
@@ -46,7 +47,6 @@ const GROUPS: NavGroup[] = [
   ] },
   { section: null, title: "Admin", items: [
     { href: "/team/tasks", label: "Tasks", icon: ClipboardCheck },
-    { href: "/team/approvals", label: "Approvals", icon: CheckCircle2, badge: "approvals" },
     { href: "/team/outbox", label: "Emails to send", icon: Send, badge: "toSend", hideWhenZero: true, roles: ["owner", "sales", "event_manager"] },
     { href: "/team/settings/team", label: "Team & access", icon: UserCog, roles: ["owner"] },
     { href: "/team/settings", label: "Settings", icon: Settings, exact: true },

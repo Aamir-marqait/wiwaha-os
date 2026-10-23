@@ -6,8 +6,9 @@ import { createAdminClient } from "@/lib/supabase/admin";
 const TOKEN = /^[a-f0-9]{24}$/;
 
 /**
- * A wedding guest asks for an add-on (makeup, laundry…). No login: the guest
- * link is the key. The request goes to the event manager; nothing is charged.
+ * A wedding guest asks for an add-on (airport pickup, an extra bed…) or sends a
+ * message. No login: the couple's link is the key. The request is listed in the
+ * Wedding Room (Extras) and goes to the event manager; nothing is charged.
  */
 export async function requestAddOn(token: string, input: { optionId: string; name: string; phone: string; room: string; quantity: string; date: string; notes: string }): Promise<{ error?: string; ok?: string }> {
   if (!TOKEN.test(token)) return { error: "This link isn't valid." };
@@ -21,8 +22,12 @@ export async function requestAddOn(token: string, input: { optionId: string; nam
   const { data: w } = await db.from("weddings").select("id, title, event_start, event_end, event_manager_id").eq("guest_token", token).maybeSingle();
   if (!w) return { error: "This link isn't valid." };
   if (input.date && (input.date < String(w.event_start).slice(0, 10) || input.date > String(w.event_end).slice(0, 10))) return { error: "Choose one of the celebration days." };
-  const { data: o } = await db.from("service_options").select("id, name").eq("id", input.optionId).eq("active", true).eq("guest_bookable", true).maybeSingle();
-  if (!o) return { error: "That service isn't available." };
+  // No option chosen means "something else": the message says what they need.
+  const other = !input.optionId;
+  if (other && input.notes.trim().length < 3) return { error: "Tell us what you need." };
+  const { data: found } = other ? { data: null } : await db.from("service_options").select("id, name").eq("id", input.optionId).eq("active", true).eq("guest_bookable", true).maybeSingle();
+  if (!other && !found) return { error: "That service isn't available." };
+  const o = found ?? { id: null, name: "Something else" };
   // A little protection against a shared link being abused.
   const since = new Date(Date.now() - 3600_000).toISOString();
   const { count } = await db.from("guest_requests").select("id", { count: "exact", head: true }).eq("wedding_id", w.id).gte("created_at", since);

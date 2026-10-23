@@ -15,7 +15,7 @@ export async function GuestPanel({ supabase, w, canEdit }: { supabase: Supa; w: 
   const url = `${env.appUrl()}/g/${w.guest_token}`;
   return (
     <Card>
-      <CardHeader title="Guest page" subtitle="For everyone staying: welcome, itinerary, the estate, and add-on services they can request (Lists → Extras → Guests can book)." />
+      <CardHeader title="Additional services" subtitle="The link guests use to leave their name and number and ask for airport pickup or drop, room needs or anything else. Their requests appear here." />
       <div className="px-4 py-3 sm:px-5"><GuestShare weddingId={w.id} url={url} title={w.title} welcome={w.guest_welcome} canEdit={canEdit} /></div>
       <ul className="divide-y divide-line/70 border-t border-line/70">
         {(reqs ?? []).length === 0 ? <li className="px-5 py-4 text-sm text-ink-soft">No guest requests yet.</li> : null}
