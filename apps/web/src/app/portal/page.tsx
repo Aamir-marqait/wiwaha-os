@@ -4,6 +4,8 @@ import { Lock } from "lucide-react";
 import type { Metadata } from "next";
 import { ActionButton } from "@/components/action-button";
 import { Wordmark } from "@/components/brand";
+import { CopyField } from "@/components/copy-field";
+import { env } from "@/lib/env";
 import { StageStatusBadge, UNLOCK_TEXT } from "@/components/stage-status";
 import { startStage } from "./actions";
 import { SnoozeForm } from "./_ui/forms";
@@ -52,6 +54,14 @@ export default async function PortalHome() {
       ) : null}
 
       <AtAGlance supabase={supabase} weddingId={wedding.id as string} t={t} />
+
+      {wedding.guest_token ? (
+        <Card className="space-y-2 p-4">
+          <h2 className="font-serif text-xl font-semibold">Additional services for your guests</h2>
+          <p className="text-sm text-ink-soft">Share this link with your guests. They leave their name and number and ask for airport pickup or drop, a room request or anything else, and our team follows up with them.</p>
+          <CopyField label="Guest link" value={`${env.appUrl()}/g/${wedding.guest_token as string}`} />
+        </Card>
+      ) : null}
 
       <section>
         <h2 className="mb-1 mt-2 font-serif text-2xl font-semibold">{t.journey}</h2>

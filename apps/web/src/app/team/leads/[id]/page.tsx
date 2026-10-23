@@ -52,7 +52,6 @@ export default async function LeadPage({ params, searchParams }: { params: Promi
     slots = free.map((s) => ({ startsAt: s.startsAt, executiveId: s.executiveId, label: formatSlot(s.startsAt), executive: nameOf(s.executiveId) ?? "Sales" }));
   }
   const checklist = book.has("visits.checklist") ? book.get("visits.checklist").items : [];
-  const holdHours = book.has("holds.soft_hold") ? book.get("holds.soft_hold").hours : 72;
   const canEdit = viewer.profile.role === "owner" || viewer.profile.role === "sales";
   const contact = lead.contact as { full_name: string; phone_e164: string | null; email: string | null; city: string | null; consent_whatsapp: boolean; consent_email: boolean };
   // The journey (D44): enquiry, each visit, then booked or lost.
@@ -179,9 +178,9 @@ export default async function LeadPage({ params, searchParams }: { params: Promi
           </Card>
 
           <Card className="p-4 sm:p-5">
-            <h2 className="font-serif text-xl font-semibold">Date holds</h2>
+            <h2 className="font-serif text-xl font-semibold">Dates</h2>
             <ul className="mt-2 space-y-2 text-sm">
-              {(holds.data ?? []).length === 0 ? <li className="text-ink-soft">No holds for this family.</li> : null}
+              {(holds.data ?? []).length === 0 ? <li className="text-ink-soft">No dates booked for this family yet.</li> : null}
               {(holds.data ?? []).map((h) => {
                 const live = h.status === "held" && h.expires_at && Date.parse(h.expires_at as string) > Date.now();
                 const space = (Array.isArray(h.space) ? h.space[0] : h.space) as { name: string } | null;
@@ -189,16 +188,16 @@ export default async function LeadPage({ params, searchParams }: { params: Promi
                   <li key={h.id as string} className="flex items-start justify-between gap-2 rounded-xl bg-ivory-100 px-3 py-2">
                     <div>
                       <p className="font-medium">{space?.name ?? "Space"} · {formatDateIST(h.starts_on as string)}{h.ends_on !== h.starts_on ? ` – ${formatDateIST(h.ends_on as string)}` : ""}</p>
-                      <p className="text-xs text-ink-soft">{live ? `Held · expires ${relativeFromNow(h.expires_at as string)}` : h.status === "held" ? "Expired (releasing)" : String(h.status)}</p>
+                      <p className="text-xs text-ink-soft">{h.status === "confirmed" ? "Booked" : live ? `Held · expires ${relativeFromNow(h.expires_at as string)}` : h.status === "held" ? "Expired (releasing)" : String(h.status)}</p>
                     </div>
-                    {live && canEdit ? <ActionButton action={releaseEntry.bind(null, h.id as string, `/team/leads/${id}`)} variant="ghost" confirm="Release this hold now?">Release</ActionButton> : null}
+                    {(live || h.status === "confirmed") && canEdit ? <ActionButton action={releaseEntry.bind(null, h.id as string, `/team/leads/${id}`)} variant="ghost" confirm="Release these dates?">Release</ActionButton> : null}
                   </li>
                 );
               })}
             </ul>
-            {viewer.profile.role !== "staff" ? (
+            {["owner", "sales"].includes(viewer.profile.role) ? (
               <div className="mt-4 border-t border-line pt-4">
-                <HoldForm leadId={id} label={`${contact.full_name} (hold)`} defaultDate={lead.date_wanted as string | null} spaces={(spaces.data ?? []).map((s) => ({ id: s.id as string, name: s.name as string, capacity: s.capacity_seated as number }))} holdHours={holdHours} />
+                <HoldForm leadId={id} label={contact.full_name} defaultDate={lead.date_wanted as string | null} spaces={(spaces.data ?? []).map((s) => ({ id: s.id as string, name: s.name as string, capacity: s.capacity_seated as number }))} />
               </div>
             ) : null}
           </Card>

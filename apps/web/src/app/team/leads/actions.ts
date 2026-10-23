@@ -62,13 +62,18 @@ export async function setLeadStatus(leadId: string, status: LeadStatus, reason =
   return error ? { error: friendlyError(error) } : {};
 }
 
+/** Books a space for this family outright (blocked and confirmed); "Mark as booked" later links it to their wedding. */
 export async function holdDateForLead(leadId: string, spaceId: string, startsOn: string, endsOn: string, label: string): Promise<{ error?: string }> {
-  await requireStaff(["owner", "sales", "event_manager"]);
+  await requireStaff(["owner", "sales"]);
   const supabase = await createClient("team");
-  const { error } = await supabase.rpc("place_hold", { p_resource_kind: "space", p_resource_id: spaceId, p_starts_on: startsOn, p_ends_on: endsOn || startsOn, p_lead_id: leadId, p_label: label });
+  const { data, error } = await supabase.rpc("place_hold", { p_resource_kind: "space", p_resource_id: spaceId, p_starts_on: startsOn, p_ends_on: endsOn || startsOn, p_lead_id: leadId, p_label: label });
   revalidatePath(`/team/leads/${leadId}`);
   revalidatePath("/team/calendar");
-  return error ? { error: friendlyError(error) } : {};
+  if (error) return { error: friendlyError(error) };
+  const id = (data as { id?: string } | null)?.id;
+  const confirmed = id ? await supabase.rpc("set_calendar_status", { p_entry_id: id, p_status: "confirmed" }) : null;
+  if (confirmed?.error && id) await supabase.rpc("set_calendar_status", { p_entry_id: id, p_status: "released", p_reason: "manual" });
+  return confirmed?.error ? { error: friendlyError(confirmed.error) } : {};
 }
 
 export async function releaseEntry(entryId: string, path: string): Promise<{ error?: string }> {
@@ -95,6 +100,9 @@ export async function markBooked(leadId: string, input: { start: string; end: st
   const rooms = input.rooms ? Number(input.rooms) : null;
   if (rooms !== null && Number.isInteger(rooms) && rooms >= 0) await supabase.from("weddings").update({ complimentary_rooms: rooms }).eq("id", weddingId);
   const note = await applySplit(supabase, weddingId, input.start, input.parts);
+  // Dates booked for this family earlier belong to the new wedding.
+  const { data: booked } = await supabase.from("calendar_entries").select("id").eq("lead_id", leadId).eq("status", "confirmed").is("wedding_id", null);
+  for (const e of booked ?? []) await supabase.rpc("set_calendar_status", { p_entry_id: e.id as string, p_status: "confirmed", p_wedding_id: weddingId });
   revalidatePath(`/team/leads/${leadId}`);
   revalidatePath("/team/weddings");
   after(runRouting);

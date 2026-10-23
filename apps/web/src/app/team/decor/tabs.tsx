@@ -5,6 +5,7 @@ const TABS = [
   { href: "/team/decor", key: "stock", label: "Stock" },
   { href: "/team/decor/templates", key: "templates", label: "Templates by area" },
   { href: "/team/decor/assignments", key: "assignments", label: "Assigned to events" },
+  { href: "/team/decor/moodboards", key: "moodboards", label: "Moodboards created" },
 ] as const;
 
 export function DecorTabs({ active }: { active: (typeof TABS)[number]["key"] }) {
