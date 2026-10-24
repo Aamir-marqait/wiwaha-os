@@ -57,7 +57,7 @@ export async function PortalAccessCard({ supabase, weddingId, couple, canEdit }:
         {servicesUrl ? (
           <div className="space-y-1">
             <CopyField label="Additional services link" value={servicesUrl} />
-            <p className="text-xs text-ink-soft">For guests: they leave a name and number and ask for airport pickup or drop, a room request or anything else. Requests are listed under Extras here, and the couple sees the same link in their portal.</p>
+            <p className="text-xs text-ink-soft">For guests: they leave a name and number and ask for airport pickup or drop, a room request or anything else. Requests are listed under Add-on services here, and the couple sees the same link in their portal.</p>
           </div>
         ) : null}
 

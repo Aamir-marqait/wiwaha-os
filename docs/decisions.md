@@ -263,4 +263,4 @@ Walking lead → visit → booking → portal → event → farewell with the fo
 - Content Studio has no Library: photos are uploaded once under Spaces and the studio picks from those. The renders-used strip is gone.
 - Closing a lead (lost, no response) always needs a reason, on the lead page and in the Claude connector; the leads list shows it.
 - Couple-side server actions are blocked in code (`COUPLE_CAN_ACT` in `portal/actions.ts`) except sharing ideas, the décor form and messaging, so the view-only rule holds even for hand-made requests.
-- Seed data carries four rooms; the team adds the rest under Catalogue → Rooms.
+- Seed files keep the full room list for dev and tests; the live database was trimmed to four rooms by hand and the team adds the rest under Catalogue → Rooms.

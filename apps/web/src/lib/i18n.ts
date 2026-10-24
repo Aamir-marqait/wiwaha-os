@@ -7,7 +7,7 @@ export type Lang = keyof typeof LANGS;
 
 const en = {
   home: "Home", brief: "Brief", menus: "Menus", decor: "Décor", quote: "Quote", payments: "Payments", guests: "Guests & rooms", family: "Family", chat: "Chat",
-  ideas: "Ideas", entertainment: "Entertainment", extras: "Extras", opens_on: "Opens on", choose: "Choose", decline: "Not for us", chosen: "Chosen", declined: "Declined", final: "Confirmed",
+  ideas: "Ideas", entertainment: "Entertainment", extras: "Add-on services", opens_on: "Opens on", choose: "Choose", decline: "Not for us", chosen: "Chosen", declined: "Declined", final: "Confirmed",
   ideas_help: "Share anything you love here: pictures, links, thoughts. We note every one and pick them up when planning begins.",
   options_help: "Your event manager has picked these for you. Choose the ones you'd like; they'll confirm.",
   namaste: "Namaste", days_to_go: "days to go", today: "Today!", sign_out: "Sign out", your_portal: "Your wedding portal",
