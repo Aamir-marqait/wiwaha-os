@@ -107,7 +107,7 @@ export default async function PortalHome() {
                 <Card className={cn("p-4", locked && "bg-ivory-50 shadow-none")}>
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
-                      <p className="flex items-center gap-2 font-serif text-xl font-semibold">{locked ? <Lock className="size-4 text-ink-soft" aria-hidden /> : null}{s.name as string}</p>
+                      <p className="flex items-center gap-2 font-serif text-xl font-semibold">{locked ? <Lock className="size-4 text-ink-soft" aria-hidden /> : null}{s.key === "extras" ? t.extras : (s.name as string)}</p>
                       {!plan.open ? <p className="mt-0.5 text-xs text-ink-soft">Opens {formatDateIST(plan.opensOn, { day: "numeric", month: "short", year: "numeric" })}</p>
                         : status === "locked" ? <p className="mt-2 text-sm text-ink-soft">{UNLOCK_TEXT[s.unlock_rule as string]}</p>
                         : s.needs_from_client && status !== "done" ? <p className="mt-2 text-sm">{s.needs_from_client as string}</p> : null}

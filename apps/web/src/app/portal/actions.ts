@@ -26,9 +26,13 @@ const route = (error: PgErr) => { if (!error) after(runRouting); };
 
 /** The couple presses Start. The database enforces the payment unlock and logs the edit with IP. */
 export async function startStage(stageId: string): Promise<Result> {
-  if (!COUPLE_CAN_ACT) return VIEW_ONLY;
   await requireClient();
   const supabase = await createClient("portal");
+  // The décor form is the one stage a couple starts themselves (D47).
+  if (!COUPLE_CAN_ACT) {
+    const { data: stage } = await supabase.from("wedding_stages").select("key").eq("id", stageId).maybeSingle();
+    if (stage?.key !== "decor") return VIEW_ONLY;
+  }
   const { error } = await supabase.rpc("start_stage", { p_stage_id: stageId });
   route(error);
   return result(["/portal"], error);
