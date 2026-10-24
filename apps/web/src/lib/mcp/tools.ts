@@ -174,10 +174,12 @@ export function registerTools(server: McpServer, ctx: ToolContext): void {
   server.registerTool("update_lead_status", {
     title: "Update a lead's status",
     description: "Move a lead along: contacted, visit_booked, visited, negotiating, lost, no_response… (use book_wedding to mark it won).",
-    inputSchema: { lead_id: uuid, status: z.enum(["new", "contacted", "visit_booked", "visited", "follow_up_done", "negotiating", "lost", "no_response"]) },
+    inputSchema: { lead_id: uuid, status: z.enum(["new", "contacted", "visit_booked", "visited", "follow_up_done", "negotiating", "lost", "no_response"]), reason: z.string().max(200).optional().describe("Required for lost and no_response: why the family didn't book") },
     annotations: WRITE,
-  }, guard(async ({ lead_id, status }) => {
-    must(await db.from("leads").update({ status }).eq("id", lead_id));
+  }, guard(async ({ lead_id, status, reason }) => {
+    const closing = status === "lost" || status === "no_response";
+    if (closing && !reason?.trim()) return ok({ error: "Say why the lead was lost (reason) before closing it." });
+    must(await db.from("leads").update({ status, lost_reason: closing ? reason!.trim() : null }).eq("id", lead_id));
     return ok(changed(`Lead is now ${status.replace(/_/g, " ")}.`));
   }));
 

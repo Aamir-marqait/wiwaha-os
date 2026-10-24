@@ -16,9 +16,11 @@ const TABS: { key: string; label: string; statuses: readonly LeadStatus[] | null
   { key: "all", label: "All", statuses: null },
 ];
 
+const closed = (l: { status: string }) => l.status === "lost" || l.status === "no_response";
+
 type Row = {
   id: string; source: string; heard_about: string | null; status: LeadStatus; score: number | null; hot: boolean; date_wanted: string | null; guest_count: number | null;
-  touch_count: number; last_touch_at: string; hold_expires_at: string | null;
+  touch_count: number; last_touch_at: string; hold_expires_at: string | null; lost_reason: string | null;
   contact: { full_name: string; phone_e164: string | null; email: string | null } | null;
 };
 
@@ -31,7 +33,7 @@ export default async function LeadsPage({ searchParams }: { searchParams: Promis
 
   let query = supabase
     .from("leads")
-    .select("id, source, heard_about, status, score, hot, date_wanted, guest_count, touch_count, last_touch_at, hold_expires_at, contact:contacts!inner(full_name, phone_e164, email)")
+    .select("id, source, heard_about, status, score, hot, date_wanted, guest_count, touch_count, last_touch_at, hold_expires_at, lost_reason, contact:contacts!inner(full_name, phone_e164, email)")
     .order("hot", { ascending: false })
     .order("last_touch_at", { ascending: false })
     .limit(200);
@@ -86,7 +88,7 @@ export default async function LeadsPage({ searchParams }: { searchParams: Promis
                   <td className="px-4 py-3">{l.date_wanted ? formatDateIST(l.date_wanted) : "—"}{l.hold_expires_at && Date.parse(l.hold_expires_at) > Date.now() ? <p className="text-xs text-burgundy-700">Held · expires {relativeFromNow(l.hold_expires_at)}</p> : null}</td>
                   <td className="px-4 py-3">{l.guest_count ?? "—"}</td>
                   <td className="px-4 py-3"><ScoreBadge score={l.score} hot={l.hot} /></td>
-                  <td className="px-4 py-3"><LeadStatusBadge status={l.status} /></td>
+                  <td className="px-4 py-3"><LeadStatusBadge status={l.status} />{closed(l) ? <p className="mt-1 max-w-[14rem] text-xs text-burgundy-700">{l.lost_reason || "No reason given"}</p> : null}</td>
                   <td className="px-4 py-3 text-ink-soft">{relativeFromNow(l.last_touch_at)}</td>
                 </tr>
               ))}
@@ -102,6 +104,7 @@ export default async function LeadsPage({ searchParams }: { searchParams: Promis
                   </div>
                   <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-ink-soft">
                     <LeadStatusBadge status={l.status} />
+                    {closed(l) ? <span className="text-burgundy-700">{l.lost_reason || "No reason given"}</span> : null}
                     <span>{l.heard_about ?? SOURCE_LABELS[l.source] ?? l.source}</span>
                     {l.date_wanted ? <span>· {formatDateIST(l.date_wanted)}</span> : null}
                     {l.guest_count ? <span>· {l.guest_count} guests</span> : null}

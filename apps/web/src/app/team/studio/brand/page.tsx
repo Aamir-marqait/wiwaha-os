@@ -1,7 +1,6 @@
 import { Card, PageTitle } from "@wiwaha/ui";
 import { requireSection } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
-import { usageThisMonth } from "../actions";
 import { StudioTabs } from "../tabs";
 import { BrandForm, type BrandField } from "./brand-form";
 
@@ -34,14 +33,13 @@ const FIELDS: BrandField[] = [
 export default async function BrandPage() {
   await requireSection("sales_marketing", ["owner", "sales"]);
   const supabase = await createClient();
-  const [{ data }, usage] = await Promise.all([supabase.from("studio_brand").select("profile, logo_url, logo_light_url, mark_url").eq("id", 1).maybeSingle(), usageThisMonth()]);
+  const { data } = await supabase.from("studio_brand").select("profile, logo_url, logo_light_url, mark_url").eq("id", 1).maybeSingle();
   const p = (data?.profile ?? {}) as Record<string, unknown>;
   const initial = Object.fromEntries(FIELDS.map((f) => [f.key, Array.isArray(p[f.key]) ? (p[f.key] as string[]).join("\n") : typeof p[f.key] === "string" ? (p[f.key] as string) : ""]));
   return (
     <>
       <PageTitle title="Brand" subtitle="Everything the studio knows about how Wiwaha sounds and looks. Prices, offers and contact numbers come from the policy book, not from here." />
       <StudioTabs active="brand" />
-      <Card className="mb-4 p-4 text-sm">This month: <strong>{usage.used}</strong> of {usage.allowance} generations used. The allowance and slide-edit limits are in Settings → Policy book (studio.content).</Card>
       <Card className="p-4 sm:p-5"><BrandForm fields={FIELDS} initial={initial} logos={{ logoUrl: (data?.logo_url as string | null) ?? "", logoLightUrl: (data?.logo_light_url as string | null) ?? "", markUrl: (data?.mark_url as string | null) ?? "" }} /></Card>
     </>
   );

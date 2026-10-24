@@ -59,7 +59,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
     seesSpend ? aiSpend().catch(() => null) : Promise.resolve(null),
     supabase.from("approvals").select("id, title, kind, priority, wedding_id, lead_id, created_at", { count: "exact" }).eq("status", "pending").order("priority").order("created_at", { ascending: false }).limit(5),
     supabase.from("tasks").select("id, title, due_at, status, priority, wedding_id", { count: "exact" }).in("status", ["todo", "in_progress", "blocked"]).not("due_at", "is", null).lte("due_at", new Date(Date.now() + 7 * 86_400_000).toISOString()).order("due_at").limit(5),
-    seesActivity ? supabase.from("agent_actions").select("id, agent_key, action, status, lead_id, wedding_id, created_at").in("status", ["ok", "gated", "escalated"]).order("created_at", { ascending: false }).limit(8) : none,
+    seesActivity ? supabase.from("agent_actions").select("id, agent_key, action, status, lead_id, wedding_id, created_at").in("status", ["ok", "gated", "escalated"]).or("lead_id.not.is.null,wedding_id.not.is.null").order("created_at", { ascending: false }).limit(8) : none,
     seesWeddings ? supabase.from("decor_briefs").select("wedding_id, status, sent_at, submitted_at, generated_at, wedding:weddings(title)").order("updated_at", { ascending: false }).limit(30) : none,
     seesWeddings ? supabase.from("moodboards").select("wedding_id").eq("source", "ai").is("shared_at", null) : none,
   ]);

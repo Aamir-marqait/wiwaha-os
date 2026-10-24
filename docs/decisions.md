@@ -257,3 +257,10 @@ Walking lead → visit → booking → portal → event → farewell with the fo
 - **Finance** is one page: money in, money out, left over, by month. Owner numbers left the menu.
 - **Portal:** open from booking. Until 90 days before: home and Ideas only, everything else locked. After: the décor form is the one task; all else is read-only (the team assigns entertainment, add-on services, rooms, vendors). No "Team login" link on the client login, and family accounts are refused at the team login. The dashboard prompts the team to send the "90 days to go" message.
 - **Demo data cleared on staging** (2026-10-24, by request); one owner login, admin@admin.com. Change that password after first sign-in.
+
+## D48 — Dashboard, Studio and portal tidy-up (Oct 2026)
+- "Recently done" lists only agent actions about a lead or wedding; routine sweeps stay in Settings → Activity.
+- Content Studio has no Library: photos are uploaded once under Spaces and the studio picks from those. The renders-used strip is gone.
+- Closing a lead (lost, no response) always needs a reason, on the lead page and in the Claude connector; the leads list shows it.
+- Couple-side server actions are blocked in code (`COUPLE_CAN_ACT` in `portal/actions.ts`) except sharing ideas, the décor form and messaging, so the view-only rule holds even for hand-made requests.
+- Seed data carries four rooms; the team adds the rest under Catalogue → Rooms.
