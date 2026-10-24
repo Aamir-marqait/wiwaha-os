@@ -13,11 +13,20 @@ const result = (paths: string[], error: PgErr, ok?: string): Result => {
   for (const p of paths) revalidatePath(p);
   return error ? { error: friendlyError(error) } : { ok };
 };
+/**
+ * D47: a couple can share ideas and fill the décor form, and message the team;
+ * everything else is the team's to do from the wedding room. Flip this to hand
+ * stage, brief, approval and guest actions back to the couple.
+ */
+const COUPLE_CAN_ACT = false;
+const VIEW_ONLY: Result = { error: "The team handles this for you. Message us if something needs changing." };
+
 /** Agent work queued by the database (agent_tasks) is routed right after the response. */
 const route = (error: PgErr) => { if (!error) after(runRouting); };
 
 /** The couple presses Start. The database enforces the payment unlock and logs the edit with IP. */
 export async function startStage(stageId: string): Promise<Result> {
+  if (!COUPLE_CAN_ACT) return VIEW_ONLY;
   await requireClient();
   const supabase = await createClient("portal");
   const { error } = await supabase.rpc("start_stage", { p_stage_id: stageId });
@@ -26,6 +35,7 @@ export async function startStage(stageId: string): Promise<Result> {
 }
 
 export async function snoozeStage(stageId: string, until: string, reason: string): Promise<Result> {
+  if (!COUPLE_CAN_ACT) return VIEW_ONLY;
   await requireClient();
   const supabase = await createClient("portal");
   const { error } = await supabase.rpc("snooze_stage", { p_stage_id: stageId, p_until: until, p_reason: reason });
@@ -44,6 +54,7 @@ export async function setLanguage(form: FormData): Promise<void> {
 export interface BriefFunction { id?: string; type: string; name: string; date: string; start_time: string; end_time: string; guest_count: string; rituals: string }
 
 export async function saveBrief(weddingId: string, functions: BriefFunction[], answers: Record<string, string | boolean>, submit: boolean): Promise<Result> {
+  if (!COUPLE_CAN_ACT) return VIEW_ONLY;
   await requireClient();
   const supabase = await createClient("portal");
   const { data: existing } = await supabase.from("event_functions").select("id").eq("wedding_id", weddingId);
@@ -73,6 +84,7 @@ export async function saveBrief(weddingId: string, functions: BriefFunction[], a
 // Menus, décor, quote
 // ---------------------------------------------------------------------------
 export async function approveMenu(menuId: string, note: string): Promise<Result> {
+  if (!COUPLE_CAN_ACT) return VIEW_ONLY;
   await requireClient();
   const supabase = await createClient("portal");
   const { error } = await supabase.rpc("client_approve_menu", { p_menu_id: menuId, p_note: note || null });
@@ -81,6 +93,7 @@ export async function approveMenu(menuId: string, note: string): Promise<Result>
 }
 
 export async function shortlistMoodboard(id: string, shortlist: boolean, feedback: string): Promise<Result> {
+  if (!COUPLE_CAN_ACT) return VIEW_ONLY;
   await requireClient();
   const supabase = await createClient("portal");
   const { error } = await supabase.rpc("client_shortlist_moodboard", { p_id: id, p_shortlist: shortlist, p_feedback: feedback || null });
@@ -89,6 +102,7 @@ export async function shortlistMoodboard(id: string, shortlist: boolean, feedbac
 }
 
 export async function approveQuote(quoteId: string): Promise<Result> {
+  if (!COUPLE_CAN_ACT) return VIEW_ONLY;
   await requireClient();
   const supabase = await createClient("portal");
   const { error } = await supabase.rpc("client_approve_quote", { p_quote_id: quoteId });
@@ -100,6 +114,7 @@ export async function approveQuote(quoteId: string): Promise<Result> {
 // Guests & rooms
 // ---------------------------------------------------------------------------
 export async function addGuest(weddingId: string, g: { name: string; phone: string; partySize: number; checkIn: string; checkOut: string; pickup: boolean; pickupFrom: string; pickupAt: string; notes: string }): Promise<Result> {
+  if (!COUPLE_CAN_ACT) return VIEW_ONLY;
   await requireClient();
   if (!g.name.trim() || !g.checkIn || !g.checkOut) return { error: "Add the guest's name and dates." };
   if (g.checkOut < g.checkIn) return { error: "Check-out must be after check-in." };
@@ -113,6 +128,7 @@ export async function addGuest(weddingId: string, g: { name: string; phone: stri
 }
 
 export async function removeGuest(id: string): Promise<Result> {
+  if (!COUPLE_CAN_ACT) return VIEW_ONLY;
   await requireClient();
   const supabase = await createClient("portal");
   const { error } = await supabase.from("room_allocations").update({ status: "cancelled" }).eq("id", id);
@@ -120,6 +136,7 @@ export async function removeGuest(id: string): Promise<Result> {
 }
 
 export async function submitRoomingList(weddingId: string): Promise<Result> {
+  if (!COUPLE_CAN_ACT) return VIEW_ONLY;
   await requireClient();
   const supabase = await createClient("portal");
   const { error } = await supabase.rpc("submit_rooming_list", { p_wedding: weddingId });
@@ -134,6 +151,7 @@ const PERMS = ["can_start_stages", "can_edit_brief", "can_approve", "can_view_pa
 export type Perm = (typeof PERMS)[number];
 
 export async function setPermission(memberId: string, perm: Perm, value: boolean): Promise<Result> {
+  if (!COUPLE_CAN_ACT) return VIEW_ONLY;
   await requireClient();
   if (!PERMS.includes(perm)) return { error: "Unknown permission." };
   const supabase = await createClient("portal");
@@ -142,6 +160,7 @@ export async function setPermission(memberId: string, perm: Perm, value: boolean
 }
 
 export async function inviteMember(weddingId: string, m: { name: string; email: string; role: string }): Promise<Result> {
+  if (!COUPLE_CAN_ACT) return VIEW_ONLY;
   await requireClient();
   const email = m.email.trim().toLowerCase();
   if (!m.name.trim() || !/^\S+@\S+\.\S+$/.test(email)) return { error: "Add a name and a valid email." };
@@ -193,6 +212,7 @@ export async function shareIdea(weddingId: string, body: string, link: string, v
 
 /** The couple chooses (or declines) an option their event manager sent. */
 export async function chooseOption(selectionId: string, choice: "chosen" | "declined", vertical: string): Promise<Result> {
+  if (!COUPLE_CAN_ACT) return VIEW_ONLY;
   await requireClient();
   const supabase = await createClient("portal");
   const { error } = await supabase.rpc("client_choose_selection", { p_id: selectionId, p_choice: choice });
@@ -211,6 +231,7 @@ export async function saveDecorBrief(weddingId: string, answers: Record<string, 
 
 /** Ask for a change on one moodboard picture. */
 export async function noteMoodboardSlide(slideId: string, note: string): Promise<Result> {
+  if (!COUPLE_CAN_ACT) return VIEW_ONLY;
   await requireClient();
   const supabase = await createClient("portal");
   const { error } = await supabase.rpc("client_note_moodboard_slide", { p_id: slideId, p_note: note });

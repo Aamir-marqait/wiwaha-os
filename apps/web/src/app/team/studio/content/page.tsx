@@ -2,10 +2,8 @@ import { formatDateIST } from "@wiwaha/db";
 import { Badge, Card, PageTitle, buttonClass, cn } from "@wiwaha/ui";
 import Link from "next/link";
 import { requireSection } from "@/lib/auth";
-import { fal } from "@/lib/media/config";
 import { createClient } from "@/lib/supabase/server";
-import { usageThisMonth } from "../actions";
-import { FORMAT_LABELS, STATUS_LABELS, StudioStatus, StudioTabs } from "../tabs";
+import { FORMAT_LABELS, STATUS_LABELS, StudioTabs } from "../tabs";
 
 export const metadata = { title: "Content Studio" };
 
@@ -24,18 +22,15 @@ export default async function StudioPage({ searchParams }: { searchParams: Promi
   const { f } = await searchParams;
   const filter = FILTERS.find((x) => x.key === f) ?? FILTERS[0];
   const supabase = await createClient();
-  const [{ data }, usage, counts] = await Promise.all([
+  const [{ data }, counts] = await Promise.all([
     supabase.from("studio_items").select("id, content_type, title, hook, status, scheduled_for, pillar, outputs, created_at, created_by_agent").in("status", [...filter.statuses]).order("scheduled_for", { ascending: true, nullsFirst: false }).order("created_at", { ascending: false }).limit(120),
-    usageThisMonth(),
     supabase.from("studio_items").select("status"),
   ]);
   const count = (statuses: readonly string[]) => (counts.data ?? []).filter((r) => statuses.includes(r.status as string)).length;
-  const low = usage.allowance - usage.used <= usage.warnAt;
   return (
     <>
       <PageTitle title="Content Studio" subtitle="Scripts, carousels, posts, stories and reels from the estate's own photos. Approve each script once; download and post." action={<Link href="/team/studio" className={buttonClass("primary", "sm")}>+ Create</Link>} />
       <StudioTabs active="content" />
-      <StudioStatus used={usage.used} allowance={usage.allowance} low={low} live={fal().live} />
       <nav aria-label="Filter" className="-mx-4 mb-4 overflow-x-auto px-4 [scrollbar-width:none] sm:mx-0 sm:px-0">
         <ul className="flex gap-1.5">
           {FILTERS.map((x) => <li key={x.key} className="shrink-0"><Link href={`/team/studio/content?f=${x.key}`} className={cn("block rounded-full px-3 py-1 text-sm ring-1", x.key === filter.key ? "bg-ink text-white ring-ink" : "bg-white ring-line")}>{x.label}{x.key !== "all" && x.key !== "discarded" ? ` · ${count(x.statuses)}` : ""}</Link></li>)}

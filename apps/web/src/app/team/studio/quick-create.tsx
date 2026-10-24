@@ -1,5 +1,6 @@
 "use client";
 import { buttonClass } from "@wiwaha/ui";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { createStudioItem, type NewItem } from "./actions";
@@ -46,11 +47,12 @@ export function QuickCreate({ pillars, photos, areas }: { pillars: string[]; pho
           {photos.length ? (
             <fieldset>
               <legend className={label}>Use these photos (otherwise the studio picks)</legend>
+              <p className="mt-0.5 text-xs text-ink-soft">These are the photos uploaded under <Link href="/team/spaces" className="underline">Spaces</Link>. Add or change them there.</p>
               <div className="mt-2 flex flex-wrap gap-1.5">
                 <button type="button" aria-pressed={!space} onClick={() => setSpace("")} className={`rounded-full px-3 py-1 text-xs ring-1 ${!space ? "bg-ink text-white ring-ink" : "bg-white ring-line"}`}>All spaces</button>
                 {areas.map((a) => <button key={a.id} type="button" aria-pressed={space === a.id} onClick={() => setSpace(a.id)} className={`rounded-full px-3 py-1 text-xs ring-1 ${space === a.id ? "bg-ink text-white ring-ink" : "bg-white ring-line"}`}>{a.name}</button>)}
               </div>
-              {shown.length === 0 ? <p className="mt-2 text-sm text-ink-soft">No photos for this space yet. Add some in Library.</p> : null}
+              {shown.length === 0 ? <p className="mt-2 text-sm text-ink-soft">No photos for this space yet. Add some under Spaces.</p> : null}
               <ul className="mt-2 grid grid-cols-4 gap-1.5 sm:grid-cols-8">
                 {shown.map((p) => {
                   const on = v.assetIds.includes(p.id);
@@ -58,7 +60,7 @@ export function QuickCreate({ pillars, photos, areas }: { pillars: string[]; pho
                 })}
               </ul>
             </fieldset>
-          ) : <p className="text-sm text-ink-soft">The library is empty: add photos in Library so posts can show the estate.</p>}
+          ) : <p className="text-sm text-ink-soft">No photos yet. Upload them once under <Link href="/team/spaces" className="underline">Spaces</Link> and they are used here.</p>}
         </div>
       </details>
       <div className="flex items-center gap-2">
