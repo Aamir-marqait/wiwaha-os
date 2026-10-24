@@ -13,9 +13,17 @@ insert into public.spaces (name, kind, capacity_seated, capacity_floating, descr
   ('Poolside Deck',        'outdoor',   120,  200, 'Deck beside the pool for cocktails and welcome dinners.',               '#6F8FAF', 50)
 on conflict (name) do nothing;
 
--- A few rooms to start; the team adds the rest in Catalogue → Rooms.
+-- 30 rooms today (101–115 deluxe, 201–212 premium, 301–303 suites)…
 insert into public.rooms (number, room_type, capacity, block, floor, sort, active)
-select n::text, 'deluxe', 2, 'East wing', 1, n, true from generate_series(101, 104) n
+select n::text, 'deluxe', 2, 'East wing', 1, n, true from generate_series(101, 115) n
+union all
+select n::text, 'premium', 3, 'West wing', 2, n, true from generate_series(201, 212) n
+union all
+select n::text, 'suite', 4, 'Garden villas', 3, n, true from generate_series(301, 303) n
+on conflict (number) do nothing;
+-- …and the 30 rooms of the planned expansion, inactive until built.
+insert into public.rooms (number, room_type, capacity, block, floor, sort, active, notes)
+select n::text, 'deluxe', 2, 'New wing (planned)', 1, n, false, 'Expansion to 60 rooms' from generate_series(401, 430) n
 on conflict (number) do nothing;
 
 insert into public.price_book_items (code, category, name, unit, unit_price_paise, gst_rate_bps, design_kind, notes) values
